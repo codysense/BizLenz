@@ -1,0 +1,193 @@
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { X, Save } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { inventoryApi } from '../../lib/api';
+import { Warehouse } from '../../types/api';
+import toast from 'react-hot-toast';
+
+const editWarehouseSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  locationId: z.string().min(1, 'Location is required'),
+  address: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
+type EditWarehouseFormData = z.infer<typeof editWarehouseSchema>;
+
+interface EditWarehouseModalProps {
+  warehouse: Warehouse;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const EditWarehouseModal = ({ warehouse, onClose, onSuccess }: EditWarehouseModalProps) => {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting, isDirty }
+  } = useForm<EditWarehouseFormData>({
+    resolver: zodResolver(editWarehouseSchema),
+    defaultValues: {
+      name: warehouse.name,
+      locationId: warehouse.locationId,
+      address: warehouse.address || '',
+      isActive: warehouse.isActive
+    }
+  });
+
+  const { data: locations } = useQuery({
+    queryKey: ['locations-for-warehouse-edit'],
+    queryFn: () => inventoryApi.getLocations({ limit: 100 })
+  });
+
+  // Reset form when warehouse changes
+  useEffect(() => {
+    reset({
+      name: warehouse.name,
+      locationId: warehouse.locationId,
+      address: warehouse.address || '',
+      isActive: warehouse.isActive
+    });
+  }, [warehouse, reset]);
+
+  const onSubmit = async (data: EditWarehouseFormData) => {
+    try {
+      await inventoryApi.updateWarehouse(warehouse.id, data);
+      toast.success('Warehouse updated successfully');
+      onSuccess();
+    } catch (error) {
+      console.error('Edit warehouse error:', error);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
+        
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  Edit Warehouse
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {warehouse.code} - {warehouse.name}
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="bg-blue-50 p-3 rounded-md">
+                <div className="text-sm text-blue-800">
+                  <strong>Warehouse Code:</strong> {warehouse.code} (cannot be changed)
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Location *
+                </label>
+                <select
+                  {...register('locationId')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                >
+                  <option value="">Select location</option>
+                  {locations?.locations?.map((location: any) => (
+                    <option key={location.id} value={location.id}>
+                      {location.code} - {location.name} ({location.city}, {location.state})
+                    </option>
+                  ))}
+                </select>
+                {errors.locationId && (
+                  <p className="mt-1 text-sm text-red-600">{errors.locationId.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Name *
+                </label>
+                <input
+                  {...register('name')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Warehouse name"
+                />
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Address
+                </label>
+                <textarea
+                  {...register('address')}
+                  rows={3}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Warehouse address"
+                />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  {...register('isActive')}
+                  type="checkbox"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label className="ml-2 block text-sm text-gray-900">
+                  Active Warehouse
+                </label>
+              </div>
+
+              {/* Change Summary */}
+              {isDirty && (
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <h4 className="text-sm font-medium text-yellow-800 mb-2">Changes will be applied to:</h4>
+                  <ul className="text-sm text-yellow-700 space-y-1">
+                    <li>• Warehouse information and address details</li>
+                    <li>• Location assignment affects inventory operations</li>
+                    <li>• Status changes affect production and inventory transactions</li>
+                    <li>• All existing inventory batches remain in this warehouse</li>
+                  </ul>
+                </div>
+              )}
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !isDirty}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EditWarehouseModal;
