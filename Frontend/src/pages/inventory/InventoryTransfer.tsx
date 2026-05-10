@@ -410,14 +410,12 @@ const InventoryTransfer = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Inventory Transfers
-          </h1>
-          <p className="text-gray-600">Transfer items between warehouses</p>
+          <h1 className="text-3xl font-bold text-black/80">Stock Transfers</h1>
+          <p className="text-gray-600">Transfer stock between warehouses</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-5 py-3 border border-transparent text-sm font-medium rounded-2xl shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Transfer
@@ -437,7 +435,7 @@ const InventoryTransfer = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Transfers
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-black/80">
                     {data?.pagination?.total || 0}
                   </dd>
                 </dl>
@@ -457,7 +455,7 @@ const InventoryTransfer = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Today's Transfers
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-black/80">
                     {data?.transfers?.filter(
                       (t: InventoryTransfer) =>
                         new Date(t.createdAt).toDateString() ===
@@ -481,7 +479,7 @@ const InventoryTransfer = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Items Moved
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-black/80">
                     {data?.transfers
                       ?.reduce(
                         (sum: number, t: InventoryTransfer) =>

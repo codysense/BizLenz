@@ -85,7 +85,7 @@ const CompanySettings = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Company Settings</h1>
+          <h1 className="text-3xl font-bold text-black/80">Company Settings</h1>
           <p className="text-gray-600">Manage your company information and preferences</p>
         </div>
       </div>
@@ -95,7 +95,7 @@ const CompanySettings = () => {
         <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
           <div className="flex items-center">
             <Building2 className="h-6 w-6 text-gray-400 mr-3" />
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
+            <h3 className="text-2xl leading-6 font-medium text-gray-900">
               Company Information
             </h3>
           </div>

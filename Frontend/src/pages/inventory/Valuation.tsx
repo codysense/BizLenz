@@ -95,7 +95,7 @@ const InventoryValuation = () => {
   const totalQuantity =
     valuationData?.valuation?.reduce(
       (sum: number, item: InventoryValuationType) => sum + item.qty,
-      0
+      0,
     ) || 0;
   const totalValue = valuationData?.totalValue || 0;
   const avgUnitCost = totalQuantity > 0 ? totalValue / totalQuantity : 0;
@@ -105,9 +105,7 @@ const InventoryValuation = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Inventory Valuation
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900">Stock Valuation</h1>
           <p className="text-gray-600">
             Current inventory values and costing analysis
           </p>
@@ -173,7 +171,7 @@ const InventoryValuation = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Items
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-2xl font-bold text-black/80">
                     {totalItems}
                   </dd>
                 </dl>
@@ -193,7 +191,7 @@ const InventoryValuation = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Quantity
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-2xl font-bold text-black/80">
                     {totalQuantity.toLocaleString()}
                   </dd>
                 </dl>
@@ -202,7 +200,7 @@ const InventoryValuation = () => {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white overflow-hidden  shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -213,7 +211,7 @@ const InventoryValuation = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Value
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-2xl font-bold text-black/80 ">
                     ₦{totalValue.toLocaleString()}
                   </dd>
                 </dl>
@@ -233,7 +231,7 @@ const InventoryValuation = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Avg Unit Cost
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-2xl font-bold text-black/80">
                     ₦{avgUnitCost.toLocaleString()}
                   </dd>
                 </dl>

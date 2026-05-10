@@ -229,9 +229,9 @@ const InventoryLedger = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inventory Ledger</h1>
+          <h1 className="text-3xl font-bold text-black/80">Stock Register</h1>
           <p className="text-gray-600">
-            Track all inventory movements and transactions
+            Track all stock movements and transactions
           </p>
         </div>
         <div className="flex space-x-2">
@@ -465,7 +465,7 @@ const InventoryLedger = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Transactions
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-black/80">
                     {ledgerData?.pagination?.total || 0}
                   </dd>
                 </dl>
@@ -485,9 +485,9 @@ const InventoryLedger = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Inbound Transactions
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-black/80">
                     {ledgerData?.entries?.filter(
-                      (e: InventoryLedgerEntry) => e.direction === "IN"
+                      (e: InventoryLedgerEntry) => e.direction === "IN",
                     ).length || 0}
                   </dd>
                 </dl>
@@ -507,9 +507,9 @@ const InventoryLedger = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Outbound Transactions
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-black/80">
                     {ledgerData?.entries?.filter(
-                      (e: InventoryLedgerEntry) => e.direction === "OUT"
+                      (e: InventoryLedgerEntry) => e.direction === "OUT",
                     ).length || 0}
                   </dd>
                 </dl>
@@ -529,12 +529,12 @@ const InventoryLedger = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Active Users
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-black/80">
                     {ledgerData?.entries
                       ? new Set(
                           ledgerData.entries
                             .filter((e: InventoryLedgerEntry) => e.user)
-                            .map((e: InventoryLedgerEntry) => e.user?.name)
+                            .map((e: InventoryLedgerEntry) => e.user?.name),
                         ).size
                       : 0}
                   </dd>

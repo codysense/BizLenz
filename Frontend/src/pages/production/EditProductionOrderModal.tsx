@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { X, Save, AlertTriangle } from "lucide-react";
+import { X, Save, AlertTriangle, Factory } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { productionApi, inventoryApi } from "../../lib/api";
 import { ProductionOrder } from "../../types/api";
@@ -43,7 +43,6 @@ const EditProductionOrderModal = ({
       bomId: order.bomId || "",
     },
   });
-  console.log("order passed", order);
 
   const selectedItemId = watch("itemId");
 
@@ -91,172 +90,212 @@ const EditProductionOrderModal = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex min-h-screen items-center justify-center px-4 py-6">
+        {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm"
           onClick={onClose}
         />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  Edit Production Order
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {order.orderNo} - Current Status: {order.status}
-                </p>
+        {/* Modal */}
+        <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+          {/* Header */}
+          <div className="border-b border-gray-100 px-6 py-5">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md">
+                  <Factory className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Edit Production Order
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {order.orderNo} • Status:{" "}
+                    <span className="font-medium">{order.status}</span>
+                  </p>
+                </div>
               </div>
+
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
+          </div>
 
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="max-h-[80vh] overflow-y-auto px-6 py-6 space-y-6"
+          >
+            {/* Released Warning */}
             {order.status === "RELEASED" && (
-              <div className="mb-4 bg-yellow-50 p-4 rounded-lg">
-                <div className="flex">
-                  <AlertTriangle className="h-5 w-5 text-yellow-400 mr-2" />
-                  <div className="text-sm text-yellow-800">
-                    <strong>Warning:</strong> This production order has been
-                    released. Changes may affect material planning and
-                    scheduling.
+              <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-yellow-800">
+                      Released Order Warning
+                    </h4>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      This production order has already been released. Updating
+                      it may affect material planning, scheduling, and
+                      operational workflows.
+                    </p>
                   </div>
                 </div>
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Production Details */}
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-5 space-y-5">
+              <h4 className="text-sm font-semibold text-gray-900">
+                Production Details
+              </h4>
+
+              {/* Finished Goods */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="mb-2 block text-sm font-medium text-gray-700">
                   Finished Goods Item *
                 </label>
+
                 <select
                   {...register("itemId")}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
                 >
                   <option value="">Select finished goods item</option>
+
                   {finishedGoods?.items?.map((item: any) => (
                     <option key={item.id} value={item.id}>
                       {item.sku} - {item.name}
                     </option>
                   ))}
                 </select>
+
                 {errors.itemId && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="mt-2 text-sm text-red-500">
                     {errors.itemId.message}
                   </p>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Qty + Warehouse */}
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
                     Target Quantity *
                   </label>
+
                   <input
                     {...register("qtyTarget", { valueAsNumber: true })}
                     type="number"
                     step="0.001"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     placeholder="100"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
                   />
+
                   {errors.qtyTarget && (
-                    <p className="mt-1 text-sm text-red-600">
+                    <p className="mt-2 text-sm text-red-500">
                       {errors.qtyTarget.message}
                     </p>
                   )}
-                  <p className="mt-1 text-xs text-gray-500">
-                    Original: {order.qtyTarget}
+
+                  <p className="mt-2 text-xs text-gray-500">
+                    Original Quantity: {order.qtyTarget}
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
                     Warehouse *
                   </label>
+
                   <select
                     {...register("warehouseId")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
                   >
                     <option value="">Select warehouse</option>
+
                     {warehouses?.warehouses?.map((warehouse: any) => (
                       <option key={warehouse.id} value={warehouse.id}>
                         {warehouse.code} - {warehouse.name}
                       </option>
                     ))}
                   </select>
+
                   {errors.warehouseId && (
-                    <p className="mt-1 text-sm text-red-600">
+                    <p className="mt-2 text-sm text-red-500">
                       {errors.warehouseId.message}
                     </p>
                   )}
                 </div>
               </div>
+            </div>
 
-              {selectedItemId && boms && boms.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Bill of Materials
-                  </label>
-                  <select
-                    {...register("bomId")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  >
-                    <option value="">No BOM - Manual material planning</option>
-                    {boms.map((bom: any) => (
-                      <option key={bom.id} value={bom.id}>
-                        Version {bom.version} ({bom.bomLines.length} components)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            {/* BOM Selection */}
+            {selectedItemId && boms && boms.length > 0 && (
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                <h4 className="text-sm font-semibold text-blue-900 mb-3">
+                  Bill of Materials
+                </h4>
 
-              {/* Change Summary */}
-              {isDirty && (
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium text-yellow-800 mb-2">
-                    Changes Summary:
-                  </h4>
-                  <ul className="text-sm text-yellow-700 space-y-1">
-                    <li>• Production order details will be updated</li>
-                    <li>
-                      • Material requirements may change if item or quantity is
-                      modified
-                    </li>
-                    {order.status === "RELEASED" && (
-                      <li>
-                        • <strong>Warning:</strong> This may affect material
-                        planning and scheduling
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                <select
+                  {...register("bomId")}
+                  className="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !isDirty}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isSubmitting ? "Saving..." : "Save Changes"}
-                </button>
+                  <option value="">No BOM - Manual material planning</option>
+
+                  {boms.map((bom: any) => (
+                    <option key={bom.id} value={bom.id}>
+                      Version {bom.version} ({bom.bomLines.length} components)
+                    </option>
+                  ))}
+                </select>
               </div>
-            </form>
-          </div>
+            )}
+
+            {/* Change Summary */}
+            {isDirty && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                <h4 className="text-sm font-semibold text-amber-900 mb-3">
+                  Change Impact
+                </h4>
+
+                <ul className="space-y-2 text-sm text-amber-800">
+                  <li>• Production order details will be updated</li>
+                  <li>• Material requirements may be recalculated</li>
+                  <li>• Inventory planning may be affected</li>
+
+                  {order.status === "RELEASED" && (
+                    <li>• Released orders may impact live scheduling</li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 border-t border-gray-100 pt-5">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || !isDirty}
+                className="inline-flex items-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-md hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

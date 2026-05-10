@@ -3,7 +3,14 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { X, Plus, Trash2, Calculator, AlertTriangle } from "lucide-react";
+import {
+  X,
+  Plus,
+  Trash2,
+  Calculator,
+  AlertTriangle,
+  Package,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { productionApi, inventoryApi } from "../../lib/api";
 import { ProductionOrder } from "../../types/api";
@@ -238,268 +245,283 @@ const IssueMaterialsModal = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex min-h-screen items-center justify-center px-4 py-6">
+        {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm"
           onClick={onClose}
         />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Issue Materials: {order.orderNo}
-              </h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
+        {/* Modal */}
+        <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+          {/* Header */}
+          <div className="border-b border-gray-100 px-6 py-5">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-md">
+                  <Package className="h-5 w-5" />
+                </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Order Info */}
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-                  <div>
-                    <span className="text-sm text-gray-500">Item:</span>
-                    <div className="font-medium">{order.item.name}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500">Target Qty:</span>
-                    <div className="font-medium">{order.qtyTarget}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500">Warehouse:</span>
-                    <div className="font-medium">{order.warehouse.name}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500">
-                      BOM Available:
-                    </span>
-                    <div className="font-medium">
-                      {order.bom
-                        ? `Yes (${order.bom.bomLines.length} components)`
-                        : "No"}
-                    </div>
-                  </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Issue Materials
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Production Order: {order.orderNo}
+                  </p>
                 </div>
               </div>
 
-              {/* BOM Information */}
-              {order.bom && (
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium text-green-900">
-                      Bill of Materials (Version {order.bom.version || "1.0"})
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={calculateFromBOM}
-                      className="inline-flex items-center px-3 py-2 border border-green-300 shadow-sm text-sm leading-4 font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                      <Calculator className="h-4 w-4 mr-2" />
-                      Auto-Calculate from BOM
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {order.bom.bomLines.map((line, index) => {
-                      const baseQty =
-                        Number(line.qtyPer) * Number(order.qtyTarget);
-                      const scrapMultiplier =
-                        1 + Number(line.scrapPercent) / 100;
-                      const totalQty = baseQty * scrapMultiplier;
+              <button
+                onClick={onClose}
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
 
-                      return (
-                        <div key={index} className="text-sm">
-                          <div className="font-medium">
-                            {line.componentItem.sku}
-                          </div>
-                          <div className="text-green-700">
-                            {line.qtyPer} × {order.qtyTarget} = {baseQty}{" "}
-                            {line.componentItem.uom}
-                            {line.scrapPercent > 0 && (
-                              <span className="text-orange-600">
-                                {" "}
-                                (+{line.scrapPercent}% scrap ={" "}
-                                {totalQty.toFixed(3)})
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="max-h-[85vh] overflow-y-auto px-6 py-6 space-y-6"
+          >
+            {/* Order Summary */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                <p className="text-xs text-gray-500">Item</p>
+                <p className="font-semibold text-gray-900">{order.item.name}</p>
+              </div>
+
+              <div className="rounded-2xl border border-green-100 bg-green-50 p-4">
+                <p className="text-xs text-gray-500">Target Qty</p>
+                <p className="font-semibold text-gray-900">{order.qtyTarget}</p>
+              </div>
+
+              <div className="rounded-2xl border border-purple-100 bg-purple-50 p-4">
+                <p className="text-xs text-gray-500">Warehouse</p>
+                <p className="font-semibold text-gray-900">
+                  {order.warehouse.name}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
+                <p className="text-xs text-gray-500">BOM Status</p>
+                <p className="font-semibold text-gray-900">
+                  {order.bom
+                    ? `Available (${order.bom.bomLines.length})`
+                    : "No BOM"}
+                </p>
+              </div>
+            </div>
+
+            {/* BOM Preview */}
+            {order.bom && (
+              <div className="rounded-2xl border border-green-100 bg-green-50 p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-green-900">
+                      Bill of Materials
+                    </h4>
+                    <p className="text-sm text-green-700">
+                      Version {order.bom.version || "1.0"}
+                    </p>
                   </div>
-                </div>
-              )}
-              {/* Materials */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-md font-medium text-gray-900">
-                    Materials to Issue
-                  </h4>
+
                   <button
                     type="button"
-                    onClick={() => append({ itemId: "", qty: 1 })}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    onClick={calculateFromBOM}
+                    className="inline-flex items-center rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Material
+                    <Calculator className="mr-2 h-4 w-4" />
+                    Auto Calculate
                   </button>
                 </div>
 
-                {errors.materials && (
-                  <p className="mb-4 text-sm text-red-600">
-                    {errors.materials.message}
-                  </p>
-                )}
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {order.bom.bomLines.map((line, index) => {
+                    const baseQty =
+                      Number(line.qtyPer) * Number(order.qtyTarget);
 
-                <div className="space-y-4">
-                  {fields.map((field, index) => (
-                    <div key={field.id} className="bg-gray-50 p-4 rounded-lg">
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-                        <div className="sm:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Material *
-                          </label>
-                          <select
-                            {...register(`materials.${index}.itemId`)}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                          >
-                            {rawMaterials
-                              ? "Select material"
-                              : "Loading materials..."}
-                            {allMaterials.map((item: any) => (
-                              <option key={item.id} value={item.id}>
-                                {item.sku} - {item.name}
-                              </option>
-                            ))}
-                            {/* {rawMaterials?.items?.map((item: any) => (
-                              <option key={item.id} value={item.id}>
-                                {item.sku} - {item.name}
-                                (Stock: {stockData?.[item.id]?.qty ?? 0}{" "}
-                                {item.uom})
-                                {stockData?.[item.id]?.avgCost
-                                  ? ` - ₦${stockData[item.id].avgCost.toLocaleString()}`
-                                  : ""}
-                              </option>
-                            ))} */}
-                          </select>
-                          {errors.materials?.[index]?.itemId && (
-                            <p className="mt-1 text-sm text-red-600">
-                              {errors.materials[index]?.itemId?.message}
-                            </p>
-                          )}
-                        </div>
+                    const scrapMultiplier = 1 + Number(line.scrapPercent) / 100;
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Available Stock
-                          </label>
-                          <div className="mt-1 p-2 bg-white border border-gray-200 rounded-md text-sm">
-                            {(() => {
-                              const selectedItem = rawMaterials?.items?.find(
-                                (item: any) =>
-                                  item.id === watchedMaterials[index]?.itemId,
-                              );
-                              const stock =
-                                stockData?.[watchedMaterials[index]?.itemId]
-                                  ?.qty || 0;
+                    const totalQty = baseQty * scrapMultiplier;
 
-                              const isInsufficient =
-                                stock < (watchedMaterials[index]?.qty || 0);
+                    return (
+                      <div
+                        key={index}
+                        className="rounded-xl bg-white p-4 border border-green-100"
+                      >
+                        <p className="font-medium text-gray-900">
+                          {line.componentItem.sku}
+                        </p>
 
-                              return (
-                                <div
-                                  className={`flex items-center ${
-                                    isInsufficient
-                                      ? "text-red-600"
-                                      : "text-green-600"
-                                  }`}
-                                >
-                                  {isInsufficient && (
-                                    <AlertTriangle className="h-4 w-4 mr-1" />
-                                  )}
-                                  <span>
-                                    {stock} {selectedItem?.uom || "units"}
-                                  </span>
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {line.qtyPer} × {order.qtyTarget} = {baseQty}{" "}
+                          {line.componentItem.uom}
+                        </p>
 
-                        <div className="flex items-end">
-                          <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Quantity *
-                            </label>
-                            <input
-                              {...register(`materials.${index}.qty`, {
-                                valueAsNumber: true,
-                              })}
-                              type="number"
-                              step="0.001"
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                              placeholder="1.00"
-                            />
-                            {errors.materials?.[index]?.qty && (
-                              <p className="mt-1 text-sm text-red-600">
-                                {errors.materials[index]?.qty?.message}
-                              </p>
-                            )}
-                          </div>
-                          {fields.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => remove(index)}
-                              className="ml-2 inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-gray-500 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
+                        {line.scrapPercent > 0 && (
+                          <p className="text-sm text-orange-600 mt-1">
+                            +{line.scrapPercent}% scrap → {totalQty.toFixed(3)}
+                          </p>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
+            )}
 
-              {/* Cost Summary */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-medium text-gray-900">
-                    Estimated Total Cost:
-                  </span>
-                  <span className="text-2xl font-bold text-blue-600">
-                    ₦{calculateTotalCost().toLocaleString()}
-                  </span>
-                </div>
-                <div className="mt-2 text-sm text-gray-600">
-                  Based on inventory average costs of selected
-                  materials(warehouse-specific).
-                </div>
-              </div>
+            {/* Materials Section */}
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-5">
+              <div className="mb-5 flex items-center justify-between">
+                <h4 className="font-semibold text-gray-900">
+                  Materials to Issue
+                </h4>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t">
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  onClick={() => append({ itemId: "", qty: 1 })}
+                  className="inline-flex items-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? "Issuing..." : "Issue Materials"}
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Material
                 </button>
               </div>
-            </form>
-          </div>
+
+              {fields.map((field, index) => (
+                <div
+                  key={field.id}
+                  className="mb-4 rounded-2xl bg-white border border-gray-100 p-5 shadow-sm"
+                >
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    {/* Material Select */}
+                    <div className="md:col-span-2">
+                      <label className="mb-2 block text-sm font-medium text-gray-700">
+                        Material
+                      </label>
+
+                      <select
+                        {...register(`materials.${index}.itemId`)}
+                        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none"
+                      >
+                        <option value="">Select material</option>
+
+                        {allMaterials.map((item: any) => (
+                          <option key={item.id} value={item.id}>
+                            {item.sku} - {item.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Stock */}
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700">
+                        Available Stock
+                      </label>
+
+                      <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
+                        {(() => {
+                          const selectedItem = rawMaterials?.items?.find(
+                            (item: any) =>
+                              item.id === watchedMaterials[index]?.itemId,
+                          );
+
+                          const stock =
+                            stockData?.[watchedMaterials[index]?.itemId]?.qty ||
+                            0;
+
+                          const isInsufficient =
+                            stock < (watchedMaterials[index]?.qty || 0);
+
+                          return (
+                            <div
+                              className={`flex items-center ${
+                                isInsufficient
+                                  ? "text-red-600"
+                                  : "text-green-600"
+                              }`}
+                            >
+                              {isInsufficient && (
+                                <AlertTriangle className="mr-2 h-4 w-4" />
+                              )}
+                              {stock} {selectedItem?.uom || "units"}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Quantity */}
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
+                          Quantity
+                        </label>
+
+                        <input
+                          {...register(`materials.${index}.qty`, {
+                            valueAsNumber: true,
+                          })}
+                          type="number"
+                          step="0.001"
+                          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none"
+                        />
+                      </div>
+
+                      {fields.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => remove(index)}
+                          className="rounded-xl border border-red-100 bg-red-50 p-3 text-red-600 hover:bg-red-100"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Cost Summary */}
+            <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">
+                    Estimated Material Cost
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Based on warehouse inventory average cost
+                  </p>
+                </div>
+
+                <div className="text-3xl font-bold text-blue-600">
+                  ₦{calculateTotalCost().toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 border-t border-gray-100 pt-5">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-md hover:opacity-90 disabled:opacity-50"
+              >
+                {isSubmitting ? "Issuing..." : "Issue Materials"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

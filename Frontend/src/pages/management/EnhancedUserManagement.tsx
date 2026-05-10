@@ -184,138 +184,128 @@ const EnhancedUserManagement = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+            User Management
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
             Manage system users, roles, and permissions
           </p>
         </div>
+
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-md transition"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create User
         </button>
       </div>
 
-      {/* Search */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* Search Section */}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Search Users
             </label>
+
             <input
               type="text"
               placeholder="Search by name or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Users className="h-6 w-6 text-gray-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Total Users
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.pagination?.total || 0}
-                  </dd>
-                </dl>
-              </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        {/* Total Users */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Total Users</p>
+              <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                {data?.pagination?.total || 0}
+              </h3>
+            </div>
+
+            <div className="h-12 w-12 rounded-xl bg-gray-100 flex items-center justify-center">
+              <Users className="h-6 w-6 text-gray-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Users className="h-6 w-6 text-green-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Active Users
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.users?.filter(
-                      (u: UserWithDetails) => u.status === "ACTIVE",
-                    ).length || 0}
-                  </dd>
-                </dl>
-              </div>
+        {/* Active Users */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Active Users</p>
+              <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                {data?.users?.filter(
+                  (u: UserWithDetails) => u.status === "ACTIVE",
+                ).length || 0}
+              </h3>
+            </div>
+
+            <div className="h-12 w-12 rounded-xl bg-green-100 flex items-center justify-center">
+              <Users className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Shield className="h-6 w-6 text-blue-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Accountants
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.users?.filter((u: UserWithDetails) =>
-                      u.roles.some((r) => r.name === "Senior Accountant"),
-                    ).length || 0}
-                  </dd>
-                </dl>
-              </div>
+        {/* Accountants */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Accountants</p>
+              <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                {data?.users?.filter((u: UserWithDetails) =>
+                  u.roles.some((r) => r.name === "Senior Accountant"),
+                ).length || 0}
+              </h3>
+            </div>
+
+            <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
+              <Shield className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Shield className="h-6 w-6 text-purple-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    General Managers
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.users?.filter((u: UserWithDetails) =>
-                      u.roles.some((r) => r.name === "General Manager"),
-                    ).length || 0}
-                  </dd>
-                </dl>
-              </div>
+        {/* General Managers */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">General Managers</p>
+              <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                {data?.users?.filter((u: UserWithDetails) =>
+                  u.roles.some((r) => r.name === "General Manager"),
+                ).length || 0}
+              </h3>
+            </div>
+
+            <div className="h-12 w-12 rounded-xl bg-purple-100 flex items-center justify-center">
+              <Shield className="h-6 w-6 text-purple-600" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Data Table */}
-      <DataTable
-        data={data?.users || []}
-        columns={columns}
-        loading={isLoading}
-        pagination={data?.pagination}
-        onPageChange={setPage}
-        actions={actions}
-      />
+      {/* Data Table Section */}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4">
+        <DataTable
+          data={data?.users || []}
+          columns={columns}
+          loading={isLoading}
+          pagination={data?.pagination}
+          onPageChange={setPage}
+          actions={actions}
+        />
+      </div>
 
       {/* Create Modal */}
       {showCreateModal && (

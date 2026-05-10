@@ -61,9 +61,16 @@ router.post(
 // Vendors
 router.get(
   "/vendors",
-  requireRole(["Inventory Manager", "Senior Accountant", "Accountant", "Auditor"]),
+  requireRole([
+    "Inventory Manager",
+    "Senior Accountant",
+    "Accountant",
+    "Auditor",
+  ]),
   purchaseController.getVendors,
 );
+
+router.get("/vendors/:id", purchaseController.getVendorById);
 router.post(
   "/vendors",
   requireRole(["Inventory Manager", "Senior Accountant"]),

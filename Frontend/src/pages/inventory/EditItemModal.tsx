@@ -107,48 +107,61 @@ const EditItemModal = ({ item, onClose, onSuccess }: EditItemModalProps) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          onClick={onClose}
-        />
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Edit Item</h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen p-4">
+        {/* MODAL CONTAINER */}
+        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
+          {/* HEADER */}
+          <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-5 flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Edit Item</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Update inventory item details
+              </p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* === BASIC FIELDS === */}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* FORM */}
+          <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+            {/* BASIC INFO CARD */}
+            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 space-y-4">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Basic Information
+              </h4>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* SKU */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-gray-700">
                     SKU *
                   </label>
                   <input
                     {...register("sku")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="e.g., RM-001"
                   />
                   {errors.sku && (
-                    <p className="text-sm text-red-600">{errors.sku.message}</p>
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.sku.message}
+                    </p>
                   )}
                 </div>
 
+                {/* TYPE */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-gray-700">
                     Type *
                   </label>
                   <select
                     {...register("type")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="RAW_MATERIAL">Raw Material</option>
                     <option value="WORK_IN_PROGRESS">Work in Progress</option>
@@ -158,152 +171,169 @@ const EditItemModal = ({ item, onClose, onSuccess }: EditItemModalProps) => {
                 </div>
               </div>
 
+              {/* NAME */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-gray-700">
                   Name *
                 </label>
                 <input
                   {...register("name")}
-                  className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
                 {errors.name && (
-                  <p className="text-sm text-red-600">{errors.name.message}</p>
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.name.message}
+                  </p>
                 )}
               </div>
 
+              {/* DESCRIPTION */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-gray-700">
                   Description
                 </label>
                 <textarea
                   {...register("description")}
-                  rows={2}
-                  className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  rows={3}
+                  className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Minimum Stock Level
-                </label>
-                <input
-                  {...register("minimumStockLevel", { valueAsNumber: true })}
-                  type="number"
-                  step="0.01"
-                  className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="0.00"
-                />
-              </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
+            {/* INVENTORY INFO */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm space-y-4">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Inventory Details
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* MIN STOCK */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-gray-700">
+                    Minimum Stock
+                  </label>
+                  <input
+                    {...register("minimumStockLevel", { valueAsNumber: true })}
+                    type="number"
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+
+                {/* COST */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
                     Standard Cost
                   </label>
                   <input
                     {...register("standardCost", { valueAsNumber: true })}
                     type="number"
                     step="0.01"
-                    className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
+
+                {/* UOM */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-gray-700">
                     UOM
                   </label>
                   <input
                     {...register("uom")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="QTY"
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="e.g., PCS"
                   />
                 </div>
               </div>
+            </div>
 
-              {/* === PRICE LIST === */}
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-md font-medium text-gray-900">
-                    Price List
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => append({ customerGroup: "", price: 0 })}
-                    className="inline-flex items-center px-3 py-1 border rounded-md text-sm bg-white hover:bg-gray-50 "
+            {/* PRICE LIST */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  Price List
+                </h4>
+
+                <button
+                  type="button"
+                  onClick={() => append({ customerGroup: "", price: 0 })}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+                >
+                  <Plus className="h-4 w-4 inline mr-1" />
+                  Add Price
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="grid grid-cols-1 sm:grid-cols-5 gap-3 bg-gray-50 border border-gray-100 rounded-2xl p-4"
                   >
-                    <Plus className="h-4 w-4 mr-1" /> Add Price
-                  </button>
-                </div>
+                    {/* GROUP */}
+                    <div className="sm:col-span-2">
+                      <label className="text-sm text-gray-700">
+                        Customer Group
+                      </label>
+                      <select
+                        {...register(`priceList.${index}.customerGroup`)}
+                        className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="">Select Group</option>
+                        {groups.map((g: any) => (
+                          <option key={g.id} value={g.name}>
+                            {g.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div className="space-y-3">
-                  {fields.map((field, index) => (
-                    <div
-                      key={field.id}
-                      className="grid grid-cols-5 gap-4 items-end"
-                    >
-                      <div className="col-span-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Customer Group *
-                        </label>
-                        <select
-                          {...register(`priceList.${index}.customerGroup`)}
-                          className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3  focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        >
-                          <option value="">Select Group</option>
-                          {isGroupsLoading ? (
-                            <option disabled>Loading...</option>
-                          ) : (
-                            groups.map((g: any) => (
-                              <option key={g.id} value={g.name}>
-                                {g.name}
-                              </option>
-                            ))
-                          )}
-                        </select>
-                      </div>
+                    {/* PRICE */}
+                    <div className="sm:col-span-2">
+                      <label className="text-sm text-gray-700">Price</label>
+                      <input
+                        {...register(`priceList.${index}.price`, {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        step="0.01"
+                        className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
 
-                      <div className="col-span-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Price *
-                        </label>
-                        <input
-                          {...register(`priceList.${index}.price`, {
-                            valueAsNumber: true,
-                          })}
-                          type="number"
-                          step="0.01"
-                          className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        />
-                      </div>
-
+                    {/* DELETE */}
+                    <div className="flex items-end">
                       <button
                         type="button"
                         onClick={() => remove(index)}
-                        className="text-red-500 mt-5"
+                        className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-500"
                       >
                         <X className="h-5 w-5" />
                       </button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
+            </div>
 
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {isSubmitting ? "Updating..." : "Update Item"}
-                </button>
-              </div>
-            </form>
-          </div>
+            {/* ACTIONS */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50"
+              >
+                {isSubmitting ? "Updating..." : "Update Item"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

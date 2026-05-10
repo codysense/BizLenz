@@ -1,22 +1,24 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, Users, Edit } from 'lucide-react';
-import { salesApi } from '../../lib/api';
-import { DataTable } from '../../components/DataTable';
-import StatusBadge from '../../components/StatusBadge';
-import { CustomerGroup } from '../../types/api';
-import CreateCustomerGroupModal from './CreateCusomerGroupModal';
-import EditCustomerGroupModal from './EditCustomerGroup';
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Search, Users, Edit } from "lucide-react";
+import { salesApi } from "../../lib/api";
+import { DataTable } from "../../components/DataTable";
+import StatusBadge from "../../components/StatusBadge";
+import { CustomerGroup } from "../../types/api";
+import CreateCustomerGroupModal from "./CreateCusomerGroupModal";
+import EditCustomerGroupModal from "./EditCustomerGroup";
 
 const CustomerGroups = () => {
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<CustomerGroup | null>(
+    null,
+  );
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['customerGroups', { page, search }],
+    queryKey: ["customerGroups", { page, search }],
     queryFn: () =>
       salesApi.getCustomerGroups({
         page,
@@ -25,38 +27,38 @@ const CustomerGroups = () => {
       }),
   });
 
-  console.log(data)
+  console.log(data);
 
   const columns = [
     {
-      key: 'code',
-      header: 'Code',
-      width: 'w-24',
+      key: "code",
+      header: "Code",
+      width: "w-24",
     },
     {
-      key: 'name',
-      header: 'Group Name',
-      width: 'w-48',
+      key: "name",
+      header: "Group Name",
+      width: "w-48",
     },
     {
-      key: 'description',
-      header: 'Description',
-      cell: (group: CustomerGroup) => group.description || '-',
-      width: 'w-64',
+      key: "description",
+      header: "Description",
+      cell: (group: CustomerGroup) => group.description || "-",
+      width: "w-64",
     },
     {
-      key: 'customerCount',
-      header: 'Customers',
+      key: "customerCount",
+      header: "Customers",
       cell: (group: CustomerGroup) => group.customerCount || 0,
-      width: 'w-24',
+      width: "w-24",
     },
     {
-      key: 'isActive',
-      header: 'Status',
+      key: "isActive",
+      header: "Status",
       cell: (group: CustomerGroup) => (
-        <StatusBadge status={group.isActive ? 'Active' : 'Inactive'} />
+        <StatusBadge status={group.isActive ? "Active" : "Inactive"} />
       ),
-      width: 'w-24',
+      width: "w-24",
     },
   ];
 
@@ -91,12 +93,12 @@ const CustomerGroups = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Customer Groups</h1>
+          <h1 className="text-3xl font-bold text-black/80">Customer Groups</h1>
           <p className="text-gray-600">Manage your customer group categories</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-5 py-3 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Customer Group
@@ -134,7 +136,7 @@ const CustomerGroups = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Groups
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-gray-900">
                     {data?.pagination?.total || 0}
                   </dd>
                 </dl>
@@ -154,8 +156,9 @@ const CustomerGroups = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Active Groups
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.groups?.filter((g: CustomerGroup) => g.isActive).length || 0}
+                  <dd className="text-4xl font-bold text-black/80">
+                    {data?.groups?.filter((g: CustomerGroup) => g.isActive)
+                      .length || 0}
                   </dd>
                 </dl>
               </div>
@@ -174,10 +177,11 @@ const CustomerGroups = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Customers
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-gray-900">
                     {data?.groups?.reduce(
-                      (sum: number, g: CustomerGroup) => sum + (g.customerCount || 0),
-                      0
+                      (sum: number, g: CustomerGroup) =>
+                        sum + (g.customerCount || 0),
+                      0,
                     ) || 0}
                   </dd>
                 </dl>

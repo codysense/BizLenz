@@ -1,6 +1,7 @@
 import { useAuthStore } from "../store/authStore";
 import toast from "react-hot-toast";
 import { CreatePosReturnRequest } from "../types/api";
+import { get } from "react-hook-form";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
 
@@ -393,7 +394,18 @@ export const purchaseApi = {
         params ? "?" + new URLSearchParams(params as any).toString() : ""
       }`,
     ),
+
+  getVendorById: (id: string) => api.get(`/purchase/vendors/${id}`),
   createVendor: (data: any) => api.post("/purchase/vendors", data),
+};
+
+//Dashboard API
+export const dashboardApi = {
+  getExpenseBreakdown: () => api.get("/dashboard/expense-breakdown"),
+  getAlerts: () => api.get("/dashboard/alerts"),
+  getTopProducts: () => api.get("/dashboard/top-products"),
+  getTopCustomers: () => api.get("/dashboard/top-customers"),
+  getExecutiveSummary: () => api.get("/dashboard/executive-summary"),
 };
 
 // Sales API
@@ -422,6 +434,9 @@ export const salesApi = {
         params ? "?" + new URLSearchParams(params as any).toString() : ""
       }`,
     ),
+
+  getCustomerById: (id: string) => api.get(`/sales/customers/${id}`),
+
   createCustomer: (data: any) => api.post("/sales/customers", data),
 
   createCustomerGroup: (data) => api.post("/sales/customer-groups", data),
@@ -859,6 +874,8 @@ export const assetsApi = {
 
   // Reports
   getAssetRegister: (params?: {
+    page?: number;
+    limit?: number;
     categoryId?: string;
     status?: string;
     locationId?: string;

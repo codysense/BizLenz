@@ -1,71 +1,74 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, Building,Edit } from 'lucide-react';
-import { purchaseApi } from '../../lib/api';
-import { DataTable } from '../../components/DataTable';
-import StatusBadge from '../../components/StatusBadge';
-import { Vendor } from '../../types/api';
-import CreateVendorModal from './CreateVendorModal';
-import EditVendorModal from './EditVendorModal'
-import { Cell } from 'recharts';
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Search, Building, Edit } from "lucide-react";
+import { purchaseApi } from "../../lib/api";
+import { DataTable } from "../../components/DataTable";
+import StatusBadge from "../../components/StatusBadge";
+import { Vendor } from "../../types/api";
+import CreateVendorModal from "./CreateVendorModal";
+import EditVendorModal from "./EditVendorModal";
+import { Cell } from "recharts";
 
 const Vendors = () => {
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['vendors', { page, search }],
-    queryFn: () => purchaseApi.getVendors({ 
-      page, 
-      limit: 10, 
-      ...(search && { search })
-    })
+    queryKey: ["vendors", { page, search }],
+    queryFn: () =>
+      purchaseApi.getVendors({
+        page,
+        limit: 10,
+        ...(search && { search }),
+      }),
   });
 
   const columns = [
     {
-      key: 'code',
-      header: 'Code',
-      width: 'w-24'
+      key: "code",
+      header: "Code",
+      width: "w-24",
     },
     {
-      key: 'name',
-      header: 'Name',
-      width: 'w-48'
+      key: "name",
+      header: "Name",
+      width: "w-48",
     },
     {
-      key: 'address',
-      header: 'Address',
-      cell: (vendor: Vendor) => vendor.address || '-',
-      width: 'w-64'
+      key: "address",
+      header: "Address",
+      cell: (vendor: Vendor) => vendor.address || "-",
+      width: "w-64",
     },
     {
-      key: 'phone',
-      header: 'Phone',
-      cell: (vendor: Vendor) => vendor.phone || '-',
-      width: 'w-32'
+      key: "phone",
+      header: "Phone",
+      cell: (vendor: Vendor) => vendor.phone || "-",
+      width: "w-32",
     },
     {
-      key: 'email',
-      header: 'Email',
-      cell: (vendor: Vendor) => vendor.email || '-',
-      width: 'w-48'
+      key: "email",
+      header: "Email",
+      cell: (vendor: Vendor) => vendor.email || "-",
+      width: "w-48",
     },
     {
-      key: 'paymentTerms',
-      header: 'Payment Terms',
-      cell: (vendor: Vendor) => vendor.paymentTerms || '-',
-      width: 'w-32'
+      key: "paymentTerms",
+      header: "Payment Terms",
+      cell: (vendor: Vendor) => vendor.paymentTerms || "-",
+      width: "w-32",
     },
     {
-      key: 'isActive',
-      header: 'Status',
-      cell: (vendor: Vendor) => <StatusBadge status={vendor.isActive ? 'Active' : 'Inactive'} />,
-      width: 'w-24'
-    }
+      key: "isActive",
+      header: "Status",
+      cell: (vendor: Vendor) => (
+        <StatusBadge status={vendor.isActive ? "Active" : "Inactive"} />
+      ),
+      width: "w-24",
+    },
   ];
 
   const handleCreateVendor = () => {
@@ -73,48 +76,46 @@ const Vendors = () => {
     setShowCreateModal(false);
   };
 
-  const handleEditVendor = ()=>{
-      refetch();
-      setShowEditModal(false);
-      setSelectedVendor(null);
-    }
-  
-    //  const handleDeleteItem = async (item: Item) => {
-    //     if (confirm(`Are you sure you want to delete Inventory ${item.name}?`)) {
-    //       try {
-    //         await inventoryApi.deleteItem(item.sku);
-    //         toast.success('Item deleted successfully');
-    //         refetch();
-    //       } catch (error) {
-    //         console.error('Delete Item error:', error);
-    //       }
-    //     }
-    //   };
-  
-    const actions = (vendor: Vendor) => (
-        <div className="flex space-x-2">
-          <button
-            onClick={() => {
-              setSelectedVendor(vendor);
-              setShowEditModal(true);
-            }}
-            className="text-blue-600 hover:text-blue-900"
-            title="Edit Vendor"
-          >
-            <Edit className="h-4 w-4" />
-          </button>
-  
-          
-                  {/* <button
+  const handleEditVendor = () => {
+    refetch();
+    setShowEditModal(false);
+    setSelectedVendor(null);
+  };
+
+  //  const handleDeleteItem = async (item: Item) => {
+  //     if (confirm(`Are you sure you want to delete Inventory ${item.name}?`)) {
+  //       try {
+  //         await inventoryApi.deleteItem(item.sku);
+  //         toast.success('Item deleted successfully');
+  //         refetch();
+  //       } catch (error) {
+  //         console.error('Delete Item error:', error);
+  //       }
+  //     }
+  //   };
+
+  const actions = (vendor: Vendor) => (
+    <div className="flex space-x-2">
+      <button
+        onClick={() => {
+          setSelectedVendor(vendor);
+          setShowEditModal(true);
+        }}
+        className="text-blue-600 hover:text-blue-900"
+        title="Edit Vendor"
+      >
+        <Edit className="h-4 w-4" />
+      </button>
+
+      {/* <button
                     onClick={() => handleDeleteItem(item)}
                     className="text-red-600 hover:text-red-900"
                     title="Delete Item"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button> */}
-                
-        </div>
-      );
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -126,7 +127,7 @@ const Vendors = () => {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-5 py-3 border border-transparent text-sm font-medium rounded-2xl shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Vendor
@@ -164,7 +165,7 @@ const Vendors = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Vendors
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-black/80">
                     {data?.pagination?.total || 0}
                   </dd>
                 </dl>
@@ -184,8 +185,9 @@ const Vendors = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Active Vendors
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.vendors?.filter((v: Vendor) => v.isActive).length || 0}
+                  <dd className="text-4xl font-bold text-black/80">
+                    {data?.vendors?.filter((v: Vendor) => v.isActive).length ||
+                      0}
                   </dd>
                 </dl>
               </div>
@@ -213,16 +215,16 @@ const Vendors = () => {
       )}
 
       {/* Edit Modal */}
-            {showEditModal && selectedVendor && (
-              <EditVendorModal
-                vendor={selectedVendor}
-                onClose={() => {
-                  setShowEditModal(false);
-                  setSelectedVendor(null);
-                }}
-                onSuccess={handleEditVendor}
-              />
-            )}
+      {showEditModal && selectedVendor && (
+        <EditVendorModal
+          vendor={selectedVendor}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedVendor(null);
+          }}
+          onSuccess={handleEditVendor}
+        />
+      )}
     </div>
   );
 };

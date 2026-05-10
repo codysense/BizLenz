@@ -935,9 +935,8 @@ export class PosController {
         ];
       }
 
-      /* =========================
-       Query Execution
-    ========================== */
+      //Query Execution
+
       const [sales, total] = await Promise.all([
         prisma.posSale.findMany({
           where,

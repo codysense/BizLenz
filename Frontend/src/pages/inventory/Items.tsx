@@ -169,42 +169,46 @@ const Items = () => {
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 bg-gray-50 min-h-screen p-6">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Items</h1>
-          <p className="text-gray-600">Manage your inventory items</p>
+          <h1 className="text-2xl font-bold text-gray-900">Inventory Items</h1>
+          <p className="text-gray-500 mt-1">
+            Manage and organize your stock items efficiently
+          </p>
         </div>
+
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm transition"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Item
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* FILTERS */}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* SEARCH */}
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
+            <Search className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
 
             <input
               type="text"
-              placeholder="Search items by sku"
+              placeholder="Search items by SKU or name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
             />
           </div>
+
+          {/* TYPE FILTER */}
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="w-full px-3 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
           >
             <option value="">All Types</option>
             <option value="RAW_MATERIAL">Raw Material</option>
@@ -212,20 +216,27 @@ const Items = () => {
             <option value="FINISHED_GOODS">Finished Goods</option>
             <option value="CONSUMABLE">Consumable</option>
           </select>
+
+          {/* OPTIONAL: QUICK ACTION SLOT (future proofing) */}
+          <div className="hidden md:flex items-center justify-end text-sm text-gray-400">
+            Filter inventory results
+          </div>
         </div>
       </div>
 
-      {/* Data Table */}
-      <DataTable
-        data={data?.items || []}
-        columns={columns}
-        loading={isLoading}
-        pagination={data?.pagination}
-        onPageChange={setPage}
-        actions={actions}
-      />
+      {/* TABLE WRAPPER */}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+        <DataTable
+          data={data?.items || []}
+          columns={columns}
+          loading={isLoading}
+          pagination={data?.pagination}
+          onPageChange={setPage}
+          actions={actions}
+        />
+      </div>
 
-      {/* Create Modal */}
+      {/* CREATE MODAL */}
       {showCreateModal && (
         <CreateItemModal
           onClose={() => setShowCreateModal(false)}
@@ -233,7 +244,7 @@ const Items = () => {
         />
       )}
 
-      {/* Edit Modal */}
+      {/* EDIT MODAL */}
       {showEditModal && selectedItem && (
         <EditItemModal
           item={selectedItem}

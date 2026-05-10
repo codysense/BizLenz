@@ -17,6 +17,7 @@ import posRoutes from "./routes/pos";
 import memos from "./routes/memo";
 import journal from "./routes/journal";
 import adjustment from "./routes/stockAdjustment";
+import dashboardRoutes from "./routes/dashboard";
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ app.use("/api/v1/pos", posRoutes);
 app.use("/api/v1/memos", memos);
 app.use("/api/v1/journal", journal);
 app.use("/api/v1/adjustment", adjustment);
+app.use("/api/v1/dashboard", dashboardRoutes);
 
 // app.use("/api", memoRoutes);
 

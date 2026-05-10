@@ -156,93 +156,106 @@ const CreateVendorPaymentModal = ({ onClose, onSuccess }: Props) => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75"
-          onClick={onClose}
-        />
+      {/* Overlay (BEHIND modal content) */}
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+        onClick={onClose}
+      />
 
-        <div className="inline-block bg-white rounded-lg shadow-xl transform transition-all sm:max-w-5xl sm:w-full sm:my-8">
-          <div className="bg-white p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Record vendor Payment
-              </h3>
+      {/* Centering wrapper */}
+      <div className="flex min-h-screen items-center justify-center px-4 py-6">
+        {/* Modal */}
+        <div className="relative z-50 w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden">
+          {/* 🔥 Gradient Header */}
+          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-white">
+                  Record Vendor Payment
+                </h3>
+                <p className="text-xs text-white/80">
+                  Enter payment details and allocate lines
+                </p>
+              </div>
+
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-white/80 hover:text-white"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
+          </div>
 
-            {/* FORM */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Row 1 - Vendor + Date */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Body */}
+          <div className="p-6 space-y-6 bg-white">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* Vendor + Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium">Vendor *</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Vendor *
+                  </label>
+
                   <VendorSelect
                     vendors={vendors?.vendors || []}
                     value={watch("vendorId")}
                     onChange={(v) => setValue("vendorId", v)}
                   />
+
                   {errors.vendorId && (
-                    <p className="text-red-600 text-sm">
+                    <p className="text-sm text-red-600 mt-1">
                       {errors.vendorId.message}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium">
+                  <label className="text-sm font-medium text-gray-700">
                     Payment Date *
                   </label>
+
                   <input
                     {...register("paymentDate")}
                     type="date"
-                    className="mt-1 w-full border rounded-md px-3 py-2"
+                    className="mt-1 w-full border rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
 
-              {/* Row 2 - Cash Account + Reference */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Cash Account + Reference */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium">
+                  <label className="text-sm font-medium text-gray-700">
                     Cash Account *
                   </label>
+
                   <select
                     {...register("cashAccountId")}
                     className="mt-1 w-full border rounded-md px-3 py-2"
                   >
                     <option value="">Select cash account</option>
+
                     {cashAccounts?.accounts?.map((a: any) => (
                       <option key={a.id} value={a.id}>
-                        {a.code} - {a.name} (₦
+                        {a.code} — {a.name} (₦
                         {Number(a.balance).toLocaleString()})
                       </option>
                     ))}
                   </select>
-                  {/* Zod error */}
-                  {errors.cashAccountId && (
-                    <p className="text-red-600 text-sm">
-                      {errors.cashAccountId.message}
-                    </p>
-                  )}
 
-                  {/* Insufficient balance error */}
                   {hasInsufficientBalance && (
-                    <p className="text-red-600 text-sm mt-1">
-                      Insufficient balance. Available: ₦
-                      {Number(selectedCashAccount.balance).toLocaleString()}
+                    <p className="text-sm text-red-600 mt-1">
+                      Insufficient balance
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium">Reference</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Reference
+                  </label>
+
                   <input
                     {...register("reference")}
                     className="mt-1 w-full border rounded-md px-3 py-2"
@@ -250,10 +263,10 @@ const CreateVendorPaymentModal = ({ onClose, onSuccess }: Props) => {
                 </div>
               </div>
 
-              {/* MULTILINE SECTION */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-md font-medium">Payment Lines</h4>
+              {/* Payment Lines */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-semibold text-gray-900">Payment Lines</h4>
 
                   <button
                     type="button"
@@ -265,148 +278,105 @@ const CreateVendorPaymentModal = ({ onClose, onSuccess }: Props) => {
                         description: "",
                       })
                     }
-                    className="px-3 py-2 border rounded-md bg-white"
+                    className="px-3 py-2 text-sm border rounded-md hover:bg-gray-50"
                   >
-                    <Plus className="h-4 w-4 mr-1 inline" /> Add Line
+                    + Add Line
                   </button>
                 </div>
 
-                {errors.lines && (
-                  <p className="text-red-600 text-sm mb-2">
-                    {errors.lines.message}
-                  </p>
-                )}
+                {fields.map((field, index) => (
+                  <div key={field.id} className="bg-gray-50 p-4 rounded-lg">
+                    <div className="grid grid-cols-1 sm:grid-cols-8 gap-4">
+                      {/* Purchase */}
+                      <div className="col-span-2">
+                        <label className="text-sm font-medium">Purchase</label>
 
-                <div className="space-y-4">
-                  {fields.map((field, index) => (
-                    <div key={field.id} className="bg-gray-50 p-4 rounded-lg">
-                      <div className="grid grid-cols-1 sm:grid-cols-8 gap-4">
-                        {/* saleId (optional) */}
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium ">
-                            Purchase (optional)
-                          </label>
+                        <select
+                          {...register(`lines.${index}.purchaseId`)}
+                          className="mt-1 w-full border rounded-md px-3 py-2"
+                        >
+                          <option value="">Select</option>
+                          {vendorPurchases?.purchases?.map((p: any) => (
+                            <option key={p.id} value={p.id}>
+                              #{p.orderNo} — ₦
+                              {Number(p.balanceAmount).toLocaleString()}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                          <select
-                            {...register(`lines.${index}.purchaseId`)}
-                            className="mt-1 w-full border rounded-md px-3 py-2"
-                            onChange={(e) => {
-                              const purchaseId = e.target.value;
+                      {/* GL */}
+                      <div className="col-span-2">
+                        <label className="text-sm font-medium">
+                          GL Account
+                        </label>
 
-                              setValue(
-                                `lines.${index}.purchaseId`,
-                                purchaseId,
-                                {
-                                  shouldDirty: true,
-                                  shouldValidate: true,
-                                },
-                              );
+                        <ChartAccountSelect
+                          accounts={chartAccounts?.accounts || []}
+                          value={watch(`lines.${index}.glAccountId`)}
+                          onChange={(v) =>
+                            setValue(`lines.${index}.glAccountId`, v)
+                          }
+                        />
+                      </div>
 
-                              const purchase = vendorPurchases?.purchases?.find(
-                                (p: any) => String(p.id) === String(purchaseId),
-                              );
+                      {/* Amount */}
+                      <div>
+                        <label className="text-sm font-medium">Amount</label>
 
-                              if (purchase) {
-                                setValue(
-                                  `lines.${index}.lineAmount`,
-                                  Number(purchase.balanceAmount) === 0
-                                    ? Number(purchase.totalAmount)
-                                    : Number(purchase.balanceAmount),
-                                  {
-                                    shouldDirty: true,
-                                    shouldValidate: true,
-                                  },
-                                );
-                              } else {
-                                // Optional: reset amount if no purchase selected
-                                setValue(`lines.${index}.lineAmount`, 0);
-                              }
-                            }}
+                        <input
+                          {...register(`lines.${index}.lineAmount`, {
+                            valueAsNumber: true,
+                          })}
+                          type="number"
+                          step="0.01"
+                          className="mt-1 w-full border rounded-md px-3 py-2"
+                        />
+                      </div>
+
+                      {/* Description */}
+                      <div className="col-span-2">
+                        <label className="text-sm font-medium">
+                          Description
+                        </label>
+
+                        <input
+                          {...register(`lines.${index}.description`)}
+                          className="mt-1 w-full border rounded-md px-3 py-2"
+                        />
+                      </div>
+
+                      {/* Remove */}
+                      <div className="flex items-center">
+                        {fields.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => remove(index)}
+                            className="p-3 border rounded-md bg-white"
                           >
-                            <option value="">Select Purchase</option>
-                            {vendorPurchases?.purchases?.map((p: any) => (
-                              <option key={p.id} value={p.id}>
-                                #{p.orderNo} — ₦
-                                {Number(p.balanceAmount).toLocaleString()}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* glAccount */}
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium ">
-                            GL Account *
-                          </label>
-                          <ChartAccountSelect
-                            accounts={chartAccounts?.accounts || []}
-                            value={watch(`lines.${index}.glAccountId`)}
-                            onChange={(v) =>
-                              setValue(`lines.${index}.glAccountId`, v)
-                            }
-                          />
-                        </div>
-
-                        {/* lineAmount */}
-                        <div>
-                          <label className="block text-sm font-medium">
-                            Amount *
-                          </label>
-                          <input
-                            {...register(`lines.${index}.lineAmount`, {
-                              valueAsNumber: true,
-                            })}
-                            type="number"
-                            step="0.01"
-                            className="mt-1 w-full border rounded-md px-3 py-2"
-                          />
-                        </div>
-
-                        {/* description */}
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium">
-                            Description
-                          </label>
-                          <input
-                            {...register(`lines.${index}.description`)}
-                            className="mt-1 w-full border rounded-md px-3 py-2"
-                          />
-                        </div>
-
-                        {/* remove button */}
-                        <div className="py-6">
-                          {fields.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => remove(index)}
-                              className="p-3 border rounded-md bg-white"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
 
               {/* TOTAL */}
-              <div className="bg-blue-50 p-4 rounded-lg mt-4">
-                <div className="flex justify-between">
-                  <span className="text-lg font-medium">Total Amount:</span>
-                  <span className="text-2xl font-bold text-blue-600">
-                    ₦{calculateTotal().toLocaleString()}
-                  </span>
-                </div>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg flex justify-between">
+                <span className="font-medium">Total Amount</span>
+                <span className="text-xl font-bold text-blue-700">
+                  ₦{calculateTotal().toLocaleString()}
+                </span>
               </div>
 
-              {/* FOOTER BUTTONS */}
-              <div className="flex justify-end space-x-3 pt-4">
+              {/* Footer */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 border rounded-md bg-white"
+                  className="px-4 py-2 border rounded-md hover:bg-gray-50"
                 >
                   Cancel
                 </button>
@@ -414,9 +384,9 @@ const CreateVendorPaymentModal = ({ onClose, onSuccess }: Props) => {
                 <button
                   type="submit"
                   disabled={isSubmitting || hasInsufficientBalance}
-                  className="px-4 py-2 rounded-md bg-red-600 text-white disabled:opacity-50"
+                  className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
                 >
-                  {isSubmitting ? "Recording..." : "Record Payment"}
+                  {isSubmitting ? "Processing..." : "Record Payment"}
                 </button>
               </div>
             </form>

@@ -74,196 +74,271 @@ const DeliverSaleModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          onClick={onClose}
-        />
+    <div className="fixed inset-0 z-50 ">
+      {/* Backdrop - behind modal */}
+      <div className="absolute inset-0 bg-black/40 z-0" />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Deliver Sales Order: {sale.orderNo}
-              </h3>
+      {/* Modal wrapper */}
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-0">
+        <div className="w-full max-w-6xl rounded-3xl bg-white border border-gray-100 shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-5 text-white">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-xl font-semibold tracking-tight">
+                  Deliver Sales Order
+                </h3>
+                <p className="text-sm text-blue-100 mt-1">
+                  Order: {sale.orderNo}
+                </p>
+              </div>
+
               <button
+                type="button"
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
+                className="rounded-full bg-white/20 p-2 hover:bg-white/30 transition"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 text-white" />
               </button>
             </div>
+          </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Sale Info */}
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <div>
-                    <span className="text-sm text-gray-500">Customer:</span>
-                    <div className="font-medium">{sale.customer.name}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500">Order Date:</span>
-                    <div className="font-medium">
-                      {new Date(sale.orderDate).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500">Total Amount:</span>
-                    <div className="font-medium">
-                      ₦{sale.totalAmount.toLocaleString()}
-                    </div>
-                  </div>
+          {/* Scrollable Form Body */}
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="max-h-[85vh] overflow-y-auto p-6 space-y-6"
+          >
+            {/* Sales Summary */}
+            <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-xl p-4 border border-gray-100">
+                  <p className="text-sm text-gray-500">Customer</p>
+                  <p className="font-semibold text-gray-900">
+                    {sale.customer.name}
+                  </p>
+                </div>
+
+                <div className="bg-white rounded-xl p-4 border border-gray-100">
+                  <p className="text-sm text-gray-500">Order Date</p>
+                  <p className="font-semibold text-gray-900">
+                    {new Date(sale.orderDate).toLocaleDateString()}
+                  </p>
+                </div>
+
+                <div className="bg-white rounded-xl p-4 border border-gray-100">
+                  <p className="text-sm text-gray-500">Total Amount</p>
+                  <p className="font-semibold text-blue-600 text-lg">
+                    ₦{sale.totalAmount.toLocaleString()}
+                  </p>
                 </div>
               </div>
-              {/* Global Warehouse Assignment */}
-              <div className="bg-gray-100 p-4 rounded-lg mb-4 border">
-                <label className="block text-sm font-medium text-gray-700">
-                  Apply Warehouse to All Lines
-                </label>
+            </div>
 
-                <select
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3
-               focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  onChange={(e) => {
-                    const selected = e.target.value;
+            {/* Global Warehouse Assignment */}
+            <div className="rounded-2xl bg-gray-50 border border-gray-100 p-5">
+              <h4 className="font-semibold text-gray-900 mb-3">
+                Apply Warehouse to All Items
+              </h4>
 
-                    // Update every line's warehouseId
-                    fields.forEach((_, index) => {
-                      setValue(`deliveryLines.${index}.warehouseId`, selected);
-                    });
-                  }}
-                >
-                  <option value="">Select warehouse</option>
-                  {warehouses?.warehouses?.map((warehouse: any) => (
-                    <option key={warehouse.id} value={warehouse.id}>
-                      {warehouse.code} - {warehouse.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <select
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3
+              focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                onChange={(e) => {
+                  const selected = e.target.value;
 
-              {/* Delivery Lines */}
-              <div>
-                <h4 className="text-md font-medium text-gray-900 mb-4">
-                  Delivery Details
-                </h4>
+                  fields.forEach((_, index) => {
+                    setValue(`deliveryLines.${index}.warehouseId`, selected);
+                  });
+                }}
+              >
+                <option value="">Select warehouse</option>
+                {warehouses?.warehouses?.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.code} - {warehouse.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                {errors.deliveryLines && (
-                  <p className="mb-4 text-sm text-red-600">
-                    {errors.deliveryLines.message}
-                  </p>
-                )}
+            {/* Delivery Lines */}
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                Delivery Details
+              </h4>
 
-                <div className="space-y-4">
-                  {fields.map((field, index) => {
-                    const saleLine = sale.saleLines[index];
-                    if (!saleLine) return null;
+              {errors.deliveryLines && (
+                <p className="mb-4 text-sm text-red-500">
+                  {errors.deliveryLines.message}
+                </p>
+              )}
 
-                    return (
-                      <div key={field.id} className="bg-gray-50 p-4 rounded-lg">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-                          <div className="sm:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Item
-                            </label>
-                            <div className="mt-1 p-2 bg-white border border-gray-300 rounded-md text-sm">
-                              <div className="font-medium">
-                                {saleLine.item.sku}
-                              </div>
-                              <div className="text-gray-500">
-                                {saleLine.item.name}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                Ordered: {saleLine.qty} {saleLine.item.uom}
-                              </div>
-                            </div>
-                            <input
-                              type="hidden"
-                              {...register(`deliveryLines.${index}.saleLineId`)}
-                            />
+              <div className="space-y-4">
+                {fields.map((field, index) => {
+                  const saleLine = sale.saleLines[index];
+                  if (!saleLine) return null;
+
+                  return (
+                    <div
+                      key={field.id}
+                      className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5"
+                    >
+                      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+                        {/* Item */}
+                        <div className="lg:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Item
+                          </label>
+
+                          <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
+                            <p className="font-semibold text-gray-900">
+                              {saleLine.item.sku}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {saleLine.item.name}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Ordered: {saleLine.qty} {saleLine.item.uom}
+                            </p>
                           </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              Qty to Deliver *
-                            </label>
-                            <input
-                              {...register(
-                                `deliveryLines.${index}.qtyDelivered`,
-                                { valueAsNumber: true },
-                              )}
-                              type="number"
-                              step="0.001"
-                              max={saleLine.qty}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            />
-                            {errors.deliveryLines?.[index]?.qtyDelivered && (
-                              <p className="mt-1 text-sm text-red-600">
-                                {
-                                  errors.deliveryLines[index]?.qtyDelivered
-                                    ?.message
-                                }
-                              </p>
+                          <input
+                            type="hidden"
+                            {...register(`deliveryLines.${index}.saleLineId`)}
+                          />
+                        </div>
+
+                        {/* Quantity */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Qty to Deliver *
+                          </label>
+
+                          <input
+                            {...register(
+                              `deliveryLines.${index}.qtyDelivered`,
+                              {
+                                valueAsNumber: true,
+                              },
                             )}
-                          </div>
+                            type="number"
+                            step="0.001"
+                            max={saleLine.qty}
+                            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3
+                          focus:bg-white focus:ring-2 focus:ring-blue-500
+                          focus:border-blue-500 outline-none transition"
+                          />
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              Warehouse *
-                            </label>
-                            <select
-                              {...register(
-                                `deliveryLines.${index}.warehouseId`,
-                              )}
-                              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            >
-                              <option value="">Select warehouse</option>
-                              {warehouses?.warehouses?.map((warehouse: any) => (
-                                <option key={warehouse.id} value={warehouse.id}>
-                                  {warehouse.code} - {warehouse.name}
-                                </option>
-                              ))}
-                            </select>
-                            {errors.deliveryLines?.[index]?.warehouseId && (
-                              <p className="mt-1 text-sm text-red-600">
-                                {
-                                  errors.deliveryLines[index]?.warehouseId
-                                    ?.message
-                                }
-                              </p>
-                            )}
-                          </div>
+                          {errors.deliveryLines?.[index]?.qtyDelivered && (
+                            <p className="mt-2 text-sm text-red-500">
+                              {
+                                errors.deliveryLines[index]?.qtyDelivered
+                                  ?.message
+                              }
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Warehouse */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Warehouse *
+                          </label>
+
+                          <select
+                            {...register(`deliveryLines.${index}.warehouseId`)}
+                            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3
+                          focus:bg-white focus:ring-2 focus:ring-blue-500
+                          focus:border-blue-500 outline-none transition"
+                          >
+                            <option value="">Select warehouse</option>
+                            {warehouses?.warehouses?.map((warehouse) => (
+                              <option key={warehouse.id} value={warehouse.id}>
+                                {warehouse.code} - {warehouse.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          {errors.deliveryLines?.[index]?.warehouseId && (
+                            <p className="mt-2 text-sm text-red-500">
+                              {
+                                errors.deliveryLines[index]?.warehouseId
+                                  ?.message
+                              }
+                            </p>
+                          )}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
+            </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? "Delivering..." : "Deliver Items"}
-                </button>
-              </div>
-            </form>
-          </div>
+            {/* Footer */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg hover:shadow-xl hover:scale-[1.02] transition disabled:opacity-50"
+              >
+                {isSubmitting ? "Delivering..." : "Deliver Items"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
   );
+
+  // return (
+  //   <div className="fixed inset-0 z-50">
+  //     {/* Backdrop - behind modal */}
+  //     <div className="absolute inset-0 bg-black/40 z-0" />
+
+  //     {/* Modal wrapper */}
+  //     <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-6">
+  //       <div className="w-full max-w-6xl rounded-3xl bg-white border border-gray-100 shadow-2xl overflow-hidden">
+  //         {/* Header */}
+  //         <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-5 text-white">
+  //           <div className="flex items-start justify-between">
+  //             <div>
+  //               <h3 className="text-xl font-semibold tracking-tight">
+  //                 Deliver Sales Order
+  //               </h3>
+  //               <p className="text-sm text-blue-100 mt-1">
+  //                 Order: {sale.orderNo}
+  //               </p>
+  //             </div>
+
+  //             <button
+  //               type="button"
+  //               onClick={onClose}
+  //               className="rounded-full bg-white/20 p-2 hover:bg-white/30 transition"
+  //             >
+  //               <X className="h-5 w-5 text-white" />
+  //             </button>
+  //           </div>
+  //         </div>
+
+  //         {/* Scrollable body */}
+  //         <form
+  //           onSubmit={handleSubmit(onSubmit)}
+  //           className="max-h-[85vh] overflow-y-auto p-6 space-y-6"
+  //         >
+  //           {/* your existing form content stays here */}
+  //         </form>
+  //       </div>
+  //     </div>
+  //   </div>
+  // );
 };
 
 export default DeliverSaleModal;

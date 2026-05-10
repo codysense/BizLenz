@@ -110,283 +110,235 @@ const EditPurchaseModal = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          onClick={onClose}
-        />
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
+      {/* Modal Container */}
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-8">
+        <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl border border-gray-100">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-600 px-6 py-5 text-white">
+            <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                <h3 className="text-xl font-semibold tracking-tight">
                   Edit Purchase Order
                 </h3>
-                <p className="text-sm text-gray-600">
-                  {purchase.orderNo} - Current Status: {purchase.status}
+                <p className="text-sm text-white/80 mt-1">
+                  {purchase.orderNo} • Status: {purchase.status}
                 </p>
               </div>
+
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
+                className="rounded-full bg-white/20 p-2 hover:bg-white/30 transition"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 text-white" />
               </button>
             </div>
+          </div>
 
+          <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+            {/* Warning */}
             {purchase.status === "ORDERED" && (
-              <div className="mb-4 bg-yellow-50 p-4 rounded-lg">
-                <div className="flex">
-                  <AlertTriangle className="h-5 w-5 text-yellow-400 mr-2" />
-                  <div className="text-sm text-yellow-800">
-                    <strong>Warning:</strong> This purchase order has been sent
-                    to vendor. Changes may require vendor notification.
-                  </div>
+              <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+                <div className="flex gap-3">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                  <p className="text-sm text-yellow-800">
+                    <strong>Warning:</strong> This order has been sent to
+                    vendor. Any changes may require vendor re-confirmation.
+                  </p>
                 </div>
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Header Information */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Vendor *
-                  </label>
+            {/* Vendor + Date */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Vendor *
+                </label>
+                <div className="mt-2">
                   <VendorSelect
                     value={watch("vendorId")}
                     onChange={(val) =>
                       setValue("vendorId", val, { shouldDirty: true })
                     }
-                    error={errors.vendorId?.message}
                     vendors={vendors?.vendors || []}
+                    error={errors.vendorId?.message}
                   />
-                  {/* <select
-                    {...register("vendorId")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  >
-                    <option value="">Select vendor</option>
-                    {vendors?.vendors?.map((vendor: any) => (
-                      <option key={vendor.id} value={vendor.id}>
-                        {vendor.code} - {vendor.name}
-                      </option>
-                    ))}
-                  </select> */}
-                  {errors.vendorId && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.vendorId.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Order Date *
-                  </label>
-                  <input
-                    {...register("orderDate")}
-                    type="date"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  />
-                  {errors.orderDate && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.orderDate.message}
-                    </p>
-                  )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Notes
+                <label className="text-sm font-medium text-gray-700">
+                  Order Date *
                 </label>
-                <textarea
-                  {...register("notes")}
-                  rows={3}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Purchase order notes"
+                <input
+                  {...register("orderDate")}
+                  type="date"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition"
                 />
               </div>
+            </div>
 
-              {/* Purchase Lines */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-md font-medium text-gray-900">Items</h4>
-                  <button
-                    type="button"
-                    onClick={() => append({ itemId: "", qty: 1, unitPrice: 0 })}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Item
-                  </button>
-                </div>
+            {/* Notes */}
+            <div>
+              <label className="text-sm font-medium text-gray-700">Notes</label>
+              <textarea
+                {...register("notes")}
+                rows={3}
+                className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition"
+                placeholder="Purchase order notes..."
+              />
+            </div>
 
-                {errors.purchaseLines && (
-                  <p className="mb-4 text-sm text-red-600">
-                    {errors.purchaseLines.message}
-                  </p>
-                )}
+            {/* Lines Header */}
+            <div className="flex items-center justify-between">
+              <h4 className="text-lg font-semibold text-gray-900">
+                Purchase Lines
+              </h4>
 
-                <div className="space-y-4">
-                  {fields.map((field, index) => (
-                    <div key={field.id} className="bg-gray-50 p-4 rounded-lg">
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
-                        <div className="sm:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Item *
-                          </label>
-                          <ItemSelect
-                            value={watch(`purchaseLines.${index}.itemId`)}
-                            onChange={(val) =>
-                              setValue(`purchaseLines.${index}.itemId`, val)
-                            }
-                            error={
-                              errors.purchaseLines?.[index]?.itemId?.message
-                            }
-                          />
-                          {/* <select
-                            {...register(`purchaseLines.${index}.itemId`)}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                          >
-                            <option value="">Select item</option>
-                            {items?.items?.map((item: any) => (
-                              <option key={item.id} value={item.id}>
-                                {item.sku} - {item.name}
-                              </option>
-                            ))}
-                          </select> */}
-                          {errors.purchaseLines?.[index]?.itemId && (
-                            <p className="mt-1 text-sm text-red-600">
-                              {errors.purchaseLines[index]?.itemId?.message}
-                            </p>
-                          )}
-                        </div>
+              <button
+                type="button"
+                onClick={() => append({ itemId: "", qty: 1, unitPrice: 0 })}
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm hover:bg-gray-50 transition"
+              >
+                <Plus className="h-4 w-4" />
+                Add Item
+              </button>
+            </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Quantity *
-                          </label>
-                          <input
-                            {...register(`purchaseLines.${index}.qty`, {
-                              valueAsNumber: true,
-                            })}
-                            type="number"
-                            step="0.001"
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            placeholder="1.00"
-                          />
-                          {errors.purchaseLines?.[index]?.qty && (
-                            <p className="mt-1 text-sm text-red-600">
-                              {errors.purchaseLines[index]?.qty?.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Unit Price *
-                          </label>
-                          <input
-                            {...register(`purchaseLines.${index}.unitPrice`, {
-                              valueAsNumber: true,
-                            })}
-                            type="number"
-                            step="0.01"
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            placeholder="0.00"
-                          />
-                          {errors.purchaseLines?.[index]?.unitPrice && (
-                            <p className="mt-1 text-sm text-red-600">
-                              {errors.purchaseLines[index]?.unitPrice?.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-end">
-                          <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Line Total
-                            </label>
-                            <div className="mt-1 block w-full py-2 px-3 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-900">
-                              ₦
-                              {(
-                                (watchedLines[index]?.qty || 0) *
-                                (watchedLines[index]?.unitPrice || 0)
-                              ).toLocaleString()}
-                            </div>
-                          </div>
-                          {fields.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => remove(index)}
-                              className="ml-2 inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-gray-500 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
+            {/* Lines */}
+            <div className="space-y-4">
+              {fields.map((field, index) => (
+                <div
+                  key={field.id}
+                  className="rounded-2xl border border-gray-100 bg-gray-50 p-5"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                    {/* Item */}
+                    <div className="sm:col-span-2">
+                      <label className="text-sm text-gray-700">Item *</label>
+                      <div className="mt-2">
+                        <ItemSelect
+                          value={watch(`purchaseLines.${index}.itemId`)}
+                          onChange={(val) =>
+                            setValue(`purchaseLines.${index}.itemId`, val)
+                          }
+                          error={errors.purchaseLines?.[index]?.itemId?.message}
+                        />
                       </div>
                     </div>
-                  ))}
-                </div>
 
-                {/* Total */}
-                <div className="mt-4 bg-blue-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-medium text-gray-900">
-                      Total Amount:
-                    </span>
-                    <span className="text-2xl font-bold text-blue-600">
-                      ₦{calculateTotal().toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-sm text-gray-600">
-                    Original Total: ₦{purchase.totalAmount.toLocaleString()}
+                    {/* Qty */}
+                    <div>
+                      <label className="text-sm text-gray-700">Quantity</label>
+                      <input
+                        {...register(`purchaseLines.${index}.qty`, {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        step="0.01"
+                        className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                      />
+                    </div>
+
+                    {/* Price */}
+                    <div>
+                      <label className="text-sm text-gray-700">
+                        Unit Price
+                      </label>
+                      <input
+                        {...register(`purchaseLines.${index}.unitPrice`, {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        step="0.01"
+                        className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition"
+                      />
+                    </div>
+
+                    {/* Total + Delete */}
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <label className="text-sm text-gray-700">
+                          Line Total
+                        </label>
+                        <div className="mt-2 font-semibold text-gray-900">
+                          ₦
+                          {(
+                            (watchedLines[index]?.qty || 0) *
+                            (watchedLines[index]?.unitPrice || 0)
+                          ).toLocaleString()}
+                        </div>
+                      </div>
+
+                      {fields.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => remove(index)}
+                          className="text-gray-400 hover:text-red-500 transition"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Total */}
+            <div className="rounded-2xl bg-blue-50 border border-blue-100 p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-semibold text-gray-900">
+                  Total Amount
+                </span>
+                <span className="text-2xl font-bold text-blue-600">
+                  ₦{calculateTotal().toLocaleString()}
+                </span>
               </div>
 
-              {/* Change Summary */}
-              {isDirty && (
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium text-yellow-800 mb-2">
-                    Changes Summary:
-                  </h4>
-                  <ul className="text-sm text-yellow-700 space-y-1">
-                    <li>• Purchase order details will be updated</li>
-                    <li>• All line items will be replaced with new data</li>
-                    <li>• Total amount will be recalculated</li>
-                    {purchase.status === "ORDERED" && (
-                      <li>
-                        • <strong>Warning:</strong> Vendor may need to be
-                        notified of changes
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              )}
+              <p className="text-sm text-gray-600 mt-1">
+                Original: ₦{purchase.totalAmount.toLocaleString()}
+              </p>
+            </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !isDirty}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isSubmitting ? "Saving..." : "Save Changes"}
-                </button>
+            {/* Dirty warning */}
+            {isDirty && (
+              <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+                <h5 className="text-sm font-semibold text-yellow-800 mb-1">
+                  Pending Changes
+                </h5>
+                <p className="text-sm text-yellow-700">
+                  You have unsaved changes that will update this purchase order.
+                </p>
               </div>
-            </form>
-          </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || !isDirty}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] transition disabled:opacity-50"
+              >
+                <Save className="h-4 w-4" />
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

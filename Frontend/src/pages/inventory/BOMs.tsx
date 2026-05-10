@@ -123,152 +123,119 @@ const BOMs = () => {
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-gray-50 p-6 space-y-8">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
             Bills of Materials
           </h1>
-          <p className="text-gray-600">
-            Manage product recipes and component lists
+          <p className="text-gray-500 mt-1">
+            Manage product recipes and component structures
           </p>
         </div>
+
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm transition"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create BOM
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Filter by Item
-            </label>
-
-            <select
-              value={selectedItemId}
-              onChange={(e) => setSelectedItemId(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              <option value="">All Items</option>
-              {items?.items?.map((item: any) => (
-                <option key={item.id} value={item.id}>
-                  {item.sku} - {item.name}
-                </option>
-              ))}
-            </select>
-          </div> */}
+      {/* FILTERS */}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search BOM by Item Name
+              Search BOM
             </label>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Type item name or SKU..."
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
-          </div>
-        </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Package className="h-6 w-6 text-gray-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Total BOMs
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {boms?.length || 0}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+            <div className="relative">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Type item name or SKU..."
+                className="w-full px-4 py-2.5 pl-10 border border-gray-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+              />
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Package className="h-6 w-6 text-green-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Active BOMs
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {boms?.filter((bom: Bom) => bom.isActive).length || 0}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Package className="h-6 w-6 text-blue-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Avg Components
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {boms?.length
-                      ? Math.round(
-                          boms.reduce(
-                            (sum: number, bom: Bom) =>
-                              sum + bom.bomLines.length,
-                            0,
-                          ) / boms.length,
-                        )
-                      : 0}
-                  </dd>
-                </dl>
-              </div>
+              <search className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Data Table */}
-      {/* <DataTable
-        data={
-          selectedItemId
-            ? boms?.filter((bom: Bom) => bom.itemId === selectedItemId) || []
-            : boms || []
-        }
-        columns={columns}
-        loading={isLoading}
-        actions={actions}
-      /> */}
-      <DataTable
-        data={filteredBoms || []}
-        columns={columns}
-        loading={isLoading}
-        actions={actions}
-      />
+      {/* STATS */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 hover:shadow-md transition">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Total BOMs</p>
+              <h3 className="text-4xl font-bold text-black/80 mt-1">
+                {boms?.length || 0}
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-50">
+              <Package className="h-5 w-5 text-gray-600" />
+            </div>
+          </div>
+        </div>
 
-      {/* Create Modal */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 hover:shadow-md transition">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Active BOMs</p>
+              <h3 className="text-4xl font-bold text-black/80 mt-1">
+                {boms?.filter((bom: Bom) => bom.isActive).length || 0}
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-green-50">
+              <Package className="h-5 w-5 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 hover:shadow-md transition">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Avg Components</p>
+              <h3 className="text-4xl font-bold text-black/80 mt-1">
+                {boms?.length
+                  ? Math.round(
+                      boms.reduce(
+                        (sum: number, bom: Bom) => sum + bom.bomLines.length,
+                        0,
+                      ) / boms.length,
+                    )
+                  : 0}
+              </h3>
+            </div>
+            <div className="p-3 rounded-xl bg-blue-50">
+              <Package className="h-5 w-5 text-blue-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* TABLE */}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="text-sm font-semibold text-gray-700">BOM Records</h2>
+        </div>
+
+        <div className="p-2">
+          <DataTable
+            data={filteredBoms || []}
+            columns={columns}
+            loading={isLoading}
+            actions={actions}
+          />
+        </div>
+      </div>
+
+      {/* MODALS */}
       {showCreateModal && (
         <CreateBomModal
           onClose={() => setShowCreateModal(false)}
@@ -276,7 +243,6 @@ const BOMs = () => {
         />
       )}
 
-      {/* Edit Modal */}
       {showEditModal && selectedBom && (
         <EditBomModal
           bom={selectedBom}

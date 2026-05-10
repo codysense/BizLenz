@@ -12,8 +12,10 @@ import toast from "react-hot-toast";
 
 const AssetCategories = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditAssetCategoryModal, setShowEditAssetCategoryModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<AssetCategory | null>(null);
+  const [showEditAssetCategoryModal, setShowEditAssetCategoryModal] =
+    useState(false);
+  const [selectedCategory, setSelectedCategory] =
+    useState<AssetCategory | null>(null);
   const { user } = useAuthStore();
 
   const canManageCategories = user?.roles.includes("General Manager");
@@ -22,9 +24,6 @@ const AssetCategories = () => {
     queryKey: ["asset-categories"],
     queryFn: () => assetsApi.getAssetCategories(),
   });
-
-
-
 
   const columns = [
     {
@@ -82,8 +81,6 @@ const AssetCategories = () => {
     },
   ];
 
-
-
   const handleCreateCategory = () => {
     refetch();
     setShowCreateModal(false);
@@ -92,7 +89,7 @@ const AssetCategories = () => {
   const handleDeleteCategory = async (id: string, category: AssetCategory) => {
     if (
       !confirm(
-        `Are you sure you want to delete the asset category "${category.name}"? This action cannot be undone.`
+        `Are you sure you want to delete the asset category "${category.name}"? This action cannot be undone.`,
       )
     ) {
       return;
@@ -105,38 +102,37 @@ const AssetCategories = () => {
     } catch (error) {
       console.error("Failed to delete category:", error);
     }
-  };  
+  };
 
   const handleEditCategory = () => {
     refetch();
     setShowEditAssetCategoryModal(false);
-  }
+  };
 
   const actions = (category: AssetCategory) => (
-      <div className="flex space-x-2">
-        <button
-          onClick={() => {
-            setSelectedCategory(category);
-            setShowEditAssetCategoryModal(true);
-          }}
-          className="text-blue-600 hover:text-blue-900"
-          title="Edit Category"
-        >
-          <Edit className="h-4 w-4" />
-        </button>
-        <button
-          onClick={() => {
-            handleDeleteCategory(category.id, category);
-           
-          }}
-          className="text-red-600 hover:text-red-900"
-          title="Delete Category"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-    );
-  
+    <div className="flex space-x-2">
+      <button
+        onClick={() => {
+          setSelectedCategory(category);
+          setShowEditAssetCategoryModal(true);
+        }}
+        className="text-blue-600 hover:text-blue-900"
+        title="Edit Category"
+      >
+        <Edit className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => {
+          handleDeleteCategory(category.id, category);
+        }}
+        className="text-red-600 hover:text-red-900"
+        title="Delete Category"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
+
   if (!canManageCategories) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -156,14 +152,14 @@ const AssetCategories = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Asset Categories</h1>
+          <h1 className="text-3xl font-bold text-black/80">Asset Categories</h1>
           <p className="text-gray-600">
             Configure asset categories and depreciation settings
           </p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-5 py-3 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Category
@@ -183,7 +179,7 @@ const AssetCategories = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Categories
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-3xl font-bold text-black/80">
                     {data?.categories?.length || 0}
                   </dd>
                 </dl>
@@ -203,7 +199,7 @@ const AssetCategories = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Active Categories
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-3xl font-bold text-black/80">
                     {data?.categories?.filter((c: AssetCategory) => c.isActive)
                       .length || 0}
                   </dd>
@@ -224,11 +220,11 @@ const AssetCategories = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Assets
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-3xl font-bold text-black/80">
                     {data?.categories?.reduce(
                       (sum: number, c: AssetCategory) =>
                         sum + (c._count?.assets || 0),
-                      0
+                      0,
                     ) || 0}
                   </dd>
                 </dl>
@@ -262,8 +258,6 @@ const AssetCategories = () => {
           onSuccess={handleEditCategory}
         />
       )}
-
-
     </div>
   );
 };

@@ -38,128 +38,112 @@ const DetailJournalModal = ({ journal, onClose }: DetailJournalModalProps) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          onClick={onClose}
-        />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      {/* Overlay */}
+      <div className="absolute inset-0" onClick={onClose} />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Journal Details
-              </h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
+      {/* Modal */}
+      <div className="relative w-full max-w-6xl mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-white">
+              Journal Details
+            </h3>
+            <p className="text-xs text-blue-100">
+              {journal.reference || "No Reference"}
+            </p>
+          </div>
 
-            {/* Journal Header Info */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
-              <div>
-                <p className="text-sm text-gray-500">Date</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {new Date(journal.journalDate).toLocaleDateString()}
-                </p>
-              </div>
+          <button
+            onClick={onClose}
+            className="text-white/80 hover:text-white transition"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-              <div>
-                <p className="text-sm text-gray-500">Reference</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {journal.reference || "—"}
-                </p>
-              </div>
+        {/* Content */}
+        <div className="p-6 max-h-[75vh] overflow-y-auto space-y-6">
+          {/* Header Info Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <InfoCard
+              label="Date"
+              value={new Date(journal.journalDate).toLocaleDateString()}
+            />
+            <InfoCard label="Reference" value={journal.reference || "—"} />
+            <InfoCard label="Note" value={journal.note || "—"} />
+          </div>
 
-              <div>
-                <p className="text-sm text-gray-500">Note</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {journal.note || "—"}
-                </p>
-              </div>
-            </div>
+          {/* Journal Lines */}
+          <div>
+            <h4 className="font-semibold text-gray-800 mb-3">
+              Journal Entries
+            </h4>
 
-            {/* Journal Lines */}
-            <div>
-              <h4 className="text-md font-medium text-gray-900 mb-4">
-                Journal Entries
-              </h4>
+            <div className="space-y-3">
+              {journal.journalLines.map((line) => (
+                <div
+                  key={line.id}
+                  className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    {/* Account */}
+                    <div className="sm:col-span-2">
+                      <p className="text-xs text-gray-500">Account</p>
+                      <p className="font-medium text-gray-900">
+                        {line.account.code && `${line.account.code} - `}
+                        {line.account.name}
+                      </p>
+                    </div>
 
-              <div className="space-y-4">
-                {journal.journalLines.map((line) => (
-                  <div key={line.id} className="bg-gray-50 p-4 rounded-lg">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-                      {/* Account */}
-                      <div className="sm:col-span-2">
-                        <p className="text-sm text-gray-500">
-                          Chart of Account
-                        </p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {line.account.code && `${line.account.code} - `}
-                          {line.account.name}
-                        </p>
-                      </div>
+                    {/* Debit */}
+                    <div>
+                      <p className="text-xs text-gray-500">Debit</p>
+                      <p className="font-semibold text-red-600">
+                        ₦{(line.debit || 0).toLocaleString()}
+                      </p>
+                    </div>
 
-                      {/* Debit */}
-                      <div>
-                        <p className="text-sm text-gray-500">Debit</p>
-                        <p className="text-sm font-medium text-red-600">
-                          ₦{(line.debit || 0).toLocaleString()}
-                        </p>
-                      </div>
-
-                      {/* Credit */}
-                      <div>
-                        <p className="text-sm text-gray-500">Credit</p>
-                        <p className="text-sm font-medium text-blue-600">
-                          ₦{(line.credit || 0).toLocaleString()}
-                        </p>
-                      </div>
+                    {/* Credit */}
+                    <div>
+                      <p className="text-xs text-gray-500">Credit</p>
+                      <p className="font-semibold text-blue-600">
+                        ₦{(line.credit || 0).toLocaleString()}
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              {/* Totals */}
-              <div className="mt-4 bg-blue-50 p-4 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-medium text-gray-900">
-                    Total Debit:
-                  </span>
-                  <span className="text-2xl font-bold text-red-600">
-                    ₦{calculateDebitTotal().toLocaleString()}
-                  </span>
                 </div>
-              </div>
-
-              <div className="mt-4 bg-blue-50 p-4 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-medium text-gray-900">
-                    Total Credit:
-                  </span>
-                  <span className="text-2xl font-bold text-blue-600">
-                    ₦{calculateCreditTotal().toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex justify-end space-x-3 pt-6 border-t mt-6">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Close
-              </button>
+              ))}
             </div>
           </div>
+
+          {/* Totals */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-red-50 rounded-xl p-4">
+              <p className="text-sm text-gray-600">Total Debit</p>
+              <p className="text-2xl font-bold text-red-600">
+                ₦{calculateDebitTotal().toLocaleString()}
+              </p>
+            </div>
+
+            <div className="bg-blue-50 rounded-xl p-4">
+              <p className="text-sm text-gray-600">Total Credit</p>
+              <p className="text-2xl font-bold text-blue-600">
+                ₦{calculateCreditTotal().toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t flex justify-end bg-white">
+          <button
+            onClick={onClose}
+            className="px-5 py-2 rounded-lg border hover:bg-gray-50 text-sm"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

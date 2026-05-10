@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Plus,
@@ -51,7 +51,6 @@ const AssetRegister = () => {
     queryFn: () =>
       assetsApi.getAssets({
         page,
-        limit: 10,
         ...(categoryFilter && { categoryId: categoryFilter }),
         ...(statusFilter && { status: statusFilter }),
         ...(locationFilter && { locationId: locationFilter }),
@@ -65,12 +64,28 @@ const AssetRegister = () => {
   });
 
   const { data: registerData } = useQuery({
-    queryKey: ["asset-register-summary"],
-    queryFn: () => assetsApi.getAssetRegister(),
+    queryKey: [
+      "asset-register-summary",
+      page,
+      categoryFilter,
+      statusFilter,
+      locationFilter,
+    ],
+    queryFn: () =>
+      assetsApi.getAssetRegister({
+        page,
+        ...(categoryFilter && { categoryId: categoryFilter }),
+        ...(statusFilter && { status: statusFilter }),
+        ...(locationFilter && { locationId: locationFilter }),
+      }),
   });
   console.log("Assest register ", registerData);
 
   //console.log("Assets ", categories);
+
+  useEffect(() => {
+    setPage(1);
+  }, [categoryFilter, statusFilter, locationFilter]);
 
   const { data: locations } = useQuery({
     queryKey: ["locations-for-assets"],
@@ -231,12 +246,12 @@ const AssetRegister = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Asset Register</h1>
+          <h1 className="text-3xl font-bold text-black/80">Asset Register</h1>
           <p className="text-gray-600">Manage fixed assets and depreciation</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-5 py-3 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Asset
@@ -315,7 +330,7 @@ const AssetRegister = () => {
                     Total Assets
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.pagination?.total || 0}
+                    {registerData?.register?.pagination?.total || 0}
                   </dd>
                 </dl>
               </div>
@@ -335,8 +350,9 @@ const AssetRegister = () => {
                     Active Assets
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.assets?.filter((a: Asset) => a.status === "ACTIVE")
-                      .length || 0}
+                    {registerData?.register?.assets.filter(
+                      (a: Asset) => a.status === "ACTIVE",
+                    ).length || 0}
                   </dd>
                 </dl>
               </div>
@@ -357,7 +373,7 @@ const AssetRegister = () => {
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
                     ₦
-                    {data?.assets
+                    {registerData?.register?.assets
                       ?.reduce(
                         (sum: number, a: Asset) =>
                           Number(sum) + Number(a.acquisitionCost),
@@ -384,7 +400,7 @@ const AssetRegister = () => {
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
                     ₦
-                    {registerData?.register
+                    {registerData?.register?.assets
                       ?.reduce(
                         (sum: number, a: Asset) =>
                           sum +
@@ -402,10 +418,10 @@ const AssetRegister = () => {
 
       {/* Data Table */}
       <DataTable
-        data={data?.assets || []}
+        data={registerData?.register?.assets || []}
         columns={columns}
         loading={isLoading}
-        pagination={data?.pagination}
+        pagination={registerData?.register?.pagination}
         onPageChange={setPage}
         actions={actions}
       />

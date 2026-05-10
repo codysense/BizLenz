@@ -131,226 +131,242 @@ const CreateCustomerPaymentModal = ({ onClose, onSuccess }: Props) => {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        {/* Overlay */}
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75"
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
           onClick={onClose}
         />
 
-        <div className="inline-block bg-white rounded-lg shadow-xl transform transition-all sm:max-w-5xl sm:w-full sm:my-8">
-          <div className="bg-white p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
+        {/* Modal */}
+        <div className="inline-block bg-white rounded-xl shadow-xl transform transition-all sm:max-w-5xl sm:w-full sm:my-8">
+          {/* HEADER (Gradient) */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-white">
                 Record Customer Payment
               </h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
+              <p className="text-xs text-blue-100">
+                Allocate customer receipts across invoices or accounts
+              </p>
             </div>
 
-            {/* FORM */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Row 1 - Customer + Date */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white transition"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          {/* BODY */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="bg-white px-6 py-5">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                {/* Row 1 */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Customer *
+                    </label>
+
+                    <CustomerSelect
+                      customers={customers?.customers || []}
+                      value={watch("customerId")}
+                      onChange={(v) => setValue("customerId", v)}
+                    />
+
+                    {errors.customerId && (
+                      <p className="text-red-600 text-sm">
+                        {errors.customerId.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Payment Date *
+                    </label>
+                    <input
+                      {...register("paymentDate")}
+                      type="date"
+                      className="mt-1 w-full border rounded-md px-3 py-2"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2 */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Cash Account *
+                    </label>
+
+                    <select
+                      {...register("cashAccountId")}
+                      className="mt-1 w-full border rounded-md px-3 py-2"
+                    >
+                      <option value="">Select cash account</option>
+                      {cashAccounts?.accounts?.map((a: any) => (
+                        <option key={a.id} value={a.id}>
+                          {a.code} - {a.name} (₦
+                          {Number(a.balance).toLocaleString()})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Reference
+                    </label>
+                    <input
+                      {...register("reference")}
+                      className="mt-1 w-full border rounded-md px-3 py-2"
+                      placeholder="Cheque / Transfer ref"
+                    />
+                  </div>
+                </div>
+
+                {/* LINES */}
                 <div>
-                  <label className="block text-sm font-medium">
-                    Customer *
-                  </label>
-                  <CustomerSelect
-                    customers={customers?.customers || []}
-                    value={watch("customerId")}
-                    onChange={(v) => setValue("customerId", v)}
-                  />
-                  {errors.customerId && (
-                    <p className="text-red-600 text-sm">
-                      {errors.customerId.message}
-                    </p>
-                  )}
-                </div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-gray-900">
+                      Payment Lines
+                    </h4>
 
-                <div>
-                  <label className="block text-sm font-medium">
-                    Payment Date *
-                  </label>
-                  <input
-                    {...register("paymentDate")}
-                    type="date"
-                    className="mt-1 w-full border rounded-md px-3 py-2"
-                  />
-                </div>
-              </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        append({
+                          saleId: null,
+                          glAccountId: "",
+                          lineAmount: 0,
+                          description: "",
+                        })
+                      }
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      + Add Line
+                    </button>
+                  </div>
 
-              {/* Row 2 - Cash Account + Reference */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium">
-                    Cash Account *
-                  </label>
-                  <select
-                    {...register("cashAccountId")}
-                    className="mt-1 w-full border rounded-md px-3 py-2"
-                  >
-                    <option value="">Select cash account</option>
-                    {cashAccounts?.accounts?.map((a: any) => (
-                      <option key={a.id} value={a.id}>
-                        {a.code} - {a.name} (₦
-                        {Number(a.balance).toLocaleString()})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div className="space-y-4">
+                    {fields.map((field, index) => (
+                      <div
+                        key={field.id}
+                        className="bg-gray-50 border rounded-lg p-4"
+                      >
+                        <div className="grid grid-cols-1 sm:grid-cols-8 gap-4">
+                          {/* Sale */}
+                          <div className="col-span-2">
+                            <label className="text-sm font-medium text-gray-700">
+                              Sale (optional)
+                            </label>
 
-                <div>
-                  <label className="block text-sm font-medium">Reference</label>
-                  <input
-                    {...register("reference")}
-                    className="mt-1 w-full border rounded-md px-3 py-2"
-                  />
-                </div>
-              </div>
-
-              {/* MULTILINE SECTION */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-md font-medium">Payment Lines</h4>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      append({
-                        saleId: null,
-                        glAccountId: "",
-                        lineAmount: 0,
-                        description: "",
-                      })
-                    }
-                    className="px-3 py-2 border rounded-md bg-white"
-                  >
-                    <Plus className="h-4 w-4 mr-1 inline" /> Add Line
-                  </button>
-                </div>
-
-                {errors.lines && (
-                  <p className="text-red-600 text-sm mb-2">
-                    {errors.lines.message}
-                  </p>
-                )}
-
-                <div className="space-y-4">
-                  {fields.map((field, index) => (
-                    <div key={field.id} className="bg-gray-50 p-4 rounded-lg">
-                      <div className="grid grid-cols-1 sm:grid-cols-8 gap-4">
-                        {/* saleId (optional) */}
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium ">
-                            Sale (optional)
-                          </label>
-
-                          <select
-                            {...register(`lines.${index}.saleId`)}
-                            className="mt-1 w-full border rounded-md px-3 py-2"
-                          >
-                            <option value="">Select sale</option>
-                            {customerSales?.sales?.map((s: any) => (
-                              <option key={s.id} value={s.id}>
-                                #{s.orderNo} — ₦
-                                {Number(s.totalAmount).toLocaleString()}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* glAccount */}
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium ">
-                            GL Account *
-                          </label>
-                          <ChartAccountSelect
-                            accounts={chartAccounts?.accounts || []}
-                            value={watch(`lines.${index}.glAccountId`)}
-                            onChange={(v) =>
-                              setValue(`lines.${index}.glAccountId`, v)
-                            }
-                          />
-                        </div>
-
-                        {/* lineAmount */}
-                        <div>
-                          <label className="block text-sm font-medium">
-                            Amount *
-                          </label>
-                          <input
-                            {...register(`lines.${index}.lineAmount`, {
-                              valueAsNumber: true,
-                            })}
-                            type="number"
-                            step="0.01"
-                            className="mt-1 w-full border rounded-md px-3 py-2"
-                          />
-                        </div>
-
-                        {/* description */}
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium">
-                            Description
-                          </label>
-                          <input
-                            {...register(`lines.${index}.description`)}
-                            className="mt-1 w-full border rounded-md px-3 py-2"
-                          />
-                        </div>
-
-                        {/* remove button */}
-                        <div className="py-6">
-                          {fields.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => remove(index)}
-                              className="p-3 border rounded-md bg-white"
+                            <select
+                              {...register(`lines.${index}.saleId`)}
+                              className="mt-1 w-full border rounded-md px-3 py-2"
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
+                              <option value="">Select sale</option>
+                              {customerSales?.sales?.map((s: any) => (
+                                <option key={s.id} value={s.id}>
+                                  #{s.orderNo} — ₦
+                                  {Number(s.totalAmount).toLocaleString()}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* GL */}
+                          <div className="col-span-2">
+                            <label className="text-sm font-medium text-gray-700">
+                              GL Account *
+                            </label>
+
+                            <ChartAccountSelect
+                              accounts={chartAccounts?.accounts || []}
+                              value={watch(`lines.${index}.glAccountId`)}
+                              onChange={(v) =>
+                                setValue(`lines.${index}.glAccountId`, v)
+                              }
+                            />
+                          </div>
+
+                          {/* Amount */}
+                          <div>
+                            <label className="text-sm font-medium text-gray-700">
+                              Amount
+                            </label>
+                            <input
+                              {...register(`lines.${index}.lineAmount`, {
+                                valueAsNumber: true,
+                              })}
+                              type="number"
+                              step="0.01"
+                              className="mt-1 w-full border rounded-md px-3 py-2"
+                            />
+                          </div>
+
+                          {/* Description */}
+                          <div className="col-span-2">
+                            <label className="text-sm font-medium text-gray-700">
+                              Description
+                            </label>
+                            <input
+                              {...register(`lines.${index}.description`)}
+                              className="mt-1 w-full border rounded-md px-3 py-2"
+                            />
+                          </div>
+
+                          {/* Remove */}
+                          <div className="flex items-end">
+                            {fields.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => remove(index)}
+                                className="p-2 text-gray-500 hover:text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* TOTAL */}
-              <div className="bg-blue-50 p-4 rounded-lg mt-4">
-                <div className="flex justify-between">
-                  <span className="text-lg font-medium">Total Amount:</span>
-                  <span className="text-2xl font-bold text-blue-600">
+                {/* TOTAL */}
+                <div className="bg-blue-50 p-4 rounded-lg flex justify-between">
+                  <span className="font-medium text-gray-900">
+                    Total Amount:
+                  </span>
+                  <span className="text-xl font-bold text-blue-600">
                     ₦{calculateTotal().toLocaleString()}
                   </span>
                 </div>
-              </div>
+              </form>
+            </div>
 
-              {/* FOOTER BUTTONS */}
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border rounded-md bg-white"
-                >
-                  Cancel
-                </button>
+            {/* FOOTER */}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 rounded-md bg-green-600 text-white disabled:opacity-50"
-                >
-                  {isSubmitting ? "Recording..." : "Record Payment"}
-                </button>
-              </div>
-            </form>
-          </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                {isSubmitting ? "Recording..." : "Record Payment"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

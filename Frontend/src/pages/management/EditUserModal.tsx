@@ -103,137 +103,179 @@ const EditUserModal = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4">
+      {/* Wrapper */}
+      <div className="flex min-h-screen items-start justify-center px-4 py-6 sm:py-10">
+        {/* Overlay */}
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm"
           onClick={onClose}
         />
 
-        <div className="relative bg-white rounded-lg shadow-xl sm:max-w-lg sm:w-full p-6">
-          <div className="flex justify-between mb-4">
-            <h3 className="text-lg font-medium">Edit User</h3>
-            <button onClick={onClose}>
-              <X className="h-6 w-6 text-gray-400" />
+        {/* Modal */}
+        <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-100 my-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-t-2xl sticky top-0 z-10">
+            <h3 className="text-lg font-semibold">Edit User</h3>
+
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white"
+            >
+              <X className="h-6 w-6" />
             </button>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Name */}
-            <div>
-              <label className="block text-sm font-medium">Full Name</label>
-              <input
-                {...register("name")}
-                className="mt-1 w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              {errors.name && (
-                <p className="text-sm text-red-600">{errors.name.message}</p>
-              )}
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium">Email</label>
-              <input
-                {...register("email")}
-                type="email"
-                className="mt-1 w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              {errors.email && (
-                <p className="text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
-
-            {/* Role */}
-            <div>
-              <label className="block text-sm font-medium">Role</label>
-              <select
-                {...register("roleId")}
-                className="mt-1 w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="">Select role</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Warehouse (POS ONLY) */}
-            {showWarehouse && (
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {/* Body */}
+            <div className="p-6 space-y-5">
+              {/* Name */}
               <div>
-                <label className="block text-sm font-medium">
-                  Assigned Warehouse
+                <label className="text-sm font-medium text-gray-700">
+                  Full Name
                 </label>
+
+                <input
+                  {...register("name")}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+
+                {errors.name && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.name.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Email
+                </label>
+
+                <input
+                  {...register("email")}
+                  type="email"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+
+                {errors.email && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Role */}
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Role
+                </label>
+
                 <select
-                  {...register("warehouseId")}
-                  className="mt-1 w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  {...register("roleId")}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Select warehouse</option>
-                  {warehouses?.warehouses?.map((w: any) => (
-                    <option key={w.id} value={w.id}>
-                      {w.code} - {w.name}
+                  <option value="">Select role</option>
+
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
                     </option>
                   ))}
                 </select>
               </div>
-            )}
 
-            {/* Password (Optional) */}
-            <div>
-              <label className="block text-sm font-medium">
-                New Password (optional)
-              </label>
-              <div className="relative">
-                <input
-                  {...register("password")}
-                  type={showPassword ? "text" : "password"}
-                  className="w-full border rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2"
-                >
-                  {showPassword ? <EyeOff /> : <Eye />}
-                </button>
+              {/* Warehouse */}
+              {showWarehouse && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Assigned Warehouse
+                  </label>
+
+                  <select
+                    {...register("warehouseId")}
+                    className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select warehouse</option>
+
+                    {warehouses?.warehouses?.map((w: any) => (
+                      <option key={w.id} value={w.id}>
+                        {w.code} - {w.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* New Password */}
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  New Password (optional)
+                </label>
+
+                <div className="relative mt-1">
+                  <input
+                    {...register("password")}
+                    type={showPassword ? "text" : "password"}
+                    className="w-full border rounded-lg px-3 py-2 pr-10 focus:ring-blue-500 focus:border-blue-500"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Confirm Password
+                </label>
+
+                <div className="relative mt-1">
+                  <input
+                    {...register("confirmPassword")}
+                    type={showConfirmPassword ? "text" : "password"}
+                    className="w-full border rounded-lg px-3 py-2 pr-10 focus:ring-blue-500 focus:border-blue-500"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-sm font-medium">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  {...register("confirmPassword")}
-                  type={showConfirmPassword ? "text" : "password"}
-                  className="w-full border rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-2"
-                >
-                  {showConfirmPassword ? <EyeOff /> : <Eye />}
-                </button>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4">
+            {/* Footer */}
+            <div className="flex justify-end gap-3 p-4 border-t bg-white rounded-b-2xl sticky bottom-0">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border rounded-md border-gray-300 hover:bg-gray-100"
+                className="px-5 py-2 border rounded-lg text-sm hover:bg-gray-50"
               >
                 Cancel
               </button>
+
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50"
+                className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50"
               >
                 {isSubmitting ? "Saving..." : "Save Changes"}
               </button>

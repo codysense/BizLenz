@@ -361,6 +361,29 @@ export class PurchaseController {
     }
   }
 
+  async getVendorById(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params;
+
+      const vendor = await prisma.vendor.findUnique({
+        where: { id },
+      });
+
+      if (!vendor) {
+        return res.status(404).json({
+          error: "Vendor not found",
+        });
+      }
+
+      res.json(vendor);
+    } catch (error) {
+      console.error("Get vendor by id error:", error);
+      res.status(500).json({
+        error: "Failed to fetch vendor",
+      });
+    }
+  }
+
   async createVendor(req: AuthRequest, res: Response) {
     try {
       const validatedData = createVendorSchema.parse(req.body);

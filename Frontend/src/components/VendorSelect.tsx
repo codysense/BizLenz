@@ -66,6 +66,15 @@ export function VendorSelect({
 
   const allVendors = loadedVendors;
 
+  const { data: selectedVendorData } = useQuery({
+    queryKey: ["vendor", value],
+    queryFn: () => purchaseApi.getVendorById(value!),
+    enabled: !!value && !allVendors.some((v) => v.id === value),
+  });
+
+  const selectedVendor =
+    allVendors.find((v) => v.id === value) || selectedVendorData;
+
   //  Infinite scroll handler
   const handleScroll = (e: React.UIEvent<HTMLUListElement>) => {
     const bottom =
@@ -84,9 +93,10 @@ export function VendorSelect({
           <div className="relative w-full cursor-default overflow-hidden rounded-md border border-gray-300 bg-white text-left shadow-sm focus-within:ring-2 focus-within:ring-blue-500 sm:text-sm">
             <Combobox.Input
               className="w-full border-none py-2 pl-3 pr-10 leading-5 text-gray-900 focus:ring-0"
-              displayValue={(id: string) =>
-                allVendors.find((v) => v.id === id)?.name || ""
-              }
+              displayValue={() => selectedVendor?.name || ""}
+              // displayValue={(id: string) =>
+              //   allVendors.find((v) => v.id === id)?.name || ""
+              // }
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search vendor by name, code, or phone..."
             />

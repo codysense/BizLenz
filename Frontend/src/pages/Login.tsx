@@ -51,7 +51,7 @@ const Login = () => {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-light-lavender">
       {/* LEFT SIDE - Similar to Termii layout */}
-      <div className="hidden lg:flex flex-col justify-between bg-velvet text-lavender p-10 xl:p-16">
+      <div className="hidden lg:flex flex-col justify-between bg-emerald-600 text-lavender p-10 xl:p-16">
         <div>
           <img
             src={bizlensLogo}
@@ -59,11 +59,11 @@ const Login = () => {
             className="h-32 object-contain mb-4"
           />
 
-          <h1 className="text-4xl font-bold leading-tight mb-4">
+          <h1 className="text-4xl font-bold leading-tight mb-4 text-white">
             Control Everything. <br /> Miss Nothing.
           </h1>
 
-          <p className="text-lg text-lavender/80 max-w-md">
+          <p className="text-lg text-white/80 max-w-md">
             Track income, expenses, invoices, inventory, and financial growth
             from one powerful accounting dashboard.
           </p>
@@ -88,7 +88,7 @@ const Login = () => {
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 transform transition-all duration-300 hover:-translate-y-2 hover:bg-white/20 hover:shadow-lg cursor-pointer">
             <TrendingUp className="h-8 w-8 mb-3" />
             <h3 className="text-2xl font-bold">5,000+</h3>
-            <p className="text-sm text-lavender/70">Businesses Growing</p>
+            <p className="text-sm text-white/70">Businesses Growing</p>
           </div>
         </div>
       </div>
@@ -104,7 +104,7 @@ const Login = () => {
             />
           </div>
 
-          <h2 className="text-3xl font-bold text-dark-velvet mb-2">
+          <h2 className="text-3xl font-bold text-emerald-600 mb-2">
             Welcome Back
           </h2>
           <p className="text-gray-500 mb-8">
@@ -119,7 +119,7 @@ const Login = () => {
               <input
                 {...register("email")}
                 type="email"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-velvet"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 placeholder="Enter your email"
               />
               {errors.email && (
@@ -135,7 +135,7 @@ const Login = () => {
                 <input
                   {...register("password")}
                   type={showPassword ? "text" : "password"}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-velvet"
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="Enter your password"
                 />
 
@@ -164,14 +164,14 @@ const Login = () => {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-gray-300 text-velvet focus:ring-velvet"
+                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                   Remember Me
                 </label>
 
                 <Link
                   to="/forgot-password"
-                  className="text-sm font-medium text-velvet hover:text-dark-velvet"
+                  className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
                 >
                   Forgot Password?
                 </Link>
@@ -181,7 +181,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-lg bg-velvet text-lavender font-semibold hover:bg-dark-velvet transition duration-200 disabled:opacity-50"
+              className="w-full py-3 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition duration-200 disabled:opacity-50"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>

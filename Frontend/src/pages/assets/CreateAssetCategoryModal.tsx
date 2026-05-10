@@ -1,22 +1,29 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { X } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { assetsApi, managementApi } from '../../lib/api';
-import toast from 'react-hot-toast';
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { assetsApi, managementApi } from "../../lib/api";
+import toast from "react-hot-toast";
 
 const createAssetCategorySchema = z.object({
-  code: z.string().min(1, 'Code is required'),
-  name: z.string().min(1, 'Name is required'),
+  code: z.string().min(1, "Code is required"),
+  name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  depreciationMethod: z.enum(['STRAIGHT_LINE', 'REDUCING_BALANCE']),
-  usefulLife: z.number().int().positive('Useful life must be positive'),
-  residualValue: z.number().min(0).max(100, 'Residual value must be between 0-100%'),
-  glAssetAccountId: z.string().min(1, 'Asset account is required'),
-  glDepreciationAccountId: z.string().min(1, 'Depreciation account is required'),
-  glAccumulatedDepreciationAccountId: z.string().min(1, 'Accumulated depreciation account is required'),
+  depreciationMethod: z.enum(["STRAIGHT_LINE", "REDUCING_BALANCE"]),
+  usefulLife: z.number().int().positive("Useful life must be positive"),
+  residualValue: z
+    .number()
+    .min(0)
+    .max(100, "Residual value must be between 0-100%"),
+  glAssetAccountId: z.string().min(1, "Asset account is required"),
+  glDepreciationAccountId: z
+    .string()
+    .min(1, "Depreciation account is required"),
+  glAccumulatedDepreciationAccountId: z
+    .string()
+    .min(1, "Accumulated depreciation account is required"),
 });
 
 type CreateAssetCategoryFormData = z.infer<typeof createAssetCategorySchema>;
@@ -26,80 +33,103 @@ interface CreateAssetCategoryModalProps {
   onSuccess: () => void;
 }
 
-const CreateAssetCategoryModal = ({ onClose, onSuccess }: CreateAssetCategoryModalProps) => {
+const CreateAssetCategoryModal = ({
+  onClose,
+  onSuccess,
+}: CreateAssetCategoryModalProps) => {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting },
   } = useForm<CreateAssetCategoryFormData>({
     resolver: zodResolver(createAssetCategorySchema),
     defaultValues: {
-      depreciationMethod: 'STRAIGHT_LINE',
+      depreciationMethod: "STRAIGHT_LINE",
       usefulLife: 5,
-      residualValue: 10
-    }
+      residualValue: 10,
+    },
   });
 
   const { data: chartAccounts } = useQuery({
-    queryKey: ['chart-accounts-for-assets'],
-    queryFn: () => managementApi.getChartOfAccounts()
+    queryKey: ["chart-accounts-for-assets"],
+    queryFn: () => managementApi.getChartOfAccounts(),
   });
 
   const onSubmit = async (data: CreateAssetCategoryFormData) => {
     try {
       await assetsApi.createAssetCategory(data);
-      toast.success('Asset category created successfully');
+      toast.success("Asset category created successfully");
       onSuccess();
     } catch (error) {
-      console.error('Create asset category error:', error);
+      console.error("Create asset category error:", error);
     }
   };
 
   // Filter accounts by type
-  const assetAccounts = chartAccounts?.accounts?.filter((acc: any) => 
-    acc.accountType === 'NON_CURRENT_ASSETS' && !acc.name.toLowerCase().includes('depreciation')
-  ) || [];
+  const assetAccounts =
+    chartAccounts?.accounts?.filter(
+      (acc: any) =>
+        acc.accountType === "NON_CURRENT_ASSETS" &&
+        !acc.name.toLowerCase().includes("depreciation"),
+    ) || [];
 
-  const depreciationAccounts = chartAccounts?.accounts?.filter((acc: any) => 
-    acc.accountType === 'EXPENSES' && acc.name.toLowerCase().includes('depreciation')
-  ) || [];
+  const depreciationAccounts =
+    chartAccounts?.accounts?.filter(
+      (acc: any) =>
+        acc.accountType === "EXPENSES" &&
+        acc.name.toLowerCase().includes("depreciation"),
+    ) || [];
 
-  const accumulatedDepreciationAccounts = chartAccounts?.accounts?.filter((acc: any) => 
-    acc.accountType === 'NON_CURRENT_ASSETS' && acc.name.toLowerCase().includes('accumulated')
-  ) || [];
+  const accumulatedDepreciationAccounts =
+    chartAccounts?.accounts?.filter(
+      (acc: any) =>
+        acc.accountType === "NON_CURRENT_ASSETS" &&
+        acc.name.toLowerCase().includes("accumulated"),
+    ) || [];
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
-        
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Create Asset Category
-              </h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="flex items-center justify-center min-h-screen px-4 py-10 text-center sm:block sm:p-0">
+        {/* Overlay */}
+        <div
+          className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"
+          onClick={onClose}
+        />
+
+        {/* Modal */}
+        <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+          {/* Header (Premium Gradient) */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-white">
+              Create Asset Category
+            </h3>
+
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white transition"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="bg-white px-6 py-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* Code + Name */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Code *
                   </label>
                   <input
-                    {...register('code')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    {...register("code")}
                     placeholder="e.g., PLANT"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   {errors.code && (
-                    <p className="mt-1 text-sm text-red-600">{errors.code.message}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.code.message}
+                    </p>
                   )}
                 </div>
 
@@ -108,101 +138,91 @@ const CreateAssetCategoryModal = ({ onClose, onSuccess }: CreateAssetCategoryMod
                     Name *
                   </label>
                   <input
-                    {...register('name')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    {...register("name")}
                     placeholder="e.g., Plant and Equipment"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   {errors.name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.name.message}
+                    </p>
                   )}
                 </div>
               </div>
 
+              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Description
                 </label>
                 <textarea
-                  {...register('description')}
+                  {...register("description")}
                   rows={3}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Category description"
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {/* Depreciation Settings */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Depreciation Method*
+                    Depreciation Method *
                   </label>
                   <select
-                    {...register('depreciationMethod')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    {...register("depreciationMethod")}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="STRAIGHT_LINE">Straight Line</option>
                     <option value="REDUCING_BALANCE">Reducing Balance</option>
                   </select>
-                  {errors.depreciationMethod && (
-                    <p className="mt-1 text-sm text-red-600">{errors.depreciationMethod.message}</p>
-                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Useful Life (Years) *
+                    Useful Life (Years)
                   </label>
                   <input
-                    {...register('usefulLife', { valueAsNumber: true })}
                     type="number"
-                    min="1"
-                    max="50"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    {...register("usefulLife", { valueAsNumber: true })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
-                  {errors.usefulLife && (
-                    <p className="mt-1 text-sm text-red-600">{errors.usefulLife.message}</p>
-                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Residual Value (%) *
+                    Residual Value (%)
                   </label>
                   <input
-                    {...register('residualValue', { valueAsNumber: true })}
                     type="number"
-                    min="0"
-                    max="100"
                     step="0.01"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    {...register("residualValue", { valueAsNumber: true })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
-                  {errors.residualValue && (
-                    <p className="mt-1 text-sm text-red-600">{errors.residualValue.message}</p>
-                  )}
                 </div>
               </div>
 
-              {/* GL Account Mappings */}
+              {/* GL Accounts */}
               <div className="space-y-4">
-                <h4 className="text-md font-medium text-gray-900">GL Account Mappings</h4>
-                
+                <h4 className="text-sm font-semibold text-gray-900">
+                  GL Account Mappings
+                </h4>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Asset Account *
                   </label>
                   <select
-                    {...register('glAssetAccountId')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    {...register("glAssetAccountId")}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Select asset account</option>
-                    {assetAccounts.map((account: any) => (
-                      <option key={account.id} value={account.id}>
-                        {account.code} - {account.name}
+                    <option value="">Select account</option>
+                    {assetAccounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.code} - {acc.name}
                       </option>
                     ))}
                   </select>
-                  {errors.glAssetAccountId && (
-                    <p className="mt-1 text-sm text-red-600">{errors.glAssetAccountId.message}</p>
-                  )}
                 </div>
 
                 <div>
@@ -210,19 +230,16 @@ const CreateAssetCategoryModal = ({ onClose, onSuccess }: CreateAssetCategoryMod
                     Depreciation Expense Account *
                   </label>
                   <select
-                    {...register('glDepreciationAccountId')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    {...register("glDepreciationAccountId")}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Select depreciation expense account</option>
-                    {depreciationAccounts.map((account: any) => (
-                      <option key={account.id} value={account.id}>
-                        {account.code} - {account.name}
+                    <option value="">Select account</option>
+                    {depreciationAccounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.code} - {acc.name}
                       </option>
                     ))}
                   </select>
-                  {errors.glDepreciationAccountId && (
-                    <p className="mt-1 text-sm text-red-600">{errors.glDepreciationAccountId.message}</p>
-                  )}
                 </div>
 
                 <div>
@@ -230,45 +247,47 @@ const CreateAssetCategoryModal = ({ onClose, onSuccess }: CreateAssetCategoryMod
                     Accumulated Depreciation Account *
                   </label>
                   <select
-                    {...register('glAccumulatedDepreciationAccountId')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    {...register("glAccumulatedDepreciationAccountId")}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Select accumulated depreciation account</option>
-                    {accumulatedDepreciationAccounts.map((account: any) => (
-                      <option key={account.id} value={account.id}>
-                        {account.code} - {account.name}
+                    <option value="">Select account</option>
+                    {accumulatedDepreciationAccounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.code} - {acc.name}
                       </option>
                     ))}
                   </select>
-                  {errors.glAccumulatedDepreciationAccountId && (
-                    <p className="mt-1 text-sm text-red-600">{errors.glAccumulatedDepreciationAccountId.message}</p>
-                  )}
                 </div>
               </div>
 
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h4 className="text-sm font-medium text-green-900 mb-2">GL Account Setup:</h4>
-                <ul className="text-sm text-green-800 space-y-1">
-                  <li>• Asset Account: Records the cost of assets</li>
-                  <li>• Depreciation Expense: Monthly/yearly depreciation charges</li>
-                  <li>• Accumulated Depreciation: Total depreciation to date</li>
+              {/* Info Box */}
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm text-blue-800">
+                <p className="font-semibold mb-1">GL Setup Guide</p>
+                <ul className="space-y-1 list-disc pl-5">
+                  <li>Asset Account → Records asset acquisition cost</li>
+                  <li>Depreciation Expense → Periodic expense recognition</li>
+                  <li>
+                    Accumulated Depreciation → Total depreciation over time
+                  </li>
                 </ul>
               </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="px-5 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Creating...' : 'Create Category'}
+                  {isSubmitting ? "Creating..." : "Create Category"}
                 </button>
               </div>
             </form>

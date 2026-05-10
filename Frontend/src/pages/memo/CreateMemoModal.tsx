@@ -174,295 +174,206 @@ export const MemoModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        {/* Background overlay */}
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          onClick={onClose}
-        />
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Overlay */}
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
-        {/* Modal panel */}
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                New Memo
-              </h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
+      {/* Modal */}
+      <div className="relative w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-t-2xl">
+          <h3 className="text-lg font-semibold">New Memo</h3>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Arrange module and type in a row with space between them   */}
-              <div className="grid grid-cols-2 gap-4">
-                {/* Module */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Module *
-                  </label>
-                  <select
-                    {...register("module")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 
-                           focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  >
-                    <option value="SALES">Sales</option>
-                    <option value="PURCHASES">Purchases</option>
-                  </select>
-                  {errors.module && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.module.message}
-                    </p>
-                  )}
-                </div>
+          <button onClick={onClose} className="text-white/80 hover:text-white">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
 
-                {/* Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Type *
-                  </label>
-                  <select
-                    {...register("memoType")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 
-                           focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  >
-                    <option value="CREDIT">Credit</option>
-                    <option value="DEBIT">Debit</option>
-                  </select>
-                  {errors.memoType && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.memoType.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {/* Arrange Date and Amount in a row with space between them   */}
-              <div className="grid grid-cols-2 gap-4">
-                {/* Date */}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Date *
-                  </label>
-                  <input
-                    type="date"
-                    {...register("date", { valueAsDate: true })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 
-                           focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  />
-                  {errors.date && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.date.message}
-                    </p>
-                  )}
-                </div>
-                {/* Amount */}
-                {!isLinked && (
-                  // <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Amount *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      {...register("amount", { valueAsNumber: true })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3"
-                    />
-                  </div>
-                  // </div>
-                )}
-              </div>
-
-              {/* Reason */}
+        {/* Body */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="p-6 overflow-y-auto space-y-5">
+            {/* Module + Type */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Reason *
+                <label className="text-sm font-medium text-gray-700">
+                  Module
                 </label>
-                <input
-                  {...register("description")}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 
-                           focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-                {errors.description && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.description.message}
+                <select
+                  {...register("module")}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="SALES">Sales</option>
+                  <option value="PURCHASES">Purchases</option>
+                </select>
+                {errors.module && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.module.message}
                   </p>
                 )}
               </div>
 
-              {/* Customer (only when SALES) */}
-              {selectedModule === "SALES" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Customer *
-                  </label>
-                  <CustomerSelect
-                    customers={customers?.customers || []}
-                    value={watch("customerId")}
-                    onChange={(val) =>
-                      setValue("customerId", val, { shouldDirty: true })
-                    }
-                    error={errors.customerId?.message}
-                  />
-                  {errors.customerId && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.customerId.message}
-                    </p>
-                  )}
-                </div>
-              )}
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Type
+                </label>
+                <select
+                  {...register("memoType")}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="CREDIT">Credit</option>
+                  <option value="DEBIT">Debit</option>
+                </select>
+                {errors.memoType && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.memoType.message}
+                  </p>
+                )}
+              </div>
+            </div>
 
-              {selectedModule === "SALES" && selectedCustomerId && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Linked Sale (Optional)
-                  </label>
+            {/* Date + Amount */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  {...register("date", { valueAsDate: true })}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                {errors.date && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.date.message}
+                  </p>
+                )}
+              </div>
 
-                  <select
-                    {...register("saleId")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  >
-                    <option value="">Standalone Memo</option>
-                    {customerSales?.sales?.map((sale: any) =>
-                      //remove sale whose  status is confimmed or delivered or returned
-                      sale.status === "CONFIRMED" ||
-                      sale.status === "DELIVERED" ||
-                      sale.status === "RETURNED" ? null : (
-                        <option key={sale.id} value={sale.id}>
-                          {sale.orderNo} - {sale.totalAmount} - {sale.status}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </div>
-              )}
-
-              {/* Vendor (only when PURCHASES) */}
-              {selectedModule === "PURCHASES" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Vendor *
-                  </label>
-                  <VendorSelect
-                    vendors={vendors?.vendors || []}
-                    value={watch("vendorId")}
-                    onChange={(val) =>
-                      setValue("vendorId", val, { shouldDirty: true })
-                    }
-                    error={errors.vendorId?.message}
-                  />
-
-                  {errors.vendorId && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.vendorId.message}
-                    </p>
-                  )}
-                </div>
-              )}
-              {selectedModule === "PURCHASES" && selectedVendorId && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Linked Purchase (Optional)
-                  </label>
-
-                  <select
-                    {...register("purchaseId")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  >
-                    <option value="">Standalone Memo</option>
-                    {vendorPurchases?.purchases?.map((purchase: any) =>
-                      purchase.status === "ORDERED" ||
-                      purchase.status === "RECEIVED" ||
-                      purchase.status === "RETURNED" ? null : (
-                        <option key={purchase.id} value={purchase.id}>
-                          {purchase.orderNo} - {purchase.totalAmount} -{" "}
-                          {purchase.status}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </div>
-              )}
-
-              {isLinked && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Return Warehouse *
-                  </label>
-
-                  <select
-                    {...register("warehouseId")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  >
-                    <option value="">Select warehouse</option>
-                    {warehouses?.warehouses?.map((wh: any) => (
-                      <option key={wh.id} value={wh.id}>
-                        {wh.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* GL Account */}
               {!isLinked && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    GL Account *
+                  <label className="text-sm font-medium text-gray-700">
+                    Amount
                   </label>
-                  <ChartAccountSelect
-                    accounts={chartAccounts?.accounts || []}
-                    value={watch("accountId")}
-                    onChange={(val) =>
-                      setValue("accountId", val, { shouldDirty: true })
-                    }
-                    error={errors.accountId?.message}
+                  <input
+                    type="number"
+                    step="0.01"
+                    {...register("amount", { valueAsNumber: true })}
+                    className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
                   />
-                  {errors.accountId && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.accountId.message}
-                    </p>
-                  )}
                 </div>
               )}
+            </div>
 
-              {/* Actions */}
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 
-                           hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`px-4 py-2  border border-transparent rounded-md shadow-sm text-sm font-medium text-white
-                  ${
-                    watch("memoType") === "CREDIT"
-                      ? "bg-green-600 hover:bg-green-700 focus:ring-green-500"
-                      : watch("memoType") === "DEBIT"
-                        ? "bg-red-600 hover:bg-red-700 focus:ring-red-500"
-                        : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
-                  }`}
-                >
-                  {isSubmitting
-                    ? "Posting"
-                    : `Post ${watch("memoType") === "CREDIT" ? "Credit" : watch("memoType") === "DEBIT" ? "Debit" : ""}`}
-                </button>
+            {/* Description */}
+            <div>
+              <label className="text-sm font-medium text-gray-700">
+                Reason
+              </label>
+              <input
+                {...register("description")}
+                className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {/* Customer */}
+            {selectedModule === "SALES" && (
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Customer
+                </label>
+                <CustomerSelect
+                  customers={customers?.customers || []}
+                  value={watch("customerId")}
+                  onChange={(val) =>
+                    setValue("customerId", val, { shouldDirty: true })
+                  }
+                  error={errors.customerId?.message}
+                />
               </div>
-            </form>
+            )}
+
+            {/* Vendor */}
+            {selectedModule === "PURCHASES" && (
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Vendor
+                </label>
+                <VendorSelect
+                  vendors={vendors?.vendors || []}
+                  value={watch("vendorId")}
+                  onChange={(val) =>
+                    setValue("vendorId", val, { shouldDirty: true })
+                  }
+                  error={errors.vendorId?.message}
+                />
+              </div>
+            )}
+
+            {/* Warehouse (linked only) */}
+            {isLinked && (
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Return Warehouse
+                </label>
+                <select
+                  {...register("warehouseId")}
+                  className="mt-1 w-full border rounded-lg px-3 py-2"
+                >
+                  <option value="">Select warehouse</option>
+                  {warehouses?.warehouses?.map((wh: any) => (
+                    <option key={wh.id} value={wh.id}>
+                      {wh.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* GL Account */}
+            {!isLinked && (
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  GL Account
+                </label>
+                <ChartAccountSelect
+                  accounts={chartAccounts?.accounts || []}
+                  value={watch("accountId")}
+                  onChange={(val) =>
+                    setValue("accountId", val, { shouldDirty: true })
+                  }
+                  error={errors.accountId?.message}
+                />
+              </div>
+            )}
           </div>
-        </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 p-4 border-t bg-white rounded-b-2xl">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2 border rounded-lg text-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`px-5 py-2 rounded-lg text-white text-sm font-medium
+            ${
+              watch("memoType") === "CREDIT"
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-red-600 hover:bg-red-700"
+            }`}
+            >
+              {isSubmitting ? "Posting..." : "Post Memo"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

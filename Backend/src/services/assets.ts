@@ -568,6 +568,17 @@ export class AssetsService {
             },
           });
 
+          // Get Gl account codes for this asset's category
+          const glDepreciationAccount =
+            asset.category?.glDepreciationAccount?.code;
+          const glAccumulatedDepreciationAccount =
+            asset.category?.glAccumulatedDepreciationAccount?.code;
+
+          // console.log(`Calculating depreciation for asset ${asset.assetNo} - ${asset.name} for period ${periodYear}-${periodMonth}`);
+          // console.log(
+          //   `GL Depreciation Account: ${glDepreciationAccount}, GL Accumulated Depreciation Account: ${glAccumulatedDepreciationAccount}`,
+          // );
+
           if (existingEntry) {
             continue; // Skip if already calculated
           }
@@ -594,33 +605,33 @@ export class AssetsService {
 
             depreciationEntries.push(entry);
             totalDepreciation += calculation.depreciationAmount;
+
+            const journalId = await glService.postJournal(
+              tx,
+              [
+                {
+                  accountCode: glDepreciationAccount, // Depreciation Expense (will be updated per category)
+                  debit: calculation.depreciationAmount,
+                  credit: 0,
+                  refType: "DEPRECIATION",
+                  refId: `${periodYear}-${periodMonth}`,
+                },
+                {
+                  accountCode: glAccumulatedDepreciationAccount, // Accumulated Depreciation (will be updated per category)
+                  debit: 0,
+                  credit: calculation.depreciationAmount,
+                  refType: "DEPRECIATION",
+                  refId: `${periodYear}-${periodMonth}`,
+                },
+              ],
+              `Depreciation for ${periodYear}-${String(periodMonth).padStart(2, "0")}`,
+              userId,
+            );
           }
         }
 
         // Post consolidated depreciation journal entry
         if (totalDepreciation > 0) {
-          const journalId = await glService.postJournal(
-            tx,
-            [
-              {
-                accountCode: "6300", // Depreciation Expense (will be updated per category)
-                debit: totalDepreciation,
-                credit: 0,
-                refType: "DEPRECIATION",
-                refId: `${periodYear}-${periodMonth}`,
-              },
-              {
-                accountCode: "1600", // Accumulated Depreciation (will be updated per category)
-                debit: 0,
-                credit: totalDepreciation,
-                refType: "DEPRECIATION",
-                refId: `${periodYear}-${periodMonth}`,
-              },
-            ],
-            `Depreciation for ${periodYear}-${String(periodMonth).padStart(2, "0")}`,
-            userId,
-          );
-
           // Mark entries as posted
           await tx.assetDepreciation.updateMany({
             where: {
@@ -629,7 +640,6 @@ export class AssetsService {
             data: {
               isPosted: true,
               postedAt: new Date(),
-              journalId,
             },
           });
         }
@@ -785,44 +795,102 @@ export class AssetsService {
 
   // Asset Register Report
   async getAssetRegister(filters: any = {}) {
-    const { categoryId, status, locationId, asOfDate } = filters;
+    let {
+      page = 1,
+      limit = 10,
+      categoryId,
+      status,
+      locationId,
+      asOfDate,
+    } = filters;
+
+    page = Number(page) || 1;
+    limit = Number(limit) || 10;
+
+    const skip = (page - 1) * limit;
 
     const where: any = {};
-    if (categoryId) where.categoryId = categoryId;
-    if (status) where.status = status;
-    if (locationId) where.locationId = locationId;
 
-    const assets = await prisma.asset.findMany({
-      where,
-      include: {
-        category: {
-          select: { code: true, name: true, depreciationMethod: true },
-        },
-        location: { select: { code: true, name: true } },
-        depreciationEntries: {
-          where: asOfDate
-            ? {
-                OR: [
-                  { periodYear: { lt: new Date(asOfDate).getFullYear() } },
-                  {
-                    AND: [
-                      { periodYear: new Date(asOfDate).getFullYear() },
-                      {
-                        periodMonth: { lte: new Date(asOfDate).getMonth() + 1 },
+    // Match getAssets filtering behavior
+    if (categoryId && categoryId !== "ALL") {
+      where.categoryId = categoryId;
+    }
+
+    if (status && status !== "ALL") {
+      where.status = status.toUpperCase();
+    }
+
+    if (locationId && locationId !== "ALL") {
+      where.locationId = locationId;
+    }
+
+    const [assets, total] = await Promise.all([
+      prisma.asset.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          category: {
+            select: {
+              code: true,
+              name: true,
+              depreciationMethod: true,
+            },
+          },
+          location: {
+            select: {
+              code: true,
+              name: true,
+            },
+          },
+          depreciationEntries: {
+            where: asOfDate
+              ? {
+                  OR: [
+                    {
+                      periodYear: {
+                        lt: new Date(asOfDate).getFullYear(),
                       },
-                    ],
-                  },
-                ],
-              }
-            : undefined,
-          orderBy: { createdAt: "desc" },
-          take: 1,
+                    },
+                    {
+                      AND: [
+                        {
+                          periodYear: new Date(asOfDate).getFullYear(),
+                        },
+                        {
+                          periodMonth: {
+                            lte: new Date(asOfDate).getMonth() + 1,
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                }
+              : undefined,
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+          },
         },
-      },
-      orderBy: [{ category: { code: "asc" } }, { assetNo: "asc" }],
-    });
+        orderBy: [
+          {
+            category: {
+              code: "asc",
+            },
+          },
+          {
+            assetNo: "asc",
+          },
+        ],
+      }),
 
-    return assets.map((asset) => {
+      prisma.asset.count({
+        where,
+      }),
+    ]);
+
+    const transformedAssets = assets.map((asset) => {
       const accumulatedDepreciation =
         asset.depreciationEntries.length > 0
           ? Number(asset.depreciationEntries[0].accumulatedDepreciation)
@@ -834,7 +902,68 @@ export class AssetsService {
         netBookValue: Number(asset.acquisitionCost) - accumulatedDepreciation,
       };
     });
+
+    return {
+      assets: transformedAssets,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
   }
+  // async getAssetRegister(filters: any = {}) {
+  //   const { categoryId, status, locationId, asOfDate } = filters;
+
+  //   const where: any = {};
+  //   if (categoryId) where.categoryId = categoryId;
+  //   if (status) where.status = status;
+  //   if (locationId) where.locationId = locationId;
+
+  //   const assets = await prisma.asset.findMany({
+  //     where,
+  //     include: {
+  //       category: {
+  //         select: { code: true, name: true, depreciationMethod: true },
+  //       },
+  //       location: { select: { code: true, name: true } },
+  //       depreciationEntries: {
+  //         where: asOfDate
+  //           ? {
+  //               OR: [
+  //                 { periodYear: { lt: new Date(asOfDate).getFullYear() } },
+  //                 {
+  //                   AND: [
+  //                     { periodYear: new Date(asOfDate).getFullYear() },
+  //                     {
+  //                       periodMonth: { lte: new Date(asOfDate).getMonth() + 1 },
+  //                     },
+  //                   ],
+  //                 },
+  //               ],
+  //             }
+  //           : undefined,
+  //         orderBy: { createdAt: "desc" },
+  //         take: 1,
+  //       },
+  //     },
+  //     orderBy: [{ category: { code: "asc" } }, { assetNo: "asc" }],
+  //   });
+
+  //   return assets.map((asset) => {
+  //     const accumulatedDepreciation =
+  //       asset.depreciationEntries.length > 0
+  //         ? Number(asset.depreciationEntries[0].accumulatedDepreciation)
+  //         : 0;
+
+  //     return {
+  //       ...asset,
+  //       accumulatedDepreciation,
+  //       netBookValue: Number(asset.acquisitionCost) - accumulatedDepreciation,
+  //     };
+  //   });
+  // }
 
   // Depreciation Schedule
   async getDepreciationSchedule(assetId: string) {

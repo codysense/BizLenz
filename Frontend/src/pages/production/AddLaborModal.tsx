@@ -1,15 +1,15 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { X, Clock } from 'lucide-react';
-import { productionApi } from '../../lib/api';
-import { ProductionOrder } from '../../types/api';
-import toast from 'react-hot-toast';
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { X, Clock } from "lucide-react";
+import { productionApi } from "../../lib/api";
+import { ProductionOrder } from "../../types/api";
+import toast from "react-hot-toast";
 
 const addLaborSchema = z.object({
-  hours: z.number().positive('Hours must be positive'),
-  rate: z.number().positive('Rate must be positive'),
+  hours: z.number().positive("Hours must be positive"),
+  rate: z.number().positive("Rate must be positive"),
   employeeName: z.string().optional(),
 });
 
@@ -26,125 +26,169 @@ const AddLaborModal = ({ order, onClose, onSuccess }: AddLaborModalProps) => {
     register,
     handleSubmit,
     watch,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting },
   } = useForm<AddLaborFormData>({
-    resolver: zodResolver(addLaborSchema)
+    resolver: zodResolver(addLaborSchema),
   });
 
-  const watchedHours = watch('hours') || 0;
-  const watchedRate = watch('rate') || 0;
+  const watchedHours = watch("hours") || 0;
+  const watchedRate = watch("rate") || 0;
   const totalAmount = watchedHours * watchedRate;
 
   const onSubmit = async (data: AddLaborFormData) => {
     try {
       await productionApi.addLabor(order.id, data);
-      toast.success('Labor cost added successfully');
+      toast.success("Labor cost added successfully");
       onSuccess();
     } catch (error) {
-      console.error('Add labor error:', error);
+      console.error("Add labor error:", error);
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
-        
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Add Labor Cost: {order.orderNo}
-              </h3>
+      <div className="flex items-center justify-center min-h-screen px-4 py-8 text-center sm:block sm:p-0">
+        {/* Overlay */}
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+          onClick={onClose}
+        />
+
+        {/* Modal */}
+        <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
+          {/* Header */}
+          <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Add Labor Cost
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Order: {order.orderNo}
+                </p>
+              </div>
+
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
+                className="p-2 rounded-xl hover:bg-gray-100 transition"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
-            
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          </div>
+
+          {/* Form Content */}
+          <div className="px-6 py-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Order Info */}
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="flex items-center">
-                  <Clock className="h-5 w-5 text-blue-500 mr-2" />
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                  </div>
+
                   <div>
-                    <div className="font-medium">{order.item.name}</div>
-                    <div className="text-sm text-gray-600">Target: {order.qtyTarget} units</div>
+                    <p className="font-semibold text-gray-900">
+                      {order.item.name}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Target Production: {order.qtyTarget} units
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Hours Worked *
                   </label>
                   <input
-                    {...register('hours', { valueAsNumber: true })}
+                    {...register("hours", { valueAsNumber: true })}
                     type="number"
                     step="0.01"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     placeholder="8.00"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   {errors.hours && (
-                    <p className="mt-1 text-sm text-red-600">{errors.hours.message}</p>
+                    <p className="mt-2 text-sm text-red-500">
+                      {errors.hours.message}
+                    </p>
                   )}
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Hourly Rate (₦) *
                   </label>
                   <input
-                    {...register('rate', { valueAsNumber: true })}
+                    {...register("rate", { valueAsNumber: true })}
                     type="number"
                     step="0.01"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     placeholder="500.00"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   {errors.rate && (
-                    <p className="mt-1 text-sm text-red-600">{errors.rate.message}</p>
+                    <p className="mt-2 text-sm text-red-500">
+                      {errors.rate.message}
+                    </p>
                   )}
                 </div>
               </div>
-              
+
+              {/* Employee */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Employee Name
                 </label>
                 <input
-                  {...register('employeeName')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  {...register("employeeName")}
                   placeholder="Employee name (optional)"
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm
+                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
-              {/* Total Calculation */}
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-medium text-gray-900">Total Labor Cost:</span>
-                  <span className="text-2xl font-bold text-green-600">
-                    ₦{totalAmount.toLocaleString()}
-                  </span>
+              {/* Total Cost */}
+              <div className="rounded-2xl border border-green-100 bg-green-50 p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">
+                      Calculated Labor Cost
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Based on hours × hourly rate
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-green-600">
+                      ₦{totalAmount.toLocaleString()}
+                    </p>
+                  </div>
                 </div>
               </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
+
+              {/* Footer Buttons */}
+              <div className="flex justify-end gap-3 pt-5 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-xl bg-green-600 text-white text-sm font-medium 
+                hover:bg-green-700 shadow-sm transition disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Adding...' : 'Add Labor Cost'}
+                  {isSubmitting ? "Adding..." : "Add Labor Cost"}
                 </button>
               </div>
             </form>

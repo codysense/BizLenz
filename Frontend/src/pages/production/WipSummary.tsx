@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Factory, DollarSign, Package, TrendingUp } from "lucide-react";
+import { Factory, DollarSign, Package, TrendingUp, Filter } from "lucide-react";
 import { productionApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
 import { GenericSearchSelect } from "../../components/GenericSearchCombo";
@@ -126,26 +126,46 @@ const WipSummary = () => {
     ) || 0;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Work in Progress Summary
-          </h1>
-          <p className="text-gray-600">
-            Track manufacturing costs and WIP balances
-          </p>
+    <div className="space-y-8">
+      {/* Premium Header */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-900 to-blue-900 p-8 text-white shadow-2xl">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.15),transparent_30%)]" />
+
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p className="text-blue-200 text-sm font-medium uppercase tracking-wider">
+              Manufacturing Analytics
+            </p>
+            <h1 className="text-3xl font-bold mt-2">
+              Work in Progress Summary
+            </h1>
+            <p className="text-blue-100 mt-2 max-w-xl">
+              Track material consumption, labor allocation, overhead expenses,
+              and real-time WIP balances across production orders.
+            </p>
+          </div>
+
+          <div className="hidden md:flex h-16 w-16 rounded-2xl bg-white/10 backdrop-blur-xl items-center justify-center border border-white/20">
+            <Factory className="h-8 w-8 text-white" />
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* Premium Filters */}
+      <div className="bg-white/80 backdrop-blur-xl border border-gray-200 rounded-2xl shadow-lg p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Filter className="h-5 w-5 text-indigo-600" />
+          <h2 className="text-lg font-semibold text-gray-900">
+            Filter Production Orders
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Filter by Production Order
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Production Order
             </label>
+
             <GenericSearchSelect
               data={mappedOrders}
               value={productionOrderFilter}
@@ -158,107 +178,108 @@ const WipSummary = () => {
               }
               renderOption={(item) => `${item.orderNo} - ${item.itemName}`}
             />
-            {/* <select
-              value={productionOrderFilter}
-              onChange={(e) => setProductionOrderFilter(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              <option value="">All Production Orders</option>
-              {productionOrders?.orders?.map((order: any) => (
-                <option key={order.id} value={order.id}>
-                  {order.orderNo} - {order.item.name}
-                </option>
-              ))}
-            </select> */}
           </div>
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Package className="h-6 w-6 text-blue-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Material Issues
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    ₦{totalIssues.toLocaleString()}
-                  </dd>
-                </dl>
-              </div>
+      {/* Premium Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* Material Issues */}
+        <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">
+                Material Issues
+              </p>
+              <h3 className="text-2xl font-bold text-gray-900 mt-2">
+                ₦{totalIssues.toLocaleString()}
+              </h3>
+            </div>
+
+            <div className="h-14 w-14 rounded-2xl bg-blue-100 flex items-center justify-center">
+              <Package className="h-7 w-7 text-blue-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Factory className="h-6 w-6 text-green-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Labor Cost
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    ₦{totalLabor.toLocaleString()}
-                  </dd>
-                </dl>
-              </div>
+        {/* Labor */}
+        <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Labor Cost</p>
+              <h3 className="text-2xl font-bold text-gray-900 mt-2">
+                ₦{totalLabor.toLocaleString()}
+              </h3>
+            </div>
+
+            <div className="h-14 w-14 rounded-2xl bg-green-100 flex items-center justify-center">
+              <Factory className="h-7 w-7 text-green-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <TrendingUp className="h-6 w-6 text-purple-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Overhead
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    ₦{totalOverhead.toLocaleString()}
-                  </dd>
-                </dl>
-              </div>
+        {/* Overhead */}
+        <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Overhead</p>
+              <h3 className="text-2xl font-bold text-gray-900 mt-2">
+                ₦{totalOverhead.toLocaleString()}
+              </h3>
+            </div>
+
+            <div className="h-14 w-14 rounded-2xl bg-purple-100 flex items-center justify-center">
+              <TrendingUp className="h-7 w-7 text-purple-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <DollarSign className="h-6 w-6 text-orange-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Total WIP Balance
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    ₦{totalWipBalance.toLocaleString()}
-                  </dd>
-                </dl>
-              </div>
+        {/* Total WIP */}
+        <div className="group bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-orange-100 font-medium">
+                Total WIP Balance
+              </p>
+              <h3 className="text-2xl font-bold mt-2">
+                ₦{totalWipBalance.toLocaleString()}
+              </h3>
+            </div>
+
+            <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-lg flex items-center justify-center">
+              <DollarSign className="h-7 w-7 text-white" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Data Table */}
-      <DataTable data={wipData || []} columns={columns} loading={isLoading} />
+      {/* Premium Table Section */}
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-lg overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                WIP Breakdown
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Detailed breakdown of production order balances and costs
+              </p>
+            </div>
+
+            <div className="h-12 w-12 rounded-xl bg-indigo-100 flex items-center justify-center">
+              <BarChart3 className="h-6 w-6 text-indigo-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <DataTable
+            data={wipData || []}
+            columns={columns}
+            loading={isLoading}
+          />
+        </div>
+      </div>
     </div>
   );
 };

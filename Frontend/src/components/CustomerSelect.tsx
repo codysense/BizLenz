@@ -25,19 +25,12 @@ export function CustomerSelect({
   error,
   typeFilter,
 }: CustomerSelectProps) {
-  const [query, setQuery] = useState("");
-
   const [search, setSearch] = useState("");
   const [loadedCustomers, setLoadedCustomers] = useState<Customer[]>([]);
   const [page, setPage] = useState(1);
 
   // debounce search
   const debouncedSearch = useDebounce(search, 500);
-
-  // reset to page 1 when search or filter changes
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, typeFilter]);
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -57,23 +50,68 @@ export function CustomerSelect({
   const customers: Customer[] = data?.customers ?? [];
   const total = data?.pagination?.total ?? 0;
 
+  // useEffect(() => {
+  //   if (!customers) return;
+
+  //   setLoadedCustomers((prev) =>
+  //     page === 1 ? customers : [...prev, ...customers],
+  //   );
+  // }, [customers, page]);
+
   useEffect(() => {
     if (!customers) return;
 
-    setLoadedCustomers((prev) =>
-      page === 1 ? customers : [...prev, ...customers],
-    );
+    setLoadedCustomers((prev) => {
+      if (page === 1) return customers;
+
+      const merged = [...prev, ...customers];
+
+      return merged.filter(
+        (customer, index, self) =>
+          index === self.findIndex((c) => c.id === customer.id),
+      );
+    });
   }, [customers, page]);
 
   const allCustomers = loadedCustomers;
 
+  const { data: selectedCustomerData } = useQuery({
+    queryKey: ["customer", value],
+    queryFn: () => salesApi.getCustomerById(value!),
+    enabled: !!value && !allCustomers.some((c) => c.id === value),
+  });
+
+  // const selectedCustomer = allCustomers.find((c) => c.id === value);
+
+  const selectedCustomer =
+    allCustomers.find((c) => c.id === value) || selectedCustomerData;
+
+  useEffect(() => {
+    setLoadedCustomers([]);
+    setPage(1);
+  }, [debouncedSearch, typeFilter]);
+
   // pagination — simple "load more" when scrolling
+  // const handleScroll = (e: React.UIEvent<HTMLUListElement>) => {
+  //   const bottom =
+  //     e.currentTarget.scrollHeight - e.currentTarget.scrollTop <=
+  //     e.currentTarget.clientHeight + 5;
+
+  //   // if (bottom && customers.length < total && !isLoading) {
+  //   //   setPage((prev) => prev + 1);
+  //   // }
+
+  //   if (bottom && allCustomers.length < total && !isLoading) {
+  //     setPage((prev) => prev + 1);
+  //   }
+  // };
+
   const handleScroll = (e: React.UIEvent<HTMLUListElement>) => {
     const bottom =
       e.currentTarget.scrollHeight - e.currentTarget.scrollTop <=
       e.currentTarget.clientHeight + 5;
 
-    if (bottom && customers.length < total && !isLoading) {
+    if (bottom && allCustomers.length < total && !isLoading) {
       setPage((prev) => prev + 1);
     }
   };
@@ -95,9 +133,10 @@ export function CustomerSelect({
           <div className="relative w-full cursor-default overflow-hidden rounded-md border border-gray-300 bg-white text-left shadow-sm focus-within:ring-2 focus-within:ring-blue-500 sm:text-sm">
             <Combobox.Input
               className="w-full border-none py-2 pl-3 pr-10 leading-5 text-gray-900 focus:ring-0"
-              displayValue={(id: string) =>
-                allCustomers.find((c) => c.id === id)?.name || ""
-              }
+              displayValue={() => selectedCustomer?.name || ""}
+              // displayValue={(id: string) =>
+              //   allCustomers.find((c) => c.id === id)?.name || ""
+              // }
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search customer with name, code or phone number..."
             />
@@ -115,12 +154,12 @@ export function CustomerSelect({
               className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 sm:text-sm"
               onScroll={handleScroll}
             >
-              {customers.length === 0 && !isLoading ? (
+              {allCustomers.length === 0 && !isLoading ? (
                 <div className="cursor-default select-none py-2 px-4 text-gray-700">
                   Nothing found.
                 </div>
               ) : (
-                customers.map((c) => (
+                allCustomers.map((c) => (
                   <Combobox.Option
                     key={c.id}
                     value={c.id}

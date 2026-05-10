@@ -726,7 +726,7 @@ const Cashbook = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Cashbook</h1>
+          <h1 className="text-3xl font-bold text-black/80">Cashbook</h1>
           <p className="text-gray-600">
             Comprehensive cash and bank management
           </p>
@@ -734,16 +734,16 @@ const Cashbook = () => {
         <div className="flex space-x-2">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+            className={`inline-flex items-center px-5 py-3 border text-sm font-medium rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emrald-500 ${
               showFilters
-                ? "border-blue-500 text-blue-700 bg-blue-50"
+                ? "border-emrald-500 text-emrald-700 bg-emrald-50"
                 : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
             }`}
           >
             <Filter className="h-4 w-4 mr-2" />
             Filters
             {hasActiveFilters && (
-              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emrald-100 text-emrald-800">
                 Active
               </span>
             )}
@@ -770,7 +770,7 @@ const Cashbook = () => {
           </button> */}
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-5 py-3 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
           >
             <Plus className="h-4 w-4 mr-2" />
             New Transaction

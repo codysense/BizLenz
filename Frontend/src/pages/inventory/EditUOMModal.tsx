@@ -49,47 +49,55 @@ const EditUOMModal = ({ uom, onClose, onSuccess }: EditUOMModalProps) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          onClick={onClose}
-        />
-
-        <div
-          className="inline-block align-bottom bg-white rounded-lg text-left
-            overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
-        >
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Edit UOM
-              </h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen p-4">
+        {/* MODAL CONTAINER */}
+        <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
+          {/* HEADER */}
+          <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-5 flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Edit UOM</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Update unit of measurement details
+              </p>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* FORM */}
+          <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+            {/* INFO CARD */}
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
+              <p className="text-sm text-blue-800">
+                Update unit definition used across inventory, pricing, and BOMs.
+              </p>
+            </div>
+
+            {/* FORM FIELDS */}
+            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 space-y-4">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                UOM Details
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* CODE */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-gray-700">
                     Code *
                   </label>
                   <input
                     {...register("code")}
                     placeholder="e.g., KG"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                      py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                   {errors.code && (
-                    <p className="mt-1 text-sm text-red-600">
+                    <p className="text-xs text-red-500 mt-1">
                       {errors.code.message}
                     </p>
                   )}
@@ -97,47 +105,54 @@ const EditUOMModal = ({ uom, onClose, onSuccess }: EditUOMModalProps) => {
 
                 {/* NAME */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-gray-700">
                     Name *
                   </label>
                   <input
                     {...register("name")}
                     placeholder="Kilogram"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                      py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                   {errors.name && (
-                    <p className="mt-1 text-sm text-red-600">
+                    <p className="text-xs text-red-500 mt-1">
                       {errors.name.message}
                     </p>
                   )}
                 </div>
               </div>
+            </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm
-                    font-medium text-gray-700 hover:bg-gray-50 focus:outline-none
-                    focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Cancel
-                </button>
+            {/* IMPACT NOTE */}
+            <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-4">
+              <h4 className="text-sm font-semibold text-yellow-800 mb-2">
+                System Impact
+              </h4>
+              <ul className="text-sm text-yellow-700 space-y-1">
+                <li>• Affects inventory item measurement consistency</li>
+                <li>• Used in BOM calculations and production planning</li>
+                <li>• Changes reflect across all linked modules</li>
+              </ul>
+            </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm
-                    text-sm font-medium text-white bg-blue-600 hover:bg-blue-700
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-                    disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
-            </form>
-          </div>
+            {/* ACTIONS */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50"
+              >
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

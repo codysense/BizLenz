@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, Building, MapPin, Edit } from 'lucide-react';
-import { inventoryApi } from '../../lib/api';
-import { DataTable } from '../../components/DataTable';
-import StatusBadge from '../../components/StatusBadge';
-import CreateWarehouseModal from './CreateWarehouseModal';
-import EditWarehouseModal from './EditWarehouseModal';
-
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Search, Building, MapPin, Edit } from "lucide-react";
+import { inventoryApi } from "../../lib/api";
+import { DataTable } from "../../components/DataTable";
+import StatusBadge from "../../components/StatusBadge";
+import CreateWarehouseModal from "./CreateWarehouseModal";
+import EditWarehouseModal from "./EditWarehouseModal";
 
 interface Location {
   id: string;
@@ -24,65 +23,73 @@ interface Warehouse {
   address?: string;
   isActive: boolean;
   createdAt: string;
-  location:Location
+  location: Location;
 }
 
 const Warehouses = () => {
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(
+    null,
+  );
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['warehouses-list', { page, search }],
-    queryFn: () => inventoryApi.getWarehousesList({ 
-      page, 
-      limit: 10, 
-      ...(search && { search })
-    })
+    queryKey: ["warehouses-list", { page, search }],
+    queryFn: () =>
+      inventoryApi.getWarehousesList({
+        page,
+        limit: 10,
+        ...(search && { search }),
+      }),
   });
 
   const columns = [
     {
-      key: 'code',
-      header: 'Code',
-      width: 'w-24'
+      key: "code",
+      header: "Code",
+      width: "w-24",
     },
     {
-      key: 'name',
-      header: 'Name',
-      width: 'w-48'
+      key: "name",
+      header: "Name",
+      width: "w-48",
     },
     {
-      key: 'location.name',
-      header: 'Location',
+      key: "location.name",
+      header: "Location",
       cell: (warehouse: Warehouse) => (
         <div>
           <div className="font-medium">{warehouse.location?.name}</div>
-          <div className="text-xs text-gray-500">{warehouse.location?.city}, {warehouse.location?.state}</div>
+          <div className="text-xs text-gray-500">
+            {warehouse.location?.city}, {warehouse.location?.state}
+          </div>
         </div>
       ),
-      width: 'w-48'
+      width: "w-48",
     },
     {
-      key: 'address',
-      header: 'Address',
-      cell: (warehouse: Warehouse) => warehouse.address || '-',
-      width: 'w-64'
+      key: "address",
+      header: "Address",
+      cell: (warehouse: Warehouse) => warehouse.address || "-",
+      width: "w-64",
     },
     {
-      key: 'isActive',
-      header: 'Status',
-      cell: (warehouse: Warehouse) => <StatusBadge status={warehouse.isActive ? 'Active' : 'Inactive'} />,
-      width: 'w-24'
+      key: "isActive",
+      header: "Status",
+      cell: (warehouse: Warehouse) => (
+        <StatusBadge status={warehouse.isActive ? "Active" : "Inactive"} />
+      ),
+      width: "w-24",
     },
     {
-      key: 'createdAt',
-      header: 'Created',
-      cell: (warehouse: Warehouse) => new Date(warehouse.createdAt).toLocaleDateString(),
-      width: 'w-32'
-    }
+      key: "createdAt",
+      header: "Created",
+      cell: (warehouse: Warehouse) =>
+        new Date(warehouse.createdAt).toLocaleDateString(),
+      width: "w-32",
+    },
   ];
 
   const handleCreateWarehouse = () => {
@@ -117,11 +124,13 @@ const Warehouses = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Warehouses</h1>
-          <p className="text-gray-600">Manage warehouse locations and facilities</p>
+          <p className="text-gray-600">
+            Manage warehouse locations and facilities
+          </p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-5 py-3 border border-transparent text-sm font-medium rounded-2xl shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Warehouse
@@ -159,7 +168,7 @@ const Warehouses = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Warehouses
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-black/80">
                     {data?.pagination?.total || 0}
                   </dd>
                 </dl>
@@ -179,8 +188,9 @@ const Warehouses = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Active Warehouses
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.warehouses.filter((w: Warehouse) => w.isActive).length || 0}
+                  <dd className="text-4xl font-bold text-black/80">
+                    {data?.warehouses.filter((w: Warehouse) => w.isActive)
+                      .length || 0}
                   </dd>
                 </dl>
               </div>
@@ -199,8 +209,9 @@ const Warehouses = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Locations
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.warehouses?.filter((w: Warehouse) => w.address).length || 0}
+                  <dd className="text-4xl font-bold text-black/80">
+                    {data?.warehouses?.filter((w: Warehouse) => w.address)
+                      .length || 0}
                   </dd>
                 </dl>
               </div>

@@ -73,29 +73,42 @@ const CreateProductionOrderModal = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex items-center justify-center min-h-screen px-4 py-8 text-center sm:block sm:p-0">
+        {/* Overlay */}
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
           onClick={onClose}
         />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Create Production Order
-              </h3>
+        {/* Modal */}
+        <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-gray-100">
+          {/* Header */}
+          <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Create Production Order
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Schedule manufacturing for finished goods inventory
+                </p>
+              </div>
+
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
+                className="p-2 rounded-xl hover:bg-gray-100 transition"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
+          </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Form */}
+          <div className="px-6 py-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* Finished Goods */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Finished Goods Item *
                 </label>
                 <ItemSelect
@@ -104,38 +117,41 @@ const CreateProductionOrderModal = ({
                   typeFilter="FINISHED_GOODS"
                 />
                 {errors.itemId && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="mt-2 text-sm text-red-500">
                     {errors.itemId.message}
                   </p>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Quantity + Warehouse */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Target Quantity *
                   </label>
                   <input
                     {...register("qtyTarget", { valueAsNumber: true })}
                     type="number"
                     step="0.001"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     placeholder="100"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   {errors.qtyTarget && (
-                    <p className="mt-1 text-sm text-red-600">
+                    <p className="mt-2 text-sm text-red-500">
                       {errors.qtyTarget.message}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Warehouse *
                   </label>
                   <select
                     {...register("warehouseId")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Select warehouse</option>
                     {warehouses?.warehouses?.map((warehouse: any) => (
@@ -145,92 +161,104 @@ const CreateProductionOrderModal = ({
                     ))}
                   </select>
                   {errors.warehouseId && (
-                    <p className="mt-1 text-sm text-red-600">
+                    <p className="mt-2 text-sm text-red-500">
                       {errors.warehouseId.message}
                     </p>
                   )}
                 </div>
               </div>
 
+              {/* BOM Section */}
               {selectedItemId && boms && boms.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
+                  <label className="block text-sm font-medium text-gray-800 mb-3">
                     Bill of Materials (Recommended)
                   </label>
+
                   <select
                     {...register("bomId")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm bg-white
+                  focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">No BOM - Manual material planning</option>
+
                     {boms.map((bom: any) => (
                       <option key={bom.id} value={bom.id}>
                         Version {bom.version} ({bom.bomLines.length} components)
                       </option>
                     ))}
                   </select>
-                  {boms.length > 0 && (
-                    <div className="mt-2 p-3 bg-blue-50 rounded-md">
-                      <h4 className="text-sm font-medium text-blue-900 mb-2">
-                        BOM Preview:
-                      </h4>
-                      {boms.map((bom: any) => (
-                        <div key={bom.id} className="text-sm text-blue-800">
-                          <strong>Version {bom.version}:</strong>
-                          <ul className="ml-4 mt-1">
-                            {bom.bomLines.map((line: any, index: number) => (
-                              <li key={index}>
-                                {line.componentItem.sku} - {line.qtyPer}{" "}
-                                {line.componentItem.uom} per unit
-                                {line.scrapPercent > 0 &&
-                                  ` (${line.scrapPercent}% scrap)`}
-                              </li>
-                            ))}
-                          </ul>
+
+                  {/* BOM Preview */}
+                  <div className="mt-4 space-y-3">
+                    {boms.map((bom: any) => (
+                      <div
+                        key={bom.id}
+                        className="bg-white rounded-xl border border-blue-100 p-4"
+                      >
+                        <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                          Version {bom.version}
+                        </h4>
+
+                        <div className="space-y-2">
+                          {bom.bomLines.map((line: any, index: number) => (
+                            <div
+                              key={index}
+                              className="flex justify-between text-sm text-gray-700"
+                            >
+                              <span>{line.componentItem.sku}</span>
+
+                              <span className="font-medium">
+                                {line.qtyPer} {line.componentItem.uom}
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
+              {/* No BOM Warning */}
               {selectedItemId && (!boms || boms.length === 0) && (
-                <div className="bg-yellow-50 p-4 rounded-md">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <AlertTriangle className="h-5 w-5 text-yellow-400" />
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-yellow-800">
+                <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+
+                    <div>
+                      <h4 className="text-sm font-semibold text-yellow-900">
                         No BOM Available
-                      </h3>
-                      <div className="mt-2 text-sm text-yellow-700">
-                        <p>
-                          This item doesn't have a Bill of Materials. You'll
-                          need to manually specify which raw materials to issue
-                          during production.
-                        </p>
-                        <p className="mt-1">
-                          Consider creating a BOM for this item to automate
-                          material calculations.
-                        </p>
-                      </div>
+                      </h4>
+
+                      <p className="text-sm text-yellow-700 mt-1">
+                        This item doesn't have a Bill of Materials. You'll need
+                        to manually issue raw materials.
+                      </p>
+
+                      <p className="text-sm text-yellow-700 mt-2">
+                        Consider creating a BOM for automated material planning.
+                      </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="flex justify-end space-x-3 pt-4">
+              {/* Footer */}
+              <div className="flex justify-end gap-3 pt-5 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium 
+                hover:bg-blue-700 shadow-sm transition disabled:opacity-50"
                 >
                   {isSubmitting ? "Creating..." : "Create Production Order"}
                 </button>

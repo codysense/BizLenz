@@ -509,13 +509,13 @@ const VendorPayments = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vendor Payments</h1>
+          <h1 className="text-3xl font-bold text-black/80">Vendor Payments</h1>
           <p className="text-gray-600">Manage and track supplier payments</p>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md"
+          className="px-5 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700"
         >
           <Plus className="h-4 w-4 inline-block mr-1" />
           Record Payment
@@ -585,7 +585,7 @@ const VendorPayments = () => {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         {status}
                       </dt>
-                      <dd className="text-lg font-semibold text-gray-900">
+                      <dd className="text-2xl font-bold text-black/80">
                         {count} payments
                       </dd>
                       <dd className="text-sm text-gray-500">

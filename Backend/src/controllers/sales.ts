@@ -348,6 +348,41 @@ export class SalesController {
     }
   }
 
+  async getCustomerById(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params;
+
+      const customer = await prisma.customer.findUnique({
+        where: { id },
+        include: {
+          customerGroup: true,
+        },
+      });
+
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      const balanceResult = (await prisma.$queryRaw`
+      SELECT COALESCE(
+        (SELECT SUM(s."totalAmount") FROM sales s WHERE s."customerId" = ${customer.id} AND s.status IN ('INVOICED', 'PAID')) -
+        (SELECT SUM(sr."amountReceived") FROM sales_receipts sr WHERE sr."customerId" = ${customer.id}),
+        0
+      ) as balance
+    `) as any[];
+
+      const customerWithBalance = {
+        ...customer,
+        outstandingBalance: Number(balanceResult[0]?.balance || 0),
+      };
+
+      res.json(customerWithBalance);
+    } catch (error) {
+      console.error("Get customer by id error:", error);
+      res.status(500).json({ error: "Failed to fetch customer" });
+    }
+  }
+
   async createCustomerGroup(req: Request, res: Response) {
     try {
       const data = createCustomerGroupSchema.parse(req.body);

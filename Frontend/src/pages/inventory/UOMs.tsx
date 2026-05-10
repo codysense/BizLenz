@@ -101,7 +101,7 @@ const UOMs = () => {
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
+          className="inline-flex items-center px-5 py-3 bg-emerald-600 text-white text-sm font-medium rounded-2xl hover:bg-emerald-700"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create UOM
@@ -131,7 +131,7 @@ const UOMs = () => {
             <Tags className="h-6 w-6 text-gray-400" />
             <div className="ml-5">
               <p className="text-sm text-gray-500">Total UOMs</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-5xl font-bold text-black/80">
                 {data?.pagination?.total || 0}
               </p>
             </div>

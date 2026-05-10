@@ -128,69 +128,68 @@ const CreateCustomerRefundModal = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      {/* Wrapper */}
+      <div className="flex min-h-screen items-start justify-center px-4 py-6 sm:py-10">
+        {/* Overlay */}
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm"
           onClick={onClose}
         />
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Record Customer Refund
-              </h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
+        {/* Modal */}
+        <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-100 my-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-t-2xl sticky top-0 z-10">
+            <h3 className="text-lg font-semibold">Record Customer Refund</h3>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {/* Body */}
+            <div className="p-6 space-y-5">
+              {/* Customer */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-gray-700">
                   Customer *
                 </label>
+
                 <CustomerSelect
                   customers={customers?.customers || []}
                   value={watch("customerId")}
                   onChange={(val) => reset({ ...getValues(), customerId: val })}
                   error={errors.customerId?.message}
                 />
-                {/* <select
-                  {...register('customerId')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                >
-                  <option value="">Select customer</option>
-                  {customers?.customers?.map((customer: any) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.code} - {customer.name}
-                    </option>
-                  ))}
-                </select> */}
+
                 {errors.customerId && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="text-red-500 text-xs mt-1">
                     {errors.customerId.message}
                   </p>
                 )}
               </div>
 
+              {/* Sales Order */}
               {selectedCustomerId &&
                 customerSales?.sales &&
                 customerSales.sales.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="text-sm font-medium text-gray-700">
                       Sales Order
                     </label>
+
                     <select
                       {...register("saleId")}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">
                         General refund (not against specific order)
                       </option>
+
                       {customerSales.sales.map((sale: any) => (
                         <option key={sale.id} value={sale.id}>
                           {sale.orderNo} - ₦{sale.totalAmount.toLocaleString()}{" "}
@@ -200,18 +199,22 @@ const CreateCustomerRefundModal = ({
                     </select>
                   </div>
                 )}
+
+              {/* Receipt */}
               {selectedCustomerId && customerReceipts?.sales && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-gray-700">
                     Receipt Number (Optional)
                   </label>
+
                   <select
                     {...register("originalReceiptId")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">
                       General refund (not against specific order)
                     </option>
+
                     {customerReceipts.sales.map((sale: any) => (
                       <option key={sale.ReceiptNo} value={sale.ReceiptNo}>
                         {sale.ReceiptNo} - ₦
@@ -222,27 +225,31 @@ const CreateCustomerRefundModal = ({
                 </div>
               )}
 
+              {/* Sale Summary */}
               {selectedSale && (
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500">Order No:</span>
-                      <div className="font-medium">{selectedSale.orderNo}</div>
+                      <p className="text-gray-500">Order No</p>
+                      <p className="font-medium">{selectedSale.orderNo}</p>
                     </div>
+
                     <div>
-                      <span className="text-gray-500">Invoice Amount:</span>
-                      <div className="font-medium">
+                      <p className="text-gray-500">Invoice Amount</p>
+                      <p className="font-medium">
                         ₦{selectedSale.totalAmount.toLocaleString()}
-                      </div>
+                      </p>
                     </div>
+
                     <div>
-                      <span className="text-gray-500">Order Date:</span>
-                      <div className="font-medium">
+                      <p className="text-gray-500">Order Date</p>
+                      <p className="font-medium">
                         {new Date(selectedSale.orderDate).toLocaleDateString()}
-                      </div>
+                      </p>
                     </div>
+
                     <div>
-                      <span className="text-gray-500">Status:</span>
+                      <p className="text-gray-500">Status</p>
                       <div>
                         <StatusBadge status={selectedSale.status} />
                       </div>
@@ -251,16 +258,19 @@ const CreateCustomerRefundModal = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Cash Account + Date */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-gray-700">
                     Cash Account *
                   </label>
+
                   <select
                     {...register("cashAccountId")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 w-full border rounded-lg px-3 py-2"
                   >
                     <option value="">Select cash account</option>
+
                     {cashAccounts?.accounts?.map((account: any) => (
                       <option key={account.id} value={account.id}>
                         {account.code} - {account.name} (₦
@@ -268,13 +278,15 @@ const CreateCustomerRefundModal = ({
                       </option>
                     ))}
                   </select>
+
                   {errors.cashAccountId && (
-                    <p className="mt-1 text-sm text-red-600">
+                    <p className="text-red-500 text-xs mt-1">
                       {errors.cashAccountId.message}
                     </p>
                   )}
+
                   {hasInsufficientBalance && (
-                    <p className="mt-1 text-sm text-red-600">
+                    <p className="text-red-500 text-xs mt-1">
                       Insufficient balance (Available Balance: ₦
                       {Number(selectedCashAccount?.balance).toLocaleString()})
                     </p>
@@ -282,99 +294,112 @@ const CreateCustomerRefundModal = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-gray-700">
                     Refund Date *
                   </label>
+
                   <input
                     {...register("refundDate")}
                     type="date"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 w-full border rounded-lg px-3 py-2"
                   />
+
                   {errors.refundDate && (
-                    <p className="mt-1 text-sm text-red-600">
+                    <p className="text-red-500 text-xs mt-1">
                       {errors.refundDate.message}
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Amount + Reference */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-gray-700">
                     Refund Amount *
                   </label>
+
                   <input
-                    {...register("amount", { valueAsNumber: true })}
+                    {...register("amount", {
+                      valueAsNumber: true,
+                    })}
                     type="number"
                     step="0.01"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     placeholder="0.00"
+                    className="mt-1 w-full border rounded-lg px-3 py-2"
                   />
+
                   {errors.amount && (
-                    <p className="mt-1 text-sm text-red-600">
+                    <p className="text-red-500 text-xs mt-1">
                       {errors.amount.message}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="text-sm font-medium text-gray-700">
                     Reference
                   </label>
+
                   <input
                     {...register("reference")}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     placeholder="Check number, transfer ref, etc."
+                    className="mt-1 w-full border rounded-lg px-3 py-2"
                   />
                 </div>
               </div>
 
+              {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-gray-700">
                   Notes
                 </label>
+
                 <textarea
                   {...register("notes")}
                   rows={3}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Refund notes or additional details"
+                  className="mt-1 w-full border rounded-lg px-3 py-2"
                 />
               </div>
 
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h4 className="text-sm font-medium text-green-900 mb-2">
-                  Accounting Impact:
+              {/* Accounting Impact */}
+              <div className="bg-green-50 border border-green-100 rounded-xl p-5">
+                <h4 className="text-sm font-semibold text-green-900 mb-2">
+                  Accounting Impact
                 </h4>
+
                 <div className="text-sm text-green-800 space-y-1">
                   <div>
-                    • Cash Account will be <strong>credited</strong> (decreased)
+                    • Cash Account will be <strong>credited</strong>
                   </div>
                   <div>
-                    • Trade Receivables will be <strong>debited</strong>{" "}
-                    (increased)
+                    • Trade Receivables will be <strong>debited</strong>
                   </div>
                   <div>• Customer balance will be increased</div>
                 </div>
               </div>
+            </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || hasInsufficientBalance}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? "Recording..." : "Record Refund"}
-                </button>
-              </div>
-            </form>
-          </div>
+            {/* Footer */}
+            <div className="flex justify-end gap-3 p-4 border-t bg-white rounded-b-2xl sticky bottom-0">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2 border rounded-lg text-sm hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || hasInsufficientBalance}
+                className="px-5 py-2 rounded-lg text-white text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? "Recording..." : "Record Refund"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

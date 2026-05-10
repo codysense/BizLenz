@@ -91,6 +91,8 @@ const PosReturnsModal = ({
 
   const sales: PosSale[] = data?.sales || [];
 
+  console.log("Sales search results:", sales);
+
   const handleSaleSelect = (sale: PosSale) => {
     setSelectedSale(sale);
 
@@ -168,198 +170,471 @@ const PosReturnsModal = ({
   // };
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-500 bg-opacity-75 flex justify-center items-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl p-6">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium">
-            Process Return - {session.sessionNo}
-          </h3>
-          <button onClick={onClose}>
-            <X className="h-6 w-6 text-gray-500" />
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen p-4">
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={onClose}
+        />
 
-        {!selectedSale ? (
-          <>
-            {/* Search */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by sale number or customer..."
-                value={saleSearch}
-                onChange={(e) => setSaleSearch(e.target.value)}
-                className="pl-9 pr-3 py-2 border rounded-md w-full focus:outline-none focus:placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 sm:text-sm "
-              />
-            </div>
-
-            {/* Results */}
-            <div className="max-h-96 overflow-y-auto border rounded-md">
-              {isLoading ? (
-                <div className="p-4 text-center text-sm">Searching...</div>
-              ) : sales.length === 0 ? (
-                <div className="p-4 text-center text-sm text-gray-500">
-                  No matching sales found
-                </div>
-              ) : (
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-blue-600">
-                        Sale No
-                      </th>
-                      <th className="px-4 py-2 text-left text-blue-600">
-                        Customer
-                      </th>
-                      <th className="px-4 py-2 text-left text-blue-600">
-                        Date
-                      </th>
-                      <th className="px-4 py-2 text-left text-blue-600">
-                        Total
-                      </th>
-                      <th className="px-4 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sales.map((sale) => (
-                      <tr key={sale.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2">{sale.saleNo}</td>
-                        <td className="px-4 py-2">
-                          {sale.customer?.name || "Walk-in"}
-                        </td>
-                        <td className="px-4 py-2">
-                          {new Date(sale.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-2">
-                          ₦{sale.totalAmount.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <button
-                            onClick={() => handleSaleSelect(sale)}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            Select
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </>
-        ) : (
-          /* Return Form */
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="bg-blue-50 p-4 rounded-md">
-              <div className="flex justify-between">
-                <div>
-                  <div className="font-medium">Sale: {selectedSale.saleNo}</div>
-                  <div className="text-sm text-gray-600">
-                    {selectedSale.customer?.name || "Walk-in"} | ₦
-                    {selectedSale.totalAmount.toLocaleString()}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedSale(null)}
-                  className="text-blue-600 text-sm"
-                >
-                  Change Sale
-                </button>
-              </div>
-            </div>
-
-            <select
-              {...register("reason")}
-              className="border rounded-md px-3 py-2 w-full text-sm"
-            >
-              <option value="">Select reason</option>
-              <option value="DEFECTIVE">Defective</option>
-              <option value="WRONG_ITEM">Wrong Item</option>
-              <option value="CUSTOMER_CHANGE_MIND">
-                Customer Changed Mind
-              </option>
-              <option value="DAMAGED">Damaged</option>
-              <option value="OTHER">Other</option>
-            </select>
-
-            {errors.reason && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.reason.message}
+        {/* Modal */}
+        <div className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
+          {/* Header */}
+          <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
+            <div>
+              <p className="text-sm font-medium text-red-600">
+                Return Processing
               </p>
-            )}
+              <h2 className="text-2xl font-bold text-gray-900 mt-1">
+                Process Return
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Session: {session.sessionNo}
+              </p>
+            </div>
 
-            {fields.map((field, index) => {
-              const originalLine = selectedSale.saleLines.find(
-                (l) => l.id === field.originalLineId,
-              );
-              if (!originalLine) return null;
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-gray-100 transition"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
 
-              return (
-                <div key={field.id} className="border p-4 rounded-md">
-                  <div className="flex justify-between text-sm">
-                    <div>
-                      {originalLine.item.name} <br />
-                      <span className="text-gray-500 text-xs">
-                        Original: {originalLine.qty}
-                      </span>
-                    </div>
+          <div className="p-6">
+            {!selectedSale ? (
+              <>
+                {/* Search Section */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Search Sale
+                  </label>
+
+                  <div className="relative">
+                    <Search className="absolute left-4 top-3.5 h-4 w-4 text-gray-400" />
+
                     <input
-                      type="number"
-                      min="0"
-                      max={originalLine.qty}
-                      {...register(`returnLines.${index}.qtyReturned`, {
-                        valueAsNumber: true,
-                        validate: (value) => {
-                          if (value > originalLine.qty) {
-                            return `Cannot return more than ${originalLine.qty}`;
-                          }
-                          return true;
-                        },
-                      })}
-                      className="border px-2 py-1 rounded w-24"
+                      type="text"
+                      placeholder="Search by sale number or customer..."
+                      value={saleSearch}
+                      onChange={(e) => setSaleSearch(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                     />
-                    {errors.returnLines?.[index]?.qtyReturned && (
-                      <p className="text-sm text-red-600 mt-1">
-                        {errors.returnLines[index]?.qtyReturned?.message}
-                      </p>
-                    )}
                   </div>
                 </div>
-              );
-            })}
 
-            <div className="flex justify-between font-bold text-lg">
-              <span>Total Refund:</span>
-              <span className="text-red-600">
-                ₦{calculateReturnTotal().toLocaleString()}
-              </span>
-            </div>
+                {/* Results */}
+                <div className="border border-gray-100 rounded-3xl overflow-hidden">
+                  {isLoading ? (
+                    <div className="p-10 text-center text-gray-500">
+                      Searching sales...
+                    </div>
+                  ) : sales.length === 0 ? (
+                    <div className="p-10 text-center">
+                      <RotateCcw className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500">No matching sales found</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-96 overflow-y-auto">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-gray-600">
+                              Sale No
+                            </th>
+                            <th className="px-4 py-3 text-left text-gray-600">
+                              Customer
+                            </th>
+                            <th className="px-4 py-3 text-left text-gray-600">
+                              Date
+                            </th>
+                            <th className="px-4 py-3 text-left text-gray-600">
+                              Total
+                            </th>
+                            <th className="px-4 py-3"></th>
+                          </tr>
+                        </thead>
 
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="border px-4 py-2 rounded"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || calculateReturnTotal() === 0}
-                className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
-              >
-                <RotateCcw className="h-4 w-4 inline mr-2" />
-                Process Return
-              </button>
-            </div>
-          </form>
-        )}
+                        <tbody>
+                          {sales.map((sale) => (
+                            <tr
+                              key={sale.id}
+                              className="border-t bg-white hover:bg-gray-500 hover:text-white text-gray-700 hover:transition cursor-pointer"
+                            >
+                              <td className="px-4 py-3 font-medium">
+                                {sale.saleNo}
+                              </td>
+
+                              <td className="px-4 py-3">
+                                {sale.customer?.name || "Walk-in"}
+                              </td>
+
+                              <td className="px-4 py-3">
+                                {new Date(sale.createdAt).toLocaleDateString()}
+                              </td>
+
+                              <td className="px-4 py-3 font-medium">
+                                ₦{sale.totalAmount.toLocaleString()}
+                              </td>
+
+                              <td className="px-4 py-3 text-right">
+                                <button
+                                  onClick={() => handleSaleSelect(sale)}
+                                  className="px-4 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition"
+                                >
+                                  Select
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {/* Selected Sale Card */}
+                <div className="bg-red-50 border border-red-100 rounded-2xl p-5">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        Sale: {selectedSale.saleNo}
+                      </h3>
+
+                      <p className="text-sm text-gray-600 mt-1">
+                        {selectedSale.customer?.name || "Walk-in"} • ₦
+                        {selectedSale.totalAmount.toLocaleString()}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSale(null)}
+                      className="text-red-600 text-sm font-medium"
+                    >
+                      Change Sale
+                    </button>
+                  </div>
+                </div>
+
+                {/* Return Reason */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Return Reason
+                  </label>
+
+                  <select
+                    {...register("reason")}
+                    className="w-full border text-gray-700 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    <option value="">Select reason</option>
+                    <option value="DEFECTIVE">Defective</option>
+                    <option value="WRONG_ITEM">Wrong Item</option>
+                    <option value="CUSTOMER_CHANGE_MIND">
+                      Customer Changed Mind
+                    </option>
+                    <option value="DAMAGED">Damaged</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+
+                  {errors.reason && (
+                    <p className="text-sm text-red-600 mt-2">
+                      {errors.reason.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Return Items */}
+                <div className="space-y-4">
+                  {fields.map((field, index) => {
+                    const originalLine = selectedSale.saleLines.find(
+                      (l) => l.id === field.originalLineId,
+                    );
+
+                    if (!originalLine) return null;
+
+                    return (
+                      <div
+                        key={field.id}
+                        className="border border-gray-100 rounded-2xl p-5"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                          <div>
+                            <h4 className="font-medium text-gray-900">
+                              {originalLine.item.name}
+                            </h4>
+
+                            <p className="text-sm text-gray-500">
+                              Original Qty: {originalLine.qty}
+                            </p>
+                          </div>
+
+                          <div>
+                            <input
+                              type="number"
+                              min="0"
+                              max={originalLine.qty}
+                              {...register(`returnLines.${index}.qtyReturned`, {
+                                valueAsNumber: true,
+                                validate: (value) => {
+                                  if (value > originalLine.qty) {
+                                    return `Cannot return more than ${originalLine.qty}`;
+                                  }
+                                  return true;
+                                },
+                              })}
+                              className="w-28 border text-gray-700 border-gray-200 rounded-xl px-3 py-2 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                            />
+
+                            {errors.returnLines?.[index]?.qtyReturned && (
+                              <p className="text-sm text-red-600 mt-2">
+                                {
+                                  errors.returnLines[index]?.qtyReturned
+                                    ?.message
+                                }
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Refund Summary */}
+                <div className="bg-gray-50 rounded-2xl p-5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Total Refund</span>
+
+                    <span className="text-2xl font-bold text-red-600">
+                      ₦{calculateReturnTotal().toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-5 py-3 rounded-2xl border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || calculateReturnTotal() === 0}
+                    className="px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-medium disabled:opacity-50"
+                  >
+                    <RotateCcw className="h-4 w-4 inline mr-2" />
+                    {isSubmitting ? "Processing..." : "Process Return"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
+
+  // return (
+  //   <div className="fixed inset-0 z-50 bg-gray-500 bg-opacity-75 flex justify-center items-center p-4">
+  //     <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl p-6">
+  //       {/* Header */}
+  //       <div className="flex justify-between items-center mb-4">
+  //         <h3 className="text-lg font-medium">
+  //           Process Return - {session.sessionNo}
+  //         </h3>
+  //         <button onClick={onClose}>
+  //           <X className="h-6 w-6 text-gray-500" />
+  //         </button>
+  //       </div>
+
+  //       {!selectedSale ? (
+  //         <>
+  //           {/* Search */}
+  //           <div className="relative mb-4">
+  //             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+  //             <input
+  //               type="text"
+  //               placeholder="Search by sale number or customer..."
+  //               value={saleSearch}
+  //               onChange={(e) => setSaleSearch(e.target.value)}
+  //               className="pl-9 pr-3 py-2 border rounded-md w-full focus:outline-none focus:placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 sm:text-sm "
+  //             />
+  //           </div>
+
+  //           {/* Results */}
+  //           <div className="max-h-96 overflow-y-auto border rounded-md">
+  //             {isLoading ? (
+  //               <div className="p-4 text-center text-sm">Searching...</div>
+  //             ) : sales.length === 0 ? (
+  //               <div className="p-4 text-center text-sm text-gray-500">
+  //                 No matching sales found
+  //               </div>
+  //             ) : (
+  //               <table className="min-w-full text-sm">
+  //                 <thead className="bg-gray-50">
+  //                   <tr>
+  //                     <th className="px-4 py-2 text-left text-blue-600">
+  //                       Sale No
+  //                     </th>
+  //                     <th className="px-4 py-2 text-left text-blue-600">
+  //                       Customer
+  //                     </th>
+  //                     <th className="px-4 py-2 text-left text-blue-600">
+  //                       Date
+  //                     </th>
+  //                     <th className="px-4 py-2 text-left text-blue-600">
+  //                       Total
+  //                     </th>
+  //                     <th className="px-4 py-2"></th>
+  //                   </tr>
+  //                 </thead>
+  //                 <tbody>
+  //                   {sales.map((sale) => (
+  //                     <tr key={sale.id} className="hover:bg-gray-50">
+  //                       <td className="px-4 py-2">{sale.saleNo}</td>
+  //                       <td className="px-4 py-2">
+  //                         {sale.customer?.name || "Walk-in"}
+  //                       </td>
+  //                       <td className="px-4 py-2">
+  //                         {new Date(sale.createdAt).toLocaleDateString()}
+  //                       </td>
+  //                       <td className="px-4 py-2">
+  //                         ₦{sale.totalAmount.toLocaleString()}
+  //                       </td>
+  //                       <td className="px-4 py-2 text-right">
+  //                         <button
+  //                           onClick={() => handleSaleSelect(sale)}
+  //                           className="text-blue-600 hover:text-blue-800"
+  //                         >
+  //                           Select
+  //                         </button>
+  //                       </td>
+  //                     </tr>
+  //                   ))}
+  //                 </tbody>
+  //               </table>
+  //             )}
+  //           </div>
+  //         </>
+  //       ) : (
+  //         /* Return Form */
+  //         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+  //           <div className="bg-blue-50 p-4 rounded-md">
+  //             <div className="flex justify-between">
+  //               <div>
+  //                 <div className="font-medium">Sale: {selectedSale.saleNo}</div>
+  //                 <div className="text-sm text-gray-600">
+  //                   {selectedSale.customer?.name || "Walk-in"} | ₦
+  //                   {selectedSale.totalAmount.toLocaleString()}
+  //                 </div>
+  //               </div>
+  //               <button
+  //                 type="button"
+  //                 onClick={() => setSelectedSale(null)}
+  //                 className="text-blue-600 text-sm"
+  //               >
+  //                 Change Sale
+  //               </button>
+  //             </div>
+  //           </div>
+
+  //           <select
+  //             {...register("reason")}
+  //             className="border rounded-md px-3 py-2 w-full text-sm"
+  //           >
+  //             <option value="">Select reason</option>
+  //             <option value="DEFECTIVE">Defective</option>
+  //             <option value="WRONG_ITEM">Wrong Item</option>
+  //             <option value="CUSTOMER_CHANGE_MIND">
+  //               Customer Changed Mind
+  //             </option>
+  //             <option value="DAMAGED">Damaged</option>
+  //             <option value="OTHER">Other</option>
+  //           </select>
+
+  //           {errors.reason && (
+  //             <p className="text-sm text-red-600 mt-1">
+  //               {errors.reason.message}
+  //             </p>
+  //           )}
+
+  //           {fields.map((field, index) => {
+  //             const originalLine = selectedSale.saleLines.find(
+  //               (l) => l.id === field.originalLineId,
+  //             );
+  //             if (!originalLine) return null;
+
+  //             return (
+  //               <div key={field.id} className="border p-4 rounded-md">
+  //                 <div className="flex justify-between text-sm">
+  //                   <div>
+  //                     {originalLine.item.name} <br />
+  //                     <span className="text-gray-500 text-xs">
+  //                       Original: {originalLine.qty}
+  //                     </span>
+  //                   </div>
+  //                   <input
+  //                     type="number"
+  //                     min="0"
+  //                     max={originalLine.qty}
+  //                     {...register(`returnLines.${index}.qtyReturned`, {
+  //                       valueAsNumber: true,
+  //                       validate: (value) => {
+  //                         if (value > originalLine.qty) {
+  //                           return `Cannot return more than ${originalLine.qty}`;
+  //                         }
+  //                         return true;
+  //                       },
+  //                     })}
+  //                     className="border px-2 py-1 rounded w-24"
+  //                   />
+  //                   {errors.returnLines?.[index]?.qtyReturned && (
+  //                     <p className="text-sm text-red-600 mt-1">
+  //                       {errors.returnLines[index]?.qtyReturned?.message}
+  //                     </p>
+  //                   )}
+  //                 </div>
+  //               </div>
+  //             );
+  //           })}
+
+  //           <div className="flex justify-between font-bold text-lg">
+  //             <span>Total Refund:</span>
+  //             <span className="text-red-600">
+  //               ₦{calculateReturnTotal().toLocaleString()}
+  //             </span>
+  //           </div>
+
+  //           <div className="flex justify-end gap-3">
+  //             <button
+  //               type="button"
+  //               onClick={onClose}
+  //               className="border px-4 py-2 rounded"
+  //             >
+  //               Cancel
+  //             </button>
+  //             <button
+  //               type="submit"
+  //               disabled={isSubmitting || calculateReturnTotal() === 0}
+  //               className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
+  //             >
+  //               <RotateCcw className="h-4 w-4 inline mr-2" />
+  //               Process Return
+  //             </button>
+  //           </div>
+  //         </form>
+  //       )}
+  //     </div>
+  //   </div>
+  // );
 };
 
 export default PosReturnsModal;

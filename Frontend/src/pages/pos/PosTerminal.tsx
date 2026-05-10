@@ -445,33 +445,53 @@ const PosTerminal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          onClick={onClose}
-        />
-
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                POS Terminal - {session.sessionNo}
-              </h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm">
+      <div className="h-screen w-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-7xl h-[95vh] bg-white rounded-3xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col">
+          {/* HEADER */}
+          <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between bg-white">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">New Sale</h2>
+              <p className="text-gray-500 text-sm">
+                Session #{session.sessionNo}
+              </p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Customer Selection */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600"
+              >
+                <Calculator className="w-5 h-5" />
+              </button>
+
+              <button
+                type="button"
+                className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600"
+              >
+                <Printer className="w-5 h-5" />
+              </button>
+
+              <button
+                onClick={onClose}
+                className="p-2 rounded-xl bg-red-100 hover:bg-red-500 text-red-500 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex-1 overflow-hidden flex"
+          >
+            {/* LEFT SECTION */}
+            <div className="w-2/3 border-r border-gray-200 flex flex-col bg-gray-50">
+              {/* CUSTOMER + NOTES */}
+              <div className="p-5 border-b border-gray-200 grid grid-cols-2 gap-4 bg-white">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Customer (Optional)
+                  <label className="block text-sm text-gray-600 mb-2">
+                    Customer
                   </label>
                   <CustomerSelect
                     customers={customersWithBalances?.customers || []}
@@ -482,43 +502,167 @@ const PosTerminal = ({
                     error={errors.customerId?.message}
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm text-gray-600 mb-2">
                     Notes
                   </label>
                   <textarea
                     {...register("notes")}
                     rows={2}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Sale notes"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="Optional sale notes"
                   />
                 </div>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h4 className="text-md font-medium text-green-900 mb-3">
-                  Payments
-                </h4>
+
+              {/* ITEMS */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"
+                  >
+                    <div className="grid grid-cols-6 gap-4 items-end">
+                      {/* ITEM */}
+                      <div className="col-span-2">
+                        <label className="text-sm text-gray-600 block mb-2">
+                          Item
+                        </label>
+                        <ItemSelect
+                          noZeroItem
+                          value={watch(`saleLines.${index}.itemId`)}
+                          typeFilter="FINISHED_GOODS"
+                          onChange={(val) =>
+                            setValue(`saleLines.${index}.itemId`, val)
+                          }
+                          error={errors.saleLines?.[index]?.itemId?.message}
+                        />
+                      </div>
+
+                      {/* QTY */}
+                      <div>
+                        <label className="text-sm text-gray-600 block mb-2">
+                          Qty
+                        </label>
+                        <input
+                          {...register(`saleLines.${index}.qty`, {
+                            valueAsNumber: true,
+                          })}
+                          type="number"
+                          className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900"
+                        />
+                      </div>
+
+                      {/* PRICE */}
+                      <div>
+                        <label className="text-sm text-gray-600 block mb-2">
+                          Price
+                        </label>
+                        <input
+                          {...register(`saleLines.${index}.unitPrice`, {
+                            valueAsNumber: true,
+                          })}
+                          disabled
+                          className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2 text-gray-700"
+                        />
+                      </div>
+
+                      {/* DISCOUNT */}
+                      <div>
+                        <label className="text-sm text-gray-600 block mb-2">
+                          Discount %
+                        </label>
+                        <input
+                          {...register(`saleLines.${index}.discountPercent`, {
+                            valueAsNumber: true,
+                          })}
+                          type="number"
+                          className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900"
+                        />
+                      </div>
+
+                      {/* REMOVE */}
+                      <div className="flex justify-end">
+                        {fields.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => remove(index)}
+                            className="p-2 bg-red-100 rounded-xl text-red-600 hover:bg-red-500 hover:text-white"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* LINE TOTAL */}
+                    <div className="mt-4 flex justify-between text-sm">
+                      <span className="text-gray-500">Line Total</span>
+                      <span className="text-emerald-600 font-semibold">
+                        ₦
+                        {(() => {
+                          const lineTotal =
+                            (watchedLines[index]?.qty || 0) *
+                            (watchedLines[index]?.unitPrice || 0);
+
+                          const discount =
+                            (lineTotal *
+                              (watchedLines[index]?.discountPercent || 0)) /
+                            100;
+
+                          return (lineTotal - discount).toLocaleString();
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ADD ITEM */}
+              <div className="p-5 border-t border-gray-200 bg-white">
+                <button
+                  type="button"
+                  onClick={() =>
+                    append({
+                      itemId: "",
+                      qty: 1,
+                      unitPrice: 0,
+                      discountPercent: 0,
+                    })
+                  }
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-medium flex items-center justify-center"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Add Product
+                </button>
+              </div>
+            </div>
+
+            {/* RIGHT SECTION */}
+            <div className="w-1/3 bg-white flex flex-col p-5 space-y-5 overflow-y-auto">
+              {/* PAYMENTS */}
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
+                <h3 className="text-gray-900 font-semibold mb-4">Payments</h3>
 
                 <div className="space-y-4">
                   {paymentFields.map((field, index) => (
                     <div
                       key={field.id}
-                      className="grid grid-cols-1 sm:grid-cols-4 gap-3"
+                      className="space-y-3 border-b border-gray-200 pb-4"
                     >
-                      {/* Method */}
                       <select
                         {...register(`payments.${index}.method`)}
-                        className="border rounded px-2 py-2 focus:outline-none focus:ring-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900"
                       >
                         <option value="CASH">Cash</option>
                         <option value="TRANSFER">Transfer</option>
                         <option value="CARD">Card</option>
                       </select>
 
-                      {/* Account */}
                       <select
                         {...register(`payments.${index}.cashAccountId`)}
-                        className="border rounded px-2 py-2 focus:outline-none focus:ring-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900"
                       >
                         <option value="">Select Account</option>
                         {filteredAccounts?.map((acc: any) => (
@@ -528,299 +672,495 @@ const PosTerminal = ({
                         ))}
                       </select>
 
-                      {/* Amount */}
                       <input
                         {...register(`payments.${index}.amount`, {
                           valueAsNumber: true,
                         })}
                         type="number"
-                        step="0.01"
-                        className="border rounded px-2 py-2 focus:outline-none focus:ring-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         placeholder="Amount"
+                        className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900"
                       />
 
-                      {/* Remove */}
                       {paymentFields.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removePayment(index)}
-                          className="text-red-600"
+                          className="text-red-500 text-sm"
                         >
-                          <Trash2 size={18} />
+                          Remove payment
                         </button>
                       )}
                     </div>
                   ))}
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      appendPayment({
-                        method: "CASH",
-                        cashAccountId: "",
-                        amount: 0,
-                      })
-                    }
-                    className="flex items-center text-sm text-blue-600"
-                  >
-                    <Plus className="mr-1" size={16} /> Add Payment Method
-                  </button>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    appendPayment({
+                      method: "CASH",
+                      cashAccountId: "",
+                      amount: 0,
+                    })
+                  }
+                  className="mt-4 text-emerald-600 text-sm"
+                >
+                  + Add Payment Method
+                </button>
               </div>
 
-              {/* Customer Outstanding Balance */}
+              {/* CUSTOMER DEBT */}
               {selectedCustomer && selectedCustomer.outstandingBalance > 0 && (
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <div className="flex items-center">
-                    <User className="h-5 w-5 text-yellow-500 mr-2" />
-                    <div>
-                      <div className="font-medium text-yellow-900">
-                        Customer Outstanding Balance
-                      </div>
-                      <div className="text-sm text-yellow-700">
-                        {selectedCustomer.name} owes ₦
-                        {selectedCustomer.outstandingBalance.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                  <p className="text-amber-700 font-medium">
+                    Outstanding Balance
+                  </p>
+                  <p className="text-amber-900 mt-2 font-semibold">
+                    ₦{selectedCustomer.outstandingBalance.toLocaleString()}
+                  </p>
                 </div>
               )}
 
-              {/* Sale Lines */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-md font-medium text-gray-900">Items</h4>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      append({
-                        itemId: "",
-                        qty: 1,
-                        unitPrice: 0,
-                        discountPercent: 0,
-                      })
-                    }
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Item
-                  </button>
-                </div>
+              {/* SUMMARY */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-6">
+                <h3 className="font-semibold mb-5 text-gray-900">
+                  Order Summary
+                </h3>
 
-                <div className="space-y-4">
-                  {fields.map((field, index) => (
-                    <div key={field.id} className="bg-gray-50 p-4 rounded-lg">
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
-                        <div className="sm:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Item *
-                          </label>
-                          <ItemSelect
-                            noZeroItem={true}
-                            value={watch(`saleLines.${index}.itemId`)}
-                            typeFilter="FINISHED_GOODS"
-                            onChange={(val) =>
-                              setValue(`saleLines.${index}.itemId`, val)
-                            }
-                            error={errors.saleLines?.[index]?.itemId?.message}
-                          />
-                        </div>
+                <div className="space-y-3 text-sm text-gray-700">
+                  <div className="flex justify-between">
+                    <span>Subtotal</span>
+                    <span>₦{subtotal.toLocaleString()}</span>
+                  </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Qty *
-                          </label>
-                          <input
-                            {...register(`saleLines.${index}.qty`, {
-                              valueAsNumber: true,
-                              validate: (value) => {
-                                const itemId = watchedLines[index]?.itemId;
-                                if (!itemId) return true;
-
-                                const stock = itemStocks[itemId] ?? 0;
-
-                                if (value > stock) {
-                                  return `Only ${stock} in stock`;
-                                }
-
-                                return true;
-                              },
-                            })}
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            max={
-                              watchedLines[index]?.itemId
-                                ? (itemStocks[watchedLines[index]?.itemId] ??
-                                  undefined)
-                                : undefined
-                            }
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            placeholder="1"
-                          />
-                          {errors.saleLines?.[index]?.qty && (
-                            <p className="mt-1 text-sm text-red-600">
-                              {errors.saleLines[index]?.qty?.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Price *
-                          </label>
-                          <input
-                            {...register(`saleLines.${index}.unitPrice`, {
-                              valueAsNumber: true,
-                            })}
-                            type="number"
-                            step="0.01"
-                            disabled
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            placeholder="0.00"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Discount %
-                          </label>
-                          <input
-                            {...register(`saleLines.${index}.discountPercent`, {
-                              valueAsNumber: true,
-                            })}
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="100"
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            placeholder="0"
-                          />
-                        </div>
-
-                        <div className="flex items-end">
-                          <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Line Total
-                            </label>
-                            <div className="mt-1 block w-full py-2 px-3 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-900">
-                              ₦
-                              {(() => {
-                                const lineTotal =
-                                  (watchedLines[index]?.qty || 0) *
-                                  (watchedLines[index]?.unitPrice || 0);
-                                const discount =
-                                  (lineTotal *
-                                    (watchedLines[index]?.discountPercent ||
-                                      0)) /
-                                  100;
-                                return (lineTotal - discount).toLocaleString();
-                              })()}
-                            </div>
-                          </div>
-                          {fields.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => remove(index)}
-                              className="ml-2 inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-gray-500 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-red-500">
+                      <span>Discount</span>
+                      <span>-₦{discountAmount.toLocaleString()}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  )}
 
-              {/* Totals and Payment */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="text-md font-medium text-blue-900 mb-3">
-                    Order Summary
-                  </h4>
-                  <div className="space-y-2 text-sm">
+                  <div className="border-t border-gray-300 pt-4 flex justify-between text-2xl font-bold text-gray-900">
+                    <span>Total</span>
+                    <span>₦{totalAmount.toLocaleString()}</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span>Paid</span>
+                    <span>₦{totalPaid.toLocaleString()}</span>
+                  </div>
+
+                  {changeAmount > 0 && (
                     <div className="flex justify-between">
-                      <span>Subtotal:</span>
-                      <span>₦{subtotal.toLocaleString()}</span>
+                      <span>Change</span>
+                      <span>₦{changeAmount.toLocaleString()}</span>
                     </div>
-                    {discountAmount > 0 && (
-                      <div className="flex justify-between text-red-600">
-                        <span>Discount:</span>
-                        <span>-₦{discountAmount.toLocaleString()}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-bold text-lg border-t pt-2">
-                      <span>Total:</span>
-                      <span>₦{totalAmount.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h4 className="text-md font-medium text-green-900 mb-3">
-                    Payment
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Total Paid *
-                      </label>
-                      <input
-                        // {...register("amountPaid", { valueAsNumber: true })}
-                        disabled
-                        //value={`₦${totalPaid.toLocaleString()}`}
-                        type="number"
-                        step="0.01"
-                        min={totalPaid}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        placeholder={totalPaid.toFixed(2).toLocaleString()}
-                      />
-                      {/* {errors.totalPaid && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.totalPaid.message}
-                        </p>
-                      )} */}
-                    </div>
-
-                    {changeAmount > 0 && (
-                      <div className="bg-yellow-100 p-3 rounded-md">
-                        <div className="flex justify-between font-bold">
-                          <span>Change Due:</span>
-                          <span className="text-yellow-800">
-                            ₦{changeAmount.toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t">
+              {/* FOOTER */}
+              <div className="mt-auto space-y-3">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="w-full py-3 rounded-2xl bg-gray-100 text-gray-700"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={isSubmitting || totalPaid < totalAmount}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold disabled:opacity-50"
                 >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
                   {isSubmitting ? "Processing..." : "Complete Sale"}
                 </button>
               </div>
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>
   );
+
+  // return (
+  //   <div className="fixed inset-0 z-50 overflow-y-auto">
+  //     <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+  //       <div
+  //         className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+  //         onClick={onClose}
+  //       />
+
+  //       <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
+  //         <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+  //           <div className="flex items-center justify-between mb-4">
+  //             <h3 className="text-lg leading-6 font-medium text-gray-900">
+  //               POS Terminal - {session.sessionNo}
+  //             </h3>
+  //             <button
+  //               onClick={onClose}
+  //               className="text-gray-400 hover:text-gray-600"
+  //             >
+  //               <X className="h-6 w-6" />
+  //             </button>
+  //           </div>
+
+  //           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+  //             {/* Customer Selection */}
+  //             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  //               <div>
+  //                 <label className="block text-sm font-medium text-gray-700">
+  //                   Customer (Optional)
+  //                 </label>
+  //                 <CustomerSelect
+  //                   customers={customersWithBalances?.customers || []}
+  //                   value={watch("customerId")}
+  //                   onChange={(val) =>
+  //                     reset({ ...getValues(), customerId: val })
+  //                   }
+  //                   error={errors.customerId?.message}
+  //                 />
+  //               </div>
+  //               <div>
+  //                 <label className="block text-sm font-medium text-gray-700">
+  //                   Notes
+  //                 </label>
+  //                 <textarea
+  //                   {...register("notes")}
+  //                   rows={2}
+  //                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //                   placeholder="Sale notes"
+  //                 />
+  //               </div>
+  //             </div>
+  //             <div className="bg-green-50 p-4 rounded-lg">
+  //               <h4 className="text-md font-medium text-green-900 mb-3">
+  //                 Payments
+  //               </h4>
+
+  //               <div className="space-y-4">
+  //                 {paymentFields.map((field, index) => (
+  //                   <div
+  //                     key={field.id}
+  //                     className="grid grid-cols-1 sm:grid-cols-4 gap-3"
+  //                   >
+  //                     {/* Method */}
+  //                     <select
+  //                       {...register(`payments.${index}.method`)}
+  //                       className="border rounded px-2 py-2 focus:outline-none focus:ring-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //                     >
+  //                       <option value="CASH">Cash</option>
+  //                       <option value="TRANSFER">Transfer</option>
+  //                       <option value="CARD">Card</option>
+  //                     </select>
+
+  //                     {/* Account */}
+  //                     <select
+  //                       {...register(`payments.${index}.cashAccountId`)}
+  //                       className="border rounded px-2 py-2 focus:outline-none focus:ring-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //                     >
+  //                       <option value="">Select Account</option>
+  //                       {filteredAccounts?.map((acc: any) => (
+  //                         <option key={acc.id} value={acc.id}>
+  //                           {acc.code} - {acc.name}
+  //                         </option>
+  //                       ))}
+  //                     </select>
+
+  //                     {/* Amount */}
+  //                     <input
+  //                       {...register(`payments.${index}.amount`, {
+  //                         valueAsNumber: true,
+  //                       })}
+  //                       type="number"
+  //                       step="0.01"
+  //                       className="border rounded px-2 py-2 focus:outline-none focus:ring-3 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //                       placeholder="Amount"
+  //                     />
+
+  //                     {/* Remove */}
+  //                     {paymentFields.length > 1 && (
+  //                       <button
+  //                         type="button"
+  //                         onClick={() => removePayment(index)}
+  //                         className="text-red-600"
+  //                       >
+  //                         <Trash2 size={18} />
+  //                       </button>
+  //                     )}
+  //                   </div>
+  //                 ))}
+
+  //                 <button
+  //                   type="button"
+  //                   onClick={() =>
+  //                     appendPayment({
+  //                       method: "CASH",
+  //                       cashAccountId: "",
+  //                       amount: 0,
+  //                     })
+  //                   }
+  //                   className="flex items-center text-sm text-blue-600"
+  //                 >
+  //                   <Plus className="mr-1" size={16} /> Add Payment Method
+  //                 </button>
+  //               </div>
+  //             </div>
+
+  //             {/* Customer Outstanding Balance */}
+  //             {selectedCustomer && selectedCustomer.outstandingBalance > 0 && (
+  //               <div className="bg-yellow-50 p-4 rounded-lg">
+  //                 <div className="flex items-center">
+  //                   <User className="h-5 w-5 text-yellow-500 mr-2" />
+  //                   <div>
+  //                     <div className="font-medium text-yellow-900">
+  //                       Customer Outstanding Balance
+  //                     </div>
+  //                     <div className="text-sm text-yellow-700">
+  //                       {selectedCustomer.name} owes ₦
+  //                       {selectedCustomer.outstandingBalance.toLocaleString()}
+  //                     </div>
+  //                   </div>
+  //                 </div>
+  //               </div>
+  //             )}
+
+  //             {/* Sale Lines */}
+  //             <div>
+  //               <div className="flex items-center justify-between mb-4">
+  //                 <h4 className="text-md font-medium text-gray-900">Items</h4>
+  //                 <button
+  //                   type="button"
+  //                   onClick={() =>
+  //                     append({
+  //                       itemId: "",
+  //                       qty: 1,
+  //                       unitPrice: 0,
+  //                       discountPercent: 0,
+  //                     })
+  //                   }
+  //                   className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+  //                 >
+  //                   <Plus className="h-4 w-4 mr-2" />
+  //                   Add Item
+  //                 </button>
+  //               </div>
+
+  //               <div className="space-y-4">
+  //                 {fields.map((field, index) => (
+  //                   <div key={field.id} className="bg-gray-50 p-4 rounded-lg">
+  //                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
+  //                       <div className="sm:col-span-2">
+  //                         <label className="block text-sm font-medium text-gray-700">
+  //                           Item *
+  //                         </label>
+  //                         <ItemSelect
+  //                           noZeroItem={true}
+  //                           value={watch(`saleLines.${index}.itemId`)}
+  //                           typeFilter="FINISHED_GOODS"
+  //                           onChange={(val) =>
+  //                             setValue(`saleLines.${index}.itemId`, val)
+  //                           }
+  //                           error={errors.saleLines?.[index]?.itemId?.message}
+  //                         />
+  //                       </div>
+
+  //                       <div>
+  //                         <label className="block text-sm font-medium text-gray-700">
+  //                           Qty *
+  //                         </label>
+  //                         <input
+  //                           {...register(`saleLines.${index}.qty`, {
+  //                             valueAsNumber: true,
+  //                             validate: (value) => {
+  //                               const itemId = watchedLines[index]?.itemId;
+  //                               if (!itemId) return true;
+
+  //                               const stock = itemStocks[itemId] ?? 0;
+
+  //                               if (value > stock) {
+  //                                 return `Only ${stock} in stock`;
+  //                               }
+
+  //                               return true;
+  //                             },
+  //                           })}
+  //                           type="number"
+  //                           step="0.1"
+  //                           min="0"
+  //                           max={
+  //                             watchedLines[index]?.itemId
+  //                               ? (itemStocks[watchedLines[index]?.itemId] ??
+  //                                 undefined)
+  //                               : undefined
+  //                           }
+  //                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //                           placeholder="1"
+  //                         />
+  //                         {errors.saleLines?.[index]?.qty && (
+  //                           <p className="mt-1 text-sm text-red-600">
+  //                             {errors.saleLines[index]?.qty?.message}
+  //                           </p>
+  //                         )}
+  //                       </div>
+
+  //                       <div>
+  //                         <label className="block text-sm font-medium text-gray-700">
+  //                           Price *
+  //                         </label>
+  //                         <input
+  //                           {...register(`saleLines.${index}.unitPrice`, {
+  //                             valueAsNumber: true,
+  //                           })}
+  //                           type="number"
+  //                           step="0.01"
+  //                           disabled
+  //                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //                           placeholder="0.00"
+  //                         />
+  //                       </div>
+
+  //                       <div>
+  //                         <label className="block text-sm font-medium text-gray-700">
+  //                           Discount %
+  //                         </label>
+  //                         <input
+  //                           {...register(`saleLines.${index}.discountPercent`, {
+  //                             valueAsNumber: true,
+  //                           })}
+  //                           type="number"
+  //                           step="0.01"
+  //                           min="0"
+  //                           max="100"
+  //                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //                           placeholder="0"
+  //                         />
+  //                       </div>
+
+  //                       <div className="flex items-end">
+  //                         <div className="flex-1">
+  //                           <label className="block text-sm font-medium text-gray-700">
+  //                             Line Total
+  //                           </label>
+  //                           <div className="mt-1 block w-full py-2 px-3 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-900">
+  //                             ₦
+  //                             {(() => {
+  //                               const lineTotal =
+  //                                 (watchedLines[index]?.qty || 0) *
+  //                                 (watchedLines[index]?.unitPrice || 0);
+  //                               const discount =
+  //                                 (lineTotal *
+  //                                   (watchedLines[index]?.discountPercent ||
+  //                                     0)) /
+  //                                 100;
+  //                               return (lineTotal - discount).toLocaleString();
+  //                             })()}
+  //                           </div>
+  //                         </div>
+  //                         {fields.length > 1 && (
+  //                           <button
+  //                             type="button"
+  //                             onClick={() => remove(index)}
+  //                             className="ml-2 inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-gray-500 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+  //                           >
+  //                             <Trash2 className="h-4 w-4" />
+  //                           </button>
+  //                         )}
+  //                       </div>
+  //                     </div>
+  //                   </div>
+  //                 ))}
+  //               </div>
+  //             </div>
+
+  //             {/* Totals and Payment */}
+  //             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+  //               <div className="bg-blue-50 p-4 rounded-lg">
+  //                 <h4 className="text-md font-medium text-blue-900 mb-3">
+  //                   Order Summary
+  //                 </h4>
+  //                 <div className="space-y-2 text-sm">
+  //                   <div className="flex justify-between">
+  //                     <span>Subtotal:</span>
+  //                     <span>₦{subtotal.toLocaleString()}</span>
+  //                   </div>
+  //                   {discountAmount > 0 && (
+  //                     <div className="flex justify-between text-red-600">
+  //                       <span>Discount:</span>
+  //                       <span>-₦{discountAmount.toLocaleString()}</span>
+  //                     </div>
+  //                   )}
+  //                   <div className="flex justify-between font-bold text-lg border-t pt-2">
+  //                     <span>Total:</span>
+  //                     <span>₦{totalAmount.toLocaleString()}</span>
+  //                   </div>
+  //                 </div>
+  //               </div>
+
+  //               <div className="bg-green-50 p-4 rounded-lg">
+  //                 <h4 className="text-md font-medium text-green-900 mb-3">
+  //                   Payment
+  //                 </h4>
+  //                 <div className="space-y-3">
+  //                   <div>
+  //                     <label className="block text-sm font-medium text-gray-700">
+  //                       Total Paid *
+  //                     </label>
+  //                     <input
+  //                       // {...register("amountPaid", { valueAsNumber: true })}
+  //                       disabled
+  //                       //value={`₦${totalPaid.toLocaleString()}`}
+  //                       type="number"
+  //                       step="0.01"
+  //                       min={totalPaid}
+  //                       className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //                       placeholder={totalPaid.toFixed(2).toLocaleString()}
+  //                     />
+  //                     {/* {errors.totalPaid && (
+  //                       <p className="mt-1 text-sm text-red-600">
+  //                         {errors.totalPaid.message}
+  //                       </p>
+  //                     )} */}
+  //                   </div>
+
+  //                   {changeAmount > 0 && (
+  //                     <div className="bg-yellow-100 p-3 rounded-md">
+  //                       <div className="flex justify-between font-bold">
+  //                         <span>Change Due:</span>
+  //                         <span className="text-yellow-800">
+  //                           ₦{changeAmount.toLocaleString()}
+  //                         </span>
+  //                       </div>
+  //                     </div>
+  //                   )}
+  //                 </div>
+  //               </div>
+  //             </div>
+
+  //             <div className="flex justify-end space-x-3 pt-4 border-t">
+  //               <button
+  //                 type="button"
+  //                 onClick={onClose}
+  //                 className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+  //               >
+  //                 Cancel
+  //               </button>
+  //               <button
+  //                 type="submit"
+  //                 disabled={isSubmitting || totalPaid < totalAmount}
+  //                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+  //               >
+  //                 <ShoppingCart className="h-4 w-4 mr-2" />
+  //                 {isSubmitting ? "Processing..." : "Complete Sale"}
+  //               </button>
+  //             </div>
+  //           </form>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   </div>
+  // );
 };
 
 export default PosTerminal;

@@ -1,26 +1,34 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, Building, TrendingDown, Calculator, Package, FileText } from 'lucide-react';
-import { assetsApi } from '../../lib/api';
-import CapitalizeFromPurchaseModal from './CapitalizeFromPurchaseModal';
-import RunDepreciationModal from './RunDepreciationModal';
-import { useAuthStore } from '../../store/authStore';
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Plus,
+  Building,
+  TrendingDown,
+  Calculator,
+  Package,
+  FileText,
+} from "lucide-react";
+import { assetsApi } from "../../lib/api";
+import CapitalizeFromPurchaseModal from "./CapitalizeFromPurchaseModal";
+import RunDepreciationModal from "./RunDepreciationModal";
+import { useAuthStore } from "../../store/authStore";
 
 const AssetDashboard = () => {
   const [showCapitalizeModal, setShowCapitalizeModal] = useState(false);
   const [showDepreciationModal, setShowDepreciationModal] = useState(false);
   const { user } = useAuthStore();
 
-  const canManageAssets = user?.roles.includes('CFO') || user?.roles.includes('General Manager');
+  const canManageAssets =
+    user?.roles.includes("Auditor") || user?.roles.includes("General Manager");
 
   const { data: valuationData } = useQuery({
-    queryKey: ['asset-valuation'],
-    queryFn: () => assetsApi.getAssetValuation()
+    queryKey: ["asset-valuation"],
+    queryFn: () => assetsApi.getAssetValuation(),
   });
 
   const { data: registerData } = useQuery({
-    queryKey: ['asset-register-summary'],
-    queryFn: () => assetsApi.getAssetRegister()
+    queryKey: ["asset-register-summary"],
+    queryFn: () => assetsApi.getAssetRegister({ limit: 500 }),
   });
 
   const handleCapitalizeSuccess = () => {
@@ -32,25 +40,29 @@ const AssetDashboard = () => {
     setShowDepreciationModal(false);
     // Refetch data
   };
-   
 
   // Group assets by category for summary
-  const assetsByCategory = registerData?.register?.reduce((acc: any, asset: any) => {
-    const categoryName = asset.category?.name || 'Uncategorized';
-    if (!acc[categoryName]) {
-      acc[categoryName] = {
-        count: 0,
-        totalCost: 0,
-        totalDepreciation: 0,
-        netBookValue: 0
-      };
-    }
-    acc[categoryName].count++;
-    acc[categoryName].totalCost += Number(asset.acquisitionCost) || 0;
-    acc[categoryName].totalDepreciation += Number(asset.accumulatedDepreciation) || 0;
-    acc[categoryName].netBookValue += Number(asset.netBookValue) || Number(asset.acquisitionCost) - (Number(asset.accumulatedDepreciation) || 0);
-    return acc;
-  }, {}) || {};
+  const assetsByCategory =
+    registerData?.register?.assets.reduce((acc: any, asset: any) => {
+      const categoryName = asset.category?.name || "Uncategorized";
+      if (!acc[categoryName]) {
+        acc[categoryName] = {
+          count: 0,
+          totalCost: 0,
+          totalDepreciation: 0,
+          netBookValue: 0,
+        };
+      }
+      acc[categoryName].count++;
+      acc[categoryName].totalCost += Number(asset.acquisitionCost) || 0;
+      acc[categoryName].totalDepreciation +=
+        Number(asset.accumulatedDepreciation) || 0;
+      acc[categoryName].netBookValue +=
+        Number(asset.netBookValue) ||
+        Number(asset.acquisitionCost) -
+          (Number(asset.accumulatedDepreciation) || 0);
+      return acc;
+    }, {}) || {};
 
   return (
     <div className="space-y-6">
@@ -58,7 +70,9 @@ const AssetDashboard = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Assets Dashboard</h1>
-          <p className="text-gray-600">Overview of fixed assets and depreciation</p>
+          <p className="text-gray-600">
+            Overview of fixed assets and depreciation
+          </p>
         </div>
         <div className="flex space-x-2">
           <button
@@ -71,7 +85,7 @@ const AssetDashboard = () => {
           {canManageAssets && (
             <button
               onClick={() => setShowDepreciationModal(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              className="inline-flex items-center px-5 py-3 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
             >
               <Calculator className="h-4 w-4 mr-2" />
               Run Depreciation
@@ -134,7 +148,10 @@ const AssetDashboard = () => {
                     Accumulated Depreciation
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
-                    ₦{(valuationData?.summary?.totalAccumulatedDepreciation || 0).toLocaleString()}
+                    ₦
+                    {(
+                      valuationData?.summary?.totalAccumulatedDepreciation || 0
+                    ).toLocaleString()}
                   </dd>
                 </dl>
               </div>
@@ -154,7 +171,10 @@ const AssetDashboard = () => {
                     Net Book Value
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
-                    ₦{(valuationData?.summary?.totalNetBookValue || 0).toLocaleString()}
+                    ₦
+                    {(
+                      valuationData?.summary?.totalNetBookValue || 0
+                    ).toLocaleString()}
                   </dd>
                 </dl>
               </div>
@@ -172,28 +192,40 @@ const AssetDashboard = () => {
         </div>
         <div className="px-4 py-4 sm:px-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Object.entries(assetsByCategory).map(([categoryName, data]: [string, any]) => (
-              <div key={categoryName} className="bg-gray-50 p-4 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-gray-900">{categoryName}</h4>
-                  <span className="text-sm text-gray-500">{data.count} assets</span>
+            {Object.entries(assetsByCategory).map(
+              ([categoryName, data]: [string, any]) => (
+                <div key={categoryName} className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-gray-900">
+                      {categoryName}
+                    </h4>
+                    <span className="text-sm text-gray-500">
+                      {data.count} assets
+                    </span>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Cost:</span>
+                      <span className="font-medium">
+                        ₦{Number(data.totalCost).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Depreciation:</span>
+                      <span className="font-medium text-red-600">
+                        ₦{Number(data.totalDepreciation).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t pt-1">
+                      <span className="text-gray-600">Net Book Value:</span>
+                      <span className="font-medium text-green-600">
+                        ₦{Number(data.netBookValue).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total Cost:</span>
-                    <span className="font-medium">₦{Number(data.totalCost).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Depreciation:</span>
-                    <span className="font-medium text-red-600">₦{Number(data.totalDepreciation).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-1">
-                    <span className="text-gray-600">Net Book Value:</span>
-                    <span className="font-medium text-green-600">₦{Number(data.netBookValue).toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+              ),
+            )}
           </div>
         </div>
       </div>
@@ -213,8 +245,12 @@ const AssetDashboard = () => {
             >
               <Package className="h-8 w-8 text-gray-400 mr-3" />
               <div className="text-left">
-                <div className="font-medium text-gray-900">Capitalize Assets</div>
-                <div className="text-sm text-gray-500">From purchase orders</div>
+                <div className="font-medium text-gray-900">
+                  Capitalize Assets
+                </div>
+                <div className="text-sm text-gray-500">
+                  From purchase orders
+                </div>
               </div>
             </button>
 
@@ -225,8 +261,12 @@ const AssetDashboard = () => {
               >
                 <Calculator className="h-8 w-8 text-gray-400 mr-3" />
                 <div className="text-left">
-                  <div className="font-medium text-gray-900">Run Depreciation</div>
-                  <div className="text-sm text-gray-500">Monthly calculation</div>
+                  <div className="font-medium text-gray-900">
+                    Run Depreciation
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Monthly calculation
+                  </div>
                 </div>
               </button>
             )}

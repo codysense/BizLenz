@@ -21,99 +21,117 @@ const DetailTransferModal: React.FC<DetailTransferModalProps> = ({
     ) || 0;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          onClick={onClose}
-        />
-
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Transfer Details - {transfer.refNo || transfer.id}
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
+      <div className="flex items-center justify-center min-h-screen p-4">
+        {/* MODAL CONTAINER */}
+        <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-gray-100">
+          {/* HEADER */}
+          <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-6 py-5 flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">
+                Transfer Details
               </h3>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
+              <p className="text-sm text-gray-500 mt-1">
+                Ref: {transfer.refNo || transfer.id}
+              </p>
             </div>
 
-            {/* Transfer Direction */}
-            <div className="bg-blue-50 p-4 rounded-md mb-6">
-              <div className="flex items-center">
-                <ArrowRight className="h-5 w-5 text-blue-500 mr-2" />
-                <div className="text-sm text-blue-800">
-                  <strong>Transfer Direction:</strong>{" "}
-                  {transfer.fromWarehouse?.code} -{" "}
-                  {transfer.fromWarehouse?.name} → {transfer.toWarehouse?.code}{" "}
-                  - {transfer.toWarehouse?.name}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* CONTENT */}
+          <div className="p-6 space-y-6">
+            {/* TRANSFER DIRECTION CARD */}
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white rounded-xl border border-blue-100">
+                  <ArrowRight className="h-5 w-5 text-blue-600" />
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-blue-600 font-semibold">
+                    Transfer Route
+                  </p>
+                  <p className="text-sm text-blue-900 font-medium">
+                    {transfer.fromWarehouse?.name} →{" "}
+                    {transfer.toWarehouse?.name}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Transfer Items */}
-            <div className="mb-6">
-              <h4 className="text-md font-medium text-gray-900 mb-4">
-                Transferred Items
-              </h4>
+            {/* ITEMS SECTION */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                  Items Transferred
+                </h4>
+              </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {transfer.items?.map((item: any, index: number) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <div className="text-gray-500">Item</div>
-                        <div className="font-medium text-gray-900">
+                  <div
+                    key={index}
+                    className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {/* ITEM */}
+                      <div className="sm:col-span-2">
+                        <p className="text-xs text-gray-500">Item</p>
+                        <p className="text-sm font-semibold text-gray-900">
                           {item.item?.sku} - {item.item?.name}
-                        </div>
+                        </p>
                       </div>
 
+                      {/* QUANTITY */}
                       <div>
-                        <div className="text-gray-500">Quantity</div>
-                        <div className="font-medium">
+                        <p className="text-xs text-gray-500">Quantity</p>
+                        <span className="inline-flex mt-1 px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-sm font-medium">
                           {item.qty} {item.item?.uom || "units"}
-                        </div>
+                        </span>
                       </div>
-
-                      {/* <div>
-                        <div className="text-gray-500">Stock After</div>
-                        <div className="text-gray-700">
-                          From: {item.stockAfterFrom ?? "-"} | To:{" "}
-                          {item.stockAfterTo ?? "-"}
-                        </div>
-                      </div> */}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Transfer Summary */}
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h4 className="text-sm font-medium text-green-900 mb-2">
-                Transfer Summary:
+            {/* SUMMARY */}
+            <div className="bg-green-50 border border-green-100 rounded-2xl p-5">
+              <h4 className="text-sm font-semibold text-green-800 uppercase tracking-wide mb-3">
+                Summary
               </h4>
-              <div className="text-sm text-green-800 space-y-1">
-                <div>• Total Items: {totalItems}</div>
-                <div>• Total Quantity: {totalQty}</div>
-                <div>• Inventory ledger updated for both warehouses</div>
-                <div>
-                  • Transfer Date:{" "}
-                  {new Date(transfer.createdAt).toLocaleString()}
+
+              <div className="space-y-2 text-sm text-green-900">
+                <div className="flex justify-between">
+                  <span>Total Items</span>
+                  <span className="font-semibold">{totalItems}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span>Total Quantity</span>
+                  <span className="font-semibold">{totalQty}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span>Date</span>
+                  <span className="font-medium">
+                    {new Date(transfer.createdAt).toLocaleString()}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="flex justify-end pt-6 border-t mt-6">
+            {/* FOOTER */}
+            <div className="flex justify-end pt-4 border-t border-gray-100">
               <button
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="px-6 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium"
               >
                 Close
               </button>

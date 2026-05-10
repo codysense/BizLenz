@@ -362,69 +362,85 @@ const PosSalesHistory = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            POS Sales History
-          </h1>
-          <p className="text-gray-600">
-            View and manage point of sales transactions
-          </p>
+      <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-blue-600">Sales Analytics</p>
+
+            <h1 className="text-3xl font-bold text-gray-900 mt-1">
+              POS Sales History
+            </h1>
+
+            <p className="text-gray-500 mt-2">
+              View and manage all point-of-sale transactions and performance.
+            </p>
+          </div>
+
+          <div className="hidden md:flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50">
+            <ShoppingCart className="h-7 w-7 text-blue-600" />
+          </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+          {/* Date From */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Date From
             </label>
             <input
               type="date"
               value={dateFromFilter}
               onChange={(e) => setDateFromFilter(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
+          {/* Date To */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Date To
             </label>
             <input
               type="date"
               value={dateToFilter}
               onChange={(e) => setDateToFilter(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          {/* Payment Method */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Payment Method
             </label>
+
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">All</option>
+              <option value="">All Methods</option>
               <option value="CASH">Cash</option>
               <option value="CARD">Card</option>
               <option value="TRANSFER">Transfer</option>
             </select>
           </div>
+
+          {/* Cashier */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Cashier
             </label>
 
             <select
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               value={selectedCashier}
               onChange={(e) => setSelectedCashier(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">All</option>
+              <option value="">All Cashiers</option>
 
               {cashiers.map((cashier: any) => (
                 <option key={cashier.id} value={cashier.id}>
@@ -437,97 +453,86 @@ const PosSalesHistory = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ShoppingCart className="h-6 w-6 text-gray-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Total Sales
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {totalSales}
-                  </dd>
-                </dl>
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* Total Sales */}
+        <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm text-gray-500">Total Sales</p>
+              <h3 className="text-3xl font-bold text-gray-900 mt-3">
+                {totalSales}
+              </h3>
+            </div>
+            <div className="p-3 rounded-2xl bg-gray-50">
+              <ShoppingCart className="h-6 w-6 text-gray-700" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <DollarSign className="h-6 w-6 text-green-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Total Revenue
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    ₦{Number(totalRevenue).toLocaleString()}
-                  </dd>
-                </dl>
-              </div>
+        {/* Revenue */}
+        <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm text-gray-500">Total Revenue</p>
+              <h3 className="text-3xl font-bold text-gray-900 mt-3">
+                ₦{Number(totalRevenue).toLocaleString()}
+              </h3>
+            </div>
+            <div className="p-3 rounded-2xl bg-green-50">
+              <DollarSign className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <DollarSign className="h-6 w-6 text-blue-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Cash Sales
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {cashSales}
-                  </dd>
-                </dl>
-              </div>
+        {/* Cash Sales */}
+        <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm text-gray-500">Cash Sales</p>
+              <h3 className="text-3xl font-bold text-gray-900 mt-3">
+                {cashSales}
+              </h3>
+            </div>
+            <div className="p-3 rounded-2xl bg-blue-50">
+              <DollarSign className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Calendar className="h-6 w-6 text-purple-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Card Sales
-                  </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {cardSales}
-                  </dd>
-                </dl>
-              </div>
+        {/* Card Sales */}
+        <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm text-gray-500">Card Sales</p>
+              <h3 className="text-3xl font-bold text-gray-900 mt-3">
+                {cardSales}
+              </h3>
+            </div>
+            <div className="p-3 rounded-2xl bg-purple-50">
+              <Calendar className="h-6 w-6 text-purple-600" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Data Table */}
-      <DataTable
-        data={data?.sales || []}
-        columns={columns}
-        loading={isLoading}
-        pagination={data?.pagination}
-        onPageChange={setPage}
-        actions={actions}
-      />
+      <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900">Transactions</h3>
+          <p className="text-sm text-gray-500 mt-1">All POS sales records</p>
+        </div>
+
+        <div className="p-4">
+          <DataTable
+            data={data?.sales || []}
+            columns={columns}
+            loading={isLoading}
+            pagination={data?.pagination}
+            onPageChange={setPage}
+            actions={actions}
+          />
+        </div>
+      </div>
 
       {/* Details Modal */}
       {showDetailsModal && selectedSale && (
@@ -541,6 +546,189 @@ const PosSalesHistory = () => {
       )}
     </div>
   );
+
+  // return (
+  //   <div className="space-y-6">
+  //     {/* Header */}
+  //     <div className="flex justify-between items-center">
+  //       <div>
+  //         <h1 className="text-2xl font-bold text-gray-900">
+  //           POS Sales History
+  //         </h1>
+  //         <p className="text-gray-600">
+  //           View and manage point of sales transactions
+  //         </p>
+  //       </div>
+  //     </div>
+
+  //     {/* Filters */}
+  //     <div className="bg-white p-4 rounded-lg shadow">
+  //       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+  //         <div>
+  //           <label className="block text-sm font-medium text-gray-700 mb-1">
+  //             Date From
+  //           </label>
+  //           <input
+  //             type="date"
+  //             value={dateFromFilter}
+  //             onChange={(e) => setDateFromFilter(e.target.value)}
+  //             className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //           />
+  //         </div>
+
+  //         <div>
+  //           <label className="block text-sm font-medium text-gray-700 mb-1">
+  //             Date To
+  //           </label>
+  //           <input
+  //             type="date"
+  //             value={dateToFilter}
+  //             onChange={(e) => setDateToFilter(e.target.value)}
+  //             className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //           />
+  //         </div>
+  //         <div>
+  //           <label className="block text-sm font-medium text-gray-700 mb-1">
+  //             Payment Method
+  //           </label>
+  //           <select
+  //             value={paymentMethod}
+  //             onChange={(e) => setPaymentMethod(e.target.value)}
+  //             className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //           >
+  //             <option value="">All</option>
+  //             <option value="CASH">Cash</option>
+  //             <option value="CARD">Card</option>
+  //             <option value="TRANSFER">Transfer</option>
+  //           </select>
+  //         </div>
+  //         <div>
+  //           <label className="block text-sm font-medium text-gray-700 mb-1">
+  //             Cashier
+  //           </label>
+
+  //           <select
+  //             className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+  //             value={selectedCashier}
+  //             onChange={(e) => setSelectedCashier(e.target.value)}
+  //           >
+  //             <option value="">All</option>
+
+  //             {cashiers.map((cashier: any) => (
+  //               <option key={cashier.id} value={cashier.id}>
+  //                 {cashier.name}
+  //               </option>
+  //             ))}
+  //           </select>
+  //         </div>
+  //       </div>
+  //     </div>
+
+  //     {/* Stats */}
+  //     <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
+  //       <div className="bg-white overflow-hidden shadow rounded-lg">
+  //         <div className="p-5">
+  //           <div className="flex items-center">
+  //             <div className="flex-shrink-0">
+  //               <ShoppingCart className="h-6 w-6 text-gray-400" />
+  //             </div>
+  //             <div className="ml-5 w-0 flex-1">
+  //               <dl>
+  //                 <dt className="text-sm font-medium text-gray-500 truncate">
+  //                   Total Sales
+  //                 </dt>
+  //                 <dd className="text-2xl font-semibold text-gray-900">
+  //                   {totalSales}
+  //                 </dd>
+  //               </dl>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       </div>
+
+  //       <div className="bg-white overflow-hidden shadow rounded-lg">
+  //         <div className="p-5">
+  //           <div className="flex items-center">
+  //             <div className="flex-shrink-0">
+  //               <DollarSign className="h-6 w-6 text-green-400" />
+  //             </div>
+  //             <div className="ml-5 w-0 flex-1">
+  //               <dl>
+  //                 <dt className="text-sm font-medium text-gray-500 truncate">
+  //                   Total Revenue
+  //                 </dt>
+  //                 <dd className="text-2xl font-semibold text-gray-900">
+  //                   ₦{Number(totalRevenue).toLocaleString()}
+  //                 </dd>
+  //               </dl>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       </div>
+
+  //       <div className="bg-white overflow-hidden shadow rounded-lg">
+  //         <div className="p-5">
+  //           <div className="flex items-center">
+  //             <div className="flex-shrink-0">
+  //               <DollarSign className="h-6 w-6 text-blue-400" />
+  //             </div>
+  //             <div className="ml-5 w-0 flex-1">
+  //               <dl>
+  //                 <dt className="text-sm font-medium text-gray-500 truncate">
+  //                   Cash Sales
+  //                 </dt>
+  //                 <dd className="text-2xl font-semibold text-gray-900">
+  //                   {cashSales}
+  //                 </dd>
+  //               </dl>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       </div>
+
+  //       <div className="bg-white overflow-hidden shadow rounded-lg">
+  //         <div className="p-5">
+  //           <div className="flex items-center">
+  //             <div className="flex-shrink-0">
+  //               <Calendar className="h-6 w-6 text-purple-400" />
+  //             </div>
+  //             <div className="ml-5 w-0 flex-1">
+  //               <dl>
+  //                 <dt className="text-sm font-medium text-gray-500 truncate">
+  //                   Card Sales
+  //                 </dt>
+  //                 <dd className="text-2xl font-semibold text-gray-900">
+  //                   {cardSales}
+  //                 </dd>
+  //               </dl>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       </div>
+  //     </div>
+
+  //     {/* Data Table */}
+  //     <DataTable
+  //       data={data?.sales || []}
+  //       columns={columns}
+  //       loading={isLoading}
+  //       pagination={data?.pagination}
+  //       onPageChange={setPage}
+  //       actions={actions}
+  //     />
+
+  //     {/* Details Modal */}
+  //     {showDetailsModal && selectedSale && (
+  //       <DetailPOSSaleModal
+  //         sale={selectedSale}
+  //         onClose={() => {
+  //           setShowDetailsModal(false);
+  //           setSelectedSale(null);
+  //         }}
+  //       />
+  //     )}
+  //   </div>
+  // );
 };
 
 export default PosSalesHistory;

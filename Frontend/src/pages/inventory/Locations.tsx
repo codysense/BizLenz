@@ -1,86 +1,92 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, Search, MapPin, Building, Edit } from 'lucide-react';
-import { inventoryApi } from '../../lib/api';
-import { DataTable } from '../../components/DataTable';
-import StatusBadge from '../../components/StatusBadge';
-import { Location } from '../../types/api';
-import CreateLocationModal from './CreateLocationModal';
-import EditLocationModal from './EditLocationModal';
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Search, MapPin, Building, Edit } from "lucide-react";
+import { inventoryApi } from "../../lib/api";
+import { DataTable } from "../../components/DataTable";
+import StatusBadge from "../../components/StatusBadge";
+import { Location } from "../../types/api";
+import CreateLocationModal from "./CreateLocationModal";
+import EditLocationModal from "./EditLocationModal";
 
 const Locations = () => {
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(
+    null,
+  );
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['locations', { page, search }],
-    queryFn: () => inventoryApi.getLocations({ 
-      page, 
-      limit: 10, 
-      ...(search && { search })
-    })
+    queryKey: ["locations", { page, search }],
+    queryFn: () =>
+      inventoryApi.getLocations({
+        page,
+        limit: 10,
+        ...(search && { search }),
+      }),
   });
 
   const columns = [
     {
-      key: 'code',
-      header: 'Code',
-      width: 'w-24'
+      key: "code",
+      header: "Code",
+      width: "w-24",
     },
     {
-      key: 'name',
-      header: 'Name',
-      width: 'w-48'
+      key: "name",
+      header: "Name",
+      width: "w-48",
     },
     {
-      key: 'city',
-      header: 'City',
-      cell: (location: Location) => location.city || '-',
-      width: 'w-32'
+      key: "city",
+      header: "City",
+      cell: (location: Location) => location.city || "-",
+      width: "w-32",
     },
     {
-      key: 'state',
-      header: 'State',
-      cell: (location: Location) => location.state || '-',
-      width: 'w-32'
+      key: "state",
+      header: "State",
+      cell: (location: Location) => location.state || "-",
+      width: "w-32",
     },
     {
-      key: 'country',
-      header: 'Country',
-      width: 'w-32'
+      key: "country",
+      header: "Country",
+      width: "w-32",
     },
     {
-      key: 'address',
-      header: 'Address',
-      cell: (location: Location) => location.address || '-',
-      width: 'w-64'
+      key: "address",
+      header: "Address",
+      cell: (location: Location) => location.address || "-",
+      width: "w-64",
     },
     {
-      key: 'warehouseCount',
-      header: 'Warehouses',
+      key: "warehouseCount",
+      header: "Warehouses",
       cell: (location: Location & { _count?: { warehouses: number } }) => (
         <div className="flex items-center">
           <Building className="h-4 w-4 text-gray-400 mr-1" />
           <span>{location._count?.warehouses || 0}</span>
         </div>
       ),
-      width: 'w-24'
+      width: "w-24",
     },
     {
-      key: 'isActive',
-      header: 'Status',
-      cell: (location: Location) => <StatusBadge status={location.isActive ? 'Active' : 'Inactive'} />,
-      width: 'w-24'
+      key: "isActive",
+      header: "Status",
+      cell: (location: Location) => (
+        <StatusBadge status={location.isActive ? "Active" : "Inactive"} />
+      ),
+      width: "w-24",
     },
     {
-      key: 'createdAt',
-      header: 'Created',
-      cell: (location: Location) => new Date(location.createdAt).toLocaleDateString(),
-      width: 'w-32'
-    }
+      key: "createdAt",
+      header: "Created",
+      cell: (location: Location) =>
+        new Date(location.createdAt).toLocaleDateString(),
+      width: "w-32",
+    },
   ];
 
   const handleCreateLocation = () => {
@@ -114,12 +120,14 @@ const Locations = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Locations</h1>
-          <p className="text-gray-600">Manage business locations and facilities</p>
+          <h1 className="text-3xl font-bold text-gray-900">Locations</h1>
+          <p className="text-gray-600">
+            Manage business locations and facilities
+          </p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm transition"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Location
@@ -157,7 +165,7 @@ const Locations = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Locations
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-4xl font-bold text-black/80">
                     {data?.pagination?.total || 0}
                   </dd>
                 </dl>
@@ -177,8 +185,9 @@ const Locations = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Active Locations
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.locations?.filter((l: Location) => l.isActive).length || 0}
+                  <dd className="text-4xl font-bold text-black/80">
+                    {data?.locations?.filter((l: Location) => l.isActive)
+                      .length || 0}
                   </dd>
                 </dl>
               </div>
@@ -197,9 +206,14 @@ const Locations = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Warehouses
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.locations?.reduce((sum: number, l: Location & { _count?: { warehouses: number } }) => 
-                      sum + (l._count?.warehouses || 0), 0) || 0}
+                  <dd className="text-4xl font-bold text-black/80">
+                    {data?.locations?.reduce(
+                      (
+                        sum: number,
+                        l: Location & { _count?: { warehouses: number } },
+                      ) => sum + (l._count?.warehouses || 0),
+                      0,
+                    ) || 0}
                   </dd>
                 </dl>
               </div>
@@ -218,9 +232,13 @@ const Locations = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     States Covered
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.locations ? 
-                      new Set(data.locations.filter((l: Location) => l.state).map((l: Location) => l.state)).size 
+                  <dd className="text-4xl font-bold text-black/80">
+                    {data?.locations
+                      ? new Set(
+                          data.locations
+                            .filter((l: Location) => l.state)
+                            .map((l: Location) => l.state),
+                        ).size
                       : 0}
                   </dd>
                 </dl>

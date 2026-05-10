@@ -56,81 +56,112 @@ const EditCustomerGroupModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-        <div className="flex justify-between items-center px-5 py-3 border-b">
-          <h2 className="text-lg font-semibold text-gray-800">
-            Edit Customer Group
-          </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative z-10 w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+          <div>
+            <h2 className="text-lg font-semibold">Edit Customer Group</h2>
+            <p className="text-sm text-blue-100">
+              Update customer group information
+            </p>
+          </div>
+
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="p-2 rounded-lg hover:bg-white/20 transition"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4">
+        {/* Form Body */}
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex-1 overflow-y-auto px-6 py-5 space-y-5"
+        >
+          {/* Code */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Code
             </label>
             <input
               {...register("code")}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              placeholder="GRP001"
             />
             {errors.code && (
-              <p className="text-red-600 text-sm">{errors.code.message}</p>
+              <p className="mt-1 text-sm text-red-600">{errors.code.message}</p>
             )}
           </div>
 
+          {/* Group Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Group Name
             </label>
             <input
               {...register("name")}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              placeholder="Wholesale Customers"
             />
             {errors.name && (
-              <p className="text-red-600 text-sm">{errors.name.message}</p>
+              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
             )}
           </div>
 
+          {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Description
             </label>
             <textarea
               {...register("description")}
               rows={3}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+              placeholder="Brief description about this customer group"
             />
           </div>
 
-          <div className="flex items-center space-x-2">
+          {/* Active Toggle */}
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border">
+            <div>
+              <p className="text-sm font-medium text-gray-800">Active Status</p>
+              <p className="text-xs text-gray-500">
+                Enable or disable this customer group
+              </p>
+            </div>
+
             <input
               type="checkbox"
               {...register("isActive")}
-              className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+              className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
-            <label className="text-sm text-gray-700">Active</label>
           </div>
 
-          <div className="flex justify-end space-x-3 mt-5">
+          {/* Footer */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              className="px-5 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
             >
               Cancel
             </button>
+
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium shadow-md hover:shadow-lg transition disabled:opacity-50"
             >
-              {isSubmitting ? "Updating..." : "Update"}
+              {isSubmitting ? "Updating..." : "Update Group"}
             </button>
           </div>
         </form>

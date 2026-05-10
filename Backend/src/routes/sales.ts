@@ -98,6 +98,8 @@ router.post(
   auditLogger("CREATE", "CUSTOMER"),
   salesController.createCustomer,
 );
+
+router.get("/customers/:id", salesController.getCustomerById);
 router.post(
   "/customer-groups",
   requireRole(["Senior Accountant", "Accountant", "POS User", "Manager"]),

@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, Eye, DollarSign, Users, Calendar, Printer } from 'lucide-react';
-import { cashApi, salesApi } from '../../lib/api';
-import { DataTable } from '../../components/DataTable';
-import StatusBadge from '../../components/StatusBadge';
-import CreateCustomerRefundModal from './CreateCustomerRefundModal';
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Eye, DollarSign, Users, Calendar, Printer } from "lucide-react";
+import { cashApi, salesApi } from "../../lib/api";
+import { DataTable } from "../../components/DataTable";
+import StatusBadge from "../../components/StatusBadge";
+import CreateCustomerRefundModal from "./CreateCustomerRefundModal";
 // import { ReportExporter } from '../../lib/reportExporter';
-import { toast } from 'react-hot-toast';
-import { CustomerSelect } from '../../components/CustomerSelect';
+import { toast } from "react-hot-toast";
+import { CustomerSelect } from "../../components/CustomerSelect";
 // import { CustomerSelect } from '../../components/CustomerSelect';
 
 interface CustomerRefund {
@@ -38,22 +38,23 @@ interface CustomerRefund {
 
 const CustomerRefunds = () => {
   const [page, setPage] = useState(1);
-  const [customerFilter, setCustomerFilter] = useState('');
+  const [customerFilter, setCustomerFilter] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['customer-refunds', { page, customerId: customerFilter }],
-    queryFn: () => cashApi.getCustomerRefunds({ 
-      page, 
-      limit: 10,
-      //transactionType: 'RECEIPT',
-       ...(customerFilter && { customerId: customerFilter })
-    })
+    queryKey: ["customer-refunds", { page, customerId: customerFilter }],
+    queryFn: () =>
+      cashApi.getCustomerRefunds({
+        page,
+        limit: 10,
+        //transactionType: 'RECEIPT',
+        ...(customerFilter && { customerId: customerFilter }),
+      }),
   });
   // const { data:trn } = useQuery({
   //   queryKey: ['customer-payments', { page, customerId: customerFilter }],
-  //   queryFn: () => cashApi.getCashTransactions({ 
-  //     page, 
+  //   queryFn: () => cashApi.getCashTransactions({
+  //     page,
   //     limit: 10,
   //     transactionType: 'RECEIPT',
   //   ...(customerFilter && { customerId: customerFilter })
@@ -61,18 +62,17 @@ const CustomerRefunds = () => {
   // });
 
   // console.log(trn)
-  
 
-//   const { data: customers } = useQuery({
-//     queryKey: ['customers-for-refunds'],
-//     queryFn: () => salesApi.getCustomers({ limit: 100 })
-//   });
+  //   const { data: customers } = useQuery({
+  //     queryKey: ['customers-for-refunds'],
+  //     queryFn: () => salesApi.getCustomers({ limit: 100 })
+  //   });
 
   const handlePrintPayment = async (payment: CustomerRefund) => {
     try {
       // Create payment receipt content
-      const receiptContent = document.createElement('div');
-      receiptContent.id = 'customer-payment-print';
+      const receiptContent = document.createElement("div");
+      receiptContent.id = "customer-payment-print";
       receiptContent.innerHTML = `
         <div style="padding: 20px; font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -91,7 +91,7 @@ const CustomerRefunds = () => {
             <p><strong>Amount Received:</strong> ₦${payment.amountRefunded.toLocaleString()}</p>
             <p><strong>Payment Date:</strong> ${new Date(payment.createdAt).toLocaleDateString()}</p>
             <p><strong>Cash Account:</strong> ${payment.cashAccount.name}</p>
-            ${payment.reference ? `<p><strong>Reference:</strong> ${payment.reference}</p>` : ''}
+            ${payment.reference ? `<p><strong>Reference:</strong> ${payment.reference}</p>` : ""}
           </div>
           
           <div style="margin-top: 40px; text-align: center; color: #6b7280; font-size: 12px;">
@@ -101,71 +101,75 @@ const CustomerRefunds = () => {
           </div>
         </div>
       `;
-      
+
       document.body.appendChild(receiptContent);
-      
+
       await ReportExporter.exportToPDF(
-        'customer-payment-print',
+        "customer-payment-print",
         `customer-payment-${payment.refundNo}.pdf`,
-        `Customer Payment Receipt - ${payment.refundNo}`
+        `Customer Payment Receipt - ${payment.refundNo}`,
       );
-      
+
       document.body.removeChild(receiptContent);
-      toast.success('Payment refund printed successfully');
+      toast.success("Payment refund printed successfully");
     } catch (error) {
-      console.error('Print payment refund error:', error);
+      console.error("Print payment refund error:", error);
     }
   };
 
   const columns = [
     {
-      key: 'refundNo',
-      header: 'Refund No',
-      width: 'w-32'
+      key: "refundNo",
+      header: "Refund No",
+      width: "w-32",
     },
     {
-      key: 'customer.name',
-      header: 'Customer',
+      key: "customer.name",
+      header: "Customer",
       // cell:(payment: CustomerPayment) => payment.customer.name,
-      width: 'w-48'
+      width: "w-48",
     },
     {
-      key: 'amountRefunded',
-      header: 'Amount Received',
-      cell: (payment: CustomerRefund) => `₦${Number(payment.amountRefunded).toLocaleString()}`,
-      width: 'w-32'
+      key: "amountRefunded",
+      header: "Amount Received",
+      cell: (payment: CustomerRefund) =>
+        `₦${Number(payment.amountRefunded).toLocaleString()}`,
+      width: "w-32",
     },
     {
-      key: 'cashAccount.name',
-      header: 'Cash Account',
+      key: "cashAccount.name",
+      header: "Cash Account",
       cell: (payment: CustomerRefund) => (
         <div>
           <div className="font-medium">{payment.cashAccount.name}</div>
-          <div className="text-xs text-gray-500">{payment.cashAccount.accountType}</div>
+          <div className="text-xs text-gray-500">
+            {payment.cashAccount.accountType}
+          </div>
         </div>
       ),
-      width: 'w-48'
+      width: "w-48",
     },
     {
-      key: 'reference',
-      header: 'Reference',
-      cell: (payment: CustomerRefund) => payment.reference || '-',
-      width: 'w-32'
+      key: "reference",
+      header: "Reference",
+      cell: (payment: CustomerRefund) => payment.reference || "-",
+      width: "w-32",
     },
     {
-      key: 'receiptDate',
-      header: 'Receipt Date',
-      cell: (payment: CustomerRefund) => new Date(payment.createdAt).toLocaleDateString(),
-      width: 'w-32'
+      key: "receiptDate",
+      header: "Receipt Date",
+      cell: (payment: CustomerRefund) =>
+        new Date(payment.createdAt).toLocaleDateString(),
+      width: "w-32",
     },
     {
-      key: 'user.name',
-      header: 'Received By',
-      width: 'w-32'
+      key: "user.name",
+      header: "Received By",
+      width: "w-32",
     },
     {
-      key: 'actions',
-      header: 'Actions',
+      key: "actions",
+      header: "Actions",
       cell: (payment: CustomerRefund) => (
         <button
           onClick={() => handlePrintPayment(payment)}
@@ -175,8 +179,8 @@ const CustomerRefunds = () => {
           <Printer className="h-4 w-4" />
         </button>
       ),
-      width: 'w-24'
-    }
+      width: "w-24",
+    },
   ];
 
   const handleCreateRefund = () => {
@@ -189,12 +193,12 @@ const CustomerRefunds = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Customer Refunds</h1>
+          <h1 className="text-3xl font-bold text-black/80">Customer Refunds</h1>
           <p className="text-gray-600">Record customer refund</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-5 py-3 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
         >
           <Plus className="h-4 w-4 mr-2" />
           Record Refund
@@ -208,13 +212,12 @@ const CustomerRefunds = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Customer
             </label>
-           <CustomerSelect
-  value={customerFilter}
-  onChange={setCustomerFilter}
-  typeFilter="retail"
-  error=""
-/>
-            
+            <CustomerSelect
+              value={customerFilter}
+              onChange={setCustomerFilter}
+              typeFilter="retail"
+              error=""
+            />
           </div>
         </div>
       </div>
@@ -232,7 +235,7 @@ const CustomerRefunds = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Refunds
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
+                  <dd className="text-2xl font-bold text-black">
                     {data?.pagination?.total || 0}
                   </dd>
                 </dl>
@@ -252,8 +255,14 @@ const CustomerRefunds = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Amount
                   </dt>
-                  <dd className="text-2xl font-semibold text-green-600">
-                    ₦{data?.refunds?.reduce((sum: number, p: any) => sum + Number(p.amountRefunded), 0).toLocaleString() || '0'}
+                  <dd className="text-2xl font-bold text-black/80">
+                    ₦
+                    {data?.refunds
+                      ?.reduce(
+                        (sum: number, p: any) => sum + Number(p.amountRefunded),
+                        0,
+                      )
+                      .toLocaleString() || "0"}
                   </dd>
                 </dl>
               </div>
@@ -272,9 +281,11 @@ const CustomerRefunds = () => {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Today's Refunds
                   </dt>
-                  <dd className="text-2xl font-semibold text-gray-900">
-                    {data?.refunds?.filter((p: any) => 
-                      new Date(p.refundDate).toDateString() === new Date().toDateString()
+                  <dd className="text-2xl font-bold text-black/80">
+                    {data?.refunds?.filter(
+                      (p: any) =>
+                        new Date(p.refundDate).toDateString() ===
+                        new Date().toDateString(),
                     ).length || 0}
                   </dd>
                 </dl>
