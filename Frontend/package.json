@@ -13,6 +13,7 @@
     "prisma:push": "npx prisma db push"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.10",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.9.0",
     "@prisma/client": "^5.22.0",
