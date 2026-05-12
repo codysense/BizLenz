@@ -386,7 +386,7 @@ const InventoryTransfer = () => {
 
         <!-- FOOTER -->
         <p style="text-align:center; color:#6b7280; margin-top:40px; font-size:12px;">
-          Generated on ${new Date().toLocaleString()} | ProfitPilot ERP System
+          Generated on ${new Date().toLocaleString()} | Bizlens Accounting Software-08033124491
         </p>
 
       </body>

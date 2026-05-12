@@ -423,7 +423,7 @@ const PosTerminal = ({
           <div class="footer">
             Cashier: ${printData.cashier.name}<br>
             Thank you for your business!<br>
-            ProfitPilot ERP System
+            Bizlens Accounting Software-08033124491
           </div>
 
           <script>

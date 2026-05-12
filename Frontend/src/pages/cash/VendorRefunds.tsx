@@ -96,7 +96,7 @@ const VendorRefunds = () => {
           <div style="margin-top: 40px; text-align: center; color: #6b7280; font-size: 12px;">
             Paid by: ${payment.user.name}<br>
             Generated on ${new Date().toLocaleString()}<br>
-            ProfitPilot ERP System
+            Bizlens Accounting Software-08033124491
           </div>
         </div>
       `;

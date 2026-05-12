@@ -283,7 +283,7 @@ const AuditLog = () => {
           
           <div style="margin-top: 40px; text-align: center; color: #6b7280; font-size: 10px;">
             <p>This is a confidential audit report. Unauthorized access or distribution is prohibited.</p>
-            <p>ProfitPilot ERP System - Audit Log Report</p>
+            <p>Bizlens Accounting Software - Audit Log Report</p>
           </div>
         </div>
       `;
