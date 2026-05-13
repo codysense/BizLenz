@@ -1063,7 +1063,7 @@ const Reports = () => {
                           key={report.id}
                           className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                             selectedReport === report.id
-                              ? "border-blue-500 bg-blue-50"
+                              ? "border-emerald-500 bg-emerald-50"
                               : "border-gray-200 hover:border-gray-300"
                           }`}
                           onClick={() => setSelectedReport(report.id)}
@@ -1072,7 +1072,7 @@ const Reports = () => {
                             <report.icon
                               className={`h-5 w-5 mt-0.5 mr-3 ${
                                 selectedReport === report.id
-                                  ? "text-blue-600"
+                                  ? "text-emerald-600"
                                   : "text-gray-400"
                               }`}
                             />
@@ -1080,7 +1080,7 @@ const Reports = () => {
                               <h5
                                 className={`text-sm font-medium ${
                                   selectedReport === report.id
-                                    ? "text-blue-900"
+                                    ? "text-emerald-900"
                                     : "text-gray-900"
                                 }`}
                               >
@@ -1089,7 +1089,7 @@ const Reports = () => {
                               <p
                                 className={`text-xs mt-1 ${
                                   selectedReport === report.id
-                                    ? "text-blue-700"
+                                    ? "text-emerald-700"
                                     : "text-gray-500"
                                 }`}
                               >
@@ -1153,7 +1153,7 @@ const Reports = () => {
                     type="date"
                     value={asOfDate}
                     onChange={(e) => setAsOfDate(e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                   />
                 </div>
               )}
@@ -1167,7 +1167,7 @@ const Reports = () => {
                   <select
                     value={warehouseFilter}
                     onChange={(e) => setWarehouseFilter(e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                   >
                     <option value="">All Warehouses</option>
                     {warehouses?.warehouses?.map((warehouse: any) => (
@@ -1260,7 +1260,7 @@ const Reports = () => {
                   <select
                     value={usersFilter}
                     onChange={(e) => setUsersFilter(e.target.value)}
-                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                   >
                     <option value="">Select User</option>
                     {allUsers?.users?.map((user: any) => (
@@ -1300,7 +1300,7 @@ const Reports = () => {
               <button
                 onClick={handleGenerateReport}
                 disabled={!selectedReport || loading}
-                className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full inline-flex items-center justify-center px-5 py-3 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 {loading ? "Generating..." : "Generate Report"}
@@ -1319,7 +1319,7 @@ const Reports = () => {
               <button
                 onClick={() => handleExportReport("pdf")}
                 disabled={!reportData}
-                className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export as PDF
@@ -1328,7 +1328,7 @@ const Reports = () => {
               <button
                 onClick={() => handleExportReport("xlsx")}
                 disabled={!reportData}
-                className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export as Excel
@@ -1337,7 +1337,7 @@ const Reports = () => {
               <button
                 onClick={() => handleExportReport("csv")}
                 disabled={!reportData}
-                className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export as CSV

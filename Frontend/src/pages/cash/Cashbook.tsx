@@ -1017,7 +1017,7 @@ const Cashbook = () => {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         {status}
                       </dt>
-                      <dd className="text-lg font-semibold text-gray-900">
+                      <dd className="text-xl font-bold text-black/80">
                         {count} transactions
                       </dd>
                       <dd className="text-sm text-gray-500">

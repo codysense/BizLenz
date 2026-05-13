@@ -584,7 +584,7 @@ const SalesOrders = () => {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         {status}
                       </dt>
-                      <dd className="text-3xl font-bold text-black/80">
+                      <dd className="text-xl font-bold text-black/80">
                         {count} orders
                       </dd>
                       <dd className="text-sm text-gray-500">

@@ -591,7 +591,7 @@ const ProductionOrders = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-black/80">
             Production Orders
           </h1>
           <p className="text-gray-600">
@@ -659,7 +659,7 @@ const ProductionOrders = () => {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         {status.replace("_", " ")}
                       </dt>
-                      <dd className="text-lg font-semibold text-gray-900">
+                      <dd className="text-xl font-bold text-black/80">
                         {count} orders
                       </dd>
                       <dd className="text-sm text-gray-500">

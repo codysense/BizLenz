@@ -565,7 +565,7 @@ const CustomerPayments = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-black`/80">
+          <h1 className="text-3xl font-bold text-black/80">
             Customer Payments
           </h1>
           <p className="text-gray-600">Record customer payments and receipts</p>
@@ -689,7 +689,7 @@ const CustomerPayments = () => {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         {status}
                       </dt>
-                      <dd className="text-lg font-semibold text-black/80">
+                      <dd className="text-xl font-bold text-black/80">
                         {count} payments
                       </dd>
                       <dd className="text-sm text-gray-500">

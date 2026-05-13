@@ -214,6 +214,14 @@ export class ReportsService {
 
     const newToDate = endOfDayUTC(toDate);
     const newFromDate = startOfDayUTC(fromDate);
+
+    // console.log(
+    //   "Generating Profit and Loss report for date range:",
+    //   fromDate,
+    //   "to",
+    //   toDate,
+    // );
+
     const accounts = await prisma.chartOfAccount.findMany({
       where: {
         isActive: true,

@@ -547,7 +547,7 @@ const PurchaseOrders = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Purchase Orders</h1>
+          <h1 className="text-3xl font-bold text-black/80">Purchase Orders</h1>
           <p className="text-gray-600">Manage purchase orders and receipts</p>
         </div>
         <button
@@ -613,7 +613,7 @@ const PurchaseOrders = () => {
                         <dt className="text-sm font-medium text-gray-500 truncate">
                           {status}
                         </dt>
-                        <dd className="text-lg font-semibold text-gray-900">
+                        <dd className="text-xl font-bold text-black/80">
                           {count} orders
                         </dd>
                         <dd className="text-sm text-gray-500">

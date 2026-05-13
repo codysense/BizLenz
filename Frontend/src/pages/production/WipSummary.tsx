@@ -1,6 +1,13 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Factory, DollarSign, Package, TrendingUp, Filter } from "lucide-react";
+import {
+  Factory,
+  DollarSign,
+  Package,
+  TrendingUp,
+  Filter,
+  BarChart3,
+} from "lucide-react";
 import { productionApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
 import { GenericSearchSelect } from "../../components/GenericSearchCombo";
@@ -30,6 +37,7 @@ const WipSummary = () => {
           : undefined,
       ),
   });
+  console.log("Fetched WIP summary data:", wipData);
 
   const { data: productionOrders } = useQuery({
     queryKey: ["production-orders-for-wip"],
