@@ -75,14 +75,21 @@ const Dashboard = () => {
     queryFn: dashboardApi.getExpenseBreakdown,
   });
 
-  console.log(expenseBreakdown);
+  // console.log(
+  //   executive?.breakDownExpense.filter((e: any) => e.amount > 0),
+  //   "expenses",
+  // );
 
-  const formattedExpenseBreakdown = (expenseBreakdown || []).map(
-    (item: any) => ({
-      ...item,
-      amount: Number(item.amount),
-    }),
-  );
+  const realExpenses =
+    executive?.breakDownExpense.filter((e: any) => e.amount > 0) || [];
+  console.log("Non Zero Expenses ", realExpenses);
+
+  const formattedExpenseBreakdown = realExpenses.map((item: any) => ({
+    ...item,
+    amount: Number(item.amount),
+  }));
+
+  console.log("Formatted Expense Breakdown: ", formattedExpenseBreakdown);
 
   const { data: topProducts } = useQuery({
     queryKey: ["top-products"],
@@ -202,12 +209,15 @@ const Dashboard = () => {
                 <Pie
                   data={formattedExpenseBreakdown}
                   dataKey="amount"
-                  nameKey="category"
+                  nameKey="accountName"
                   outerRadius={100}
                   label
                 >
-                  {formattedExpenseBreakdown.map((_: any, index: number) => (
-                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                  {formattedExpenseBreakdown.map((_: any, index: string) => (
+                    <Cell
+                      key={index}
+                      fill={COLORS[Number(index) % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip />

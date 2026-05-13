@@ -11,8 +11,17 @@ export class DashboardController {
   async getExecutiveSummary(req: AuthRequest, res: Response) {
     try {
       const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startDate = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), 1),
+      );
       const endDate = new Date();
+
+      // console.log(
+      //   "Fetching executive summary for date range:",
+      //   startDate,
+      //   "to",
+      //   endDate,
+      // );
 
       const [
         regularSales,
@@ -122,12 +131,13 @@ export class DashboardController {
         revenue,
         receivables: Number(receivables._sum.totalAmount || 0),
         payables: Number(payables._sum.balanceAmount || 0),
-        expenses,
+        expenses: profitLoss.totalExpense,
         cashInflow: inflow,
         cashOutflow: outflow,
         netCashFlow: inflow - outflow,
         grossProfit: profitLoss.grossProfit,
         netProfit: profitLoss.netIncome,
+        breakDownExpense: profitLoss.expenses,
       });
     } catch (error) {
       console.error(error);
@@ -138,7 +148,9 @@ export class DashboardController {
   async getTopProducts(req: AuthRequest, res: Response) {
     try {
       const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startDate = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), 1),
+      );
       const endDate = new Date();
 
       const topProducts = await prisma.$queryRaw`
@@ -168,7 +180,9 @@ export class DashboardController {
   async getTopCustomers(req: AuthRequest, res: Response) {
     try {
       const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startDate = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), 1),
+      );
       const endDate = new Date();
       const topCustomers = await prisma.$queryRaw`
   SELECT
