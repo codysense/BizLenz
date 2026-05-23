@@ -119,13 +119,12 @@ export class DashboardController {
       const inflow = Number(cashInflows._sum.amount || 0);
       const outflow = Number(operationalPayments._sum.amount || 0);
 
-      console.log("Executive Summary:", {
-        revenue,
-        expenses,
-        inflow,
-        outflow,
-        profitLoss,
-      });
+      // console.log("Executive Summary:", {
+      //   regularSales: Number(regularSales._sum.totalAmount || 0),
+      //   posSales: Number(posSales._sum.totalAmount || 0),
+      //   receivables: Number(receivables._sum.totalAmount || 0),
+      //   payables: Number(payables._sum.balanceAmount || 0),
+      // });
 
       res.json({
         revenue,

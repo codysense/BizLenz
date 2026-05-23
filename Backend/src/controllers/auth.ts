@@ -267,13 +267,13 @@ export class AuthController {
 
   async getUsers(req: AuthRequest, res: Response) {
     try {
-      if (
-        !req.user?.roles.includes("Senior Accountant") &&
-        !req.user?.roles.includes("General Manager") &&
-        !req.user?.roles.includes("Production Manager")
-      ) {
-        return res.status(403).json({ error: "Insufficient permissions" });
-      }
+      // if (
+      //   !req.user?.roles.includes("Senior Accountant") &&
+      //   !req.user?.roles.includes("General Manager") &&
+      //   !req.user?.roles.includes("Production Manager")
+      // ) {
+      //   return res.status(403).json({ error: "Insufficient permissions" });
+      // }
 
       const { page = 1, limit = 10, search } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
@@ -303,6 +303,9 @@ export class AuthController {
                 role: { select: { name: true } },
               },
             },
+            warehouse: {
+              select: { id: true, name: true },
+            },
           },
           orderBy: { createdAt: "desc" },
         }),
@@ -312,11 +315,13 @@ export class AuthController {
       const usersWithRoles = users.map((user) => ({
         ...user,
         roles: user.userRoles.map((ur) => ur.role.name),
+        warehouse: user.warehouse || null,
         userRoles: undefined,
       }));
 
       res.json({
         users: usersWithRoles,
+        // warehouse: users?.warehouse || null,
         pagination: {
           page: Number(page),
           limit: Number(limit),

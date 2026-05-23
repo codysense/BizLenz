@@ -107,6 +107,7 @@ router.get(
     "Senior Accountant",
     "Production Manager",
     "Auditor",
+    "POS User",
   ]),
   inventoryController.getInventoryLedger,
 );
@@ -118,6 +119,7 @@ router.get(
     "Senior Accountant",
     "Production Manager",
     "Auditor",
+    "POS User",
   ]),
   inventoryController.exportInventoryLedger,
 );

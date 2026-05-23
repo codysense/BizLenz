@@ -102,9 +102,8 @@ export const requireRole = (requiredRoles: string[]) => {
       userRoles.includes("General Manager");
 
     if (!hasRole) {
-      return res
-        .status(403)
-        .json({ error: `Requires one of: ${requiredRoles.join(", ")}` });
+      return res.status(403);
+      // .json({ error: `Requires one of: ${requiredRoles.join(", ")}` });
     }
 
     next();

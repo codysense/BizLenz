@@ -16,6 +16,8 @@ import { GeneralLedgerService } from "../services/gl";
 // import prisma from '@prisma/client';
 import { Prisma } from "@prisma/client";
 // import prisma from "../prisma"; //
+import ExcelJS from "exceljs";
+import PDFDocument from "pdfkit";
 
 const prisma = new PrismaClient();
 const costingService = new CostingService();
@@ -710,6 +712,17 @@ export class InventoryController {
         where.item = { type: itemType };
       }
 
+      //if user role is pos User, filter by their assigned warehouse
+      if (req.user?.roles.includes("POS User")) {
+        const user = await prisma.user.findUnique({
+          where: { id: req.user!.id },
+          select: { warehouseId: true },
+        });
+        if (user?.warehouseId) {
+          where.warehouseId = user.warehouseId;
+        }
+      }
+
       const [entries, total] = await Promise.all([
         prisma.inventoryLedger.findMany({
           where,
@@ -746,111 +759,122 @@ export class InventoryController {
     }
   }
 
-  async exportInventoryLedger(req: AuthRequest, res: Response) {
-    try {
-      const {
-        format = "csv",
-        itemId,
-        warehouseId,
-        userId,
-        itemType,
-        refType,
-        direction,
-        dateFrom,
-        dateTo,
-      } = req.query;
+  // async exportInventoryLedger(req: AuthRequest, res: Response) {
+  //   try {
+  //     const {
+  //       format = "csv",
+  //       itemId,
+  //       warehouseId,
+  //       userId,
+  //       itemType,
+  //       refType,
+  //       direction,
+  //       dateFrom,
+  //       dateTo,
+  //     } = req.query;
 
-      const where: any = {};
-      if (itemId) where.itemId = itemId;
-      if (warehouseId) where.warehouseId = warehouseId;
-      if (userId) where.userId = userId;
-      if (refType) where.refType = refType;
-      if (direction) where.direction = direction;
-      if (dateFrom || dateTo) {
-        where.postedAt = {};
-        if (dateFrom) where.postedAt.gte = new Date(dateFrom as string);
-        if (dateTo) where.postedAt.lte = new Date(dateTo as string);
-      }
-      if (itemType) {
-        where.item = { type: itemType };
-      }
+  //     const where: any = {};
+  //     if (itemId) where.itemId = itemId;
+  //     if (warehouseId) where.warehouseId = warehouseId;
+  //     if (userId) where.userId = userId;
+  //     if (refType) where.refType = refType;
+  //     if (direction) where.direction = direction;
+  //     if (dateFrom || dateTo) {
+  //       where.postedAt = {};
+  //       if (dateFrom) where.postedAt.gte = new Date(dateFrom as string);
+  //       if (dateTo) where.postedAt.lte = new Date(dateTo as string);
+  //     }
+  //     if (itemType) {
+  //       where.item = { type: itemType };
+  //     }
 
-      const entries = await prisma.inventoryLedger.findMany({
-        where,
-        take: 10000, // Limit to prevent memory issues
-        include: {
-          item: {
-            select: { sku: true, name: true, type: true, uom: true },
-          },
-          warehouse: {
-            select: { code: true, name: true },
-          },
-          user: {
-            select: { name: true, email: true },
-          },
-        },
-        orderBy: { postedAt: "desc" },
-      });
+  //     //if user role is pos User, filter by their assigned warehouse
+  //     if (req.user?.roles.includes("POS User")) {
+  //       const user = await prisma.user.findUnique({
+  //         where: { id: req.user!.id },
+  //         select: { warehouseId: true },
+  //       });
+  //       if (user?.warehouseId) {
+  //         where.warehouseId = user.warehouseId;
+  //       }
+  //     }
 
-      if (format === "csv") {
-        // Generate CSV
-        const headers = [
-          "Date",
-          "Item SKU",
-          "Item Name",
-          "Item Type",
-          "Warehouse",
-          "Reference Type",
-          "Direction",
-          "Quantity",
-          "UOM",
-          "Unit Cost",
-          "Value",
-          "Running Qty",
-          "Running Value",
-          "Running Avg Cost",
-          "User",
-        ];
+  //     const entries = await prisma.inventoryLedger.findMany({
+  //       where,
+  //       take: 10000, // Limit to prevent memory issues
+  //       include: {
+  //         item: {
+  //           select: { sku: true, name: true, type: true, uom: true },
+  //         },
+  //         warehouse: {
+  //           select: { code: true, name: true },
+  //         },
+  //         user: {
+  //           select: { name: true, email: true },
+  //         },
+  //       },
+  //       orderBy: { postedAt: "desc" },
+  //     });
 
-        const csvRows = entries.map((entry) => [
-          new Date(entry.postedAt).toLocaleDateString(),
-          entry.item.sku,
-          entry.item.name,
-          entry.item.type,
-          entry.warehouse.name,
-          entry.refType,
-          entry.direction,
-          entry.qty.toString(),
-          entry.item.uom,
-          entry.unitCost.toString(),
-          entry.value.toString(),
-          entry.runningQty.toString(),
-          entry.runningValue.toString(),
-          entry.runningAvgCost.toString(),
-          entry.user?.name || "System",
-        ]);
+  //     if (format === "csv") {
+  //       // Generate CSV
+  //       const headers = [
+  //         "Date",
+  //         "Item SKU",
+  //         "Item Name",
+  //         "Item Type",
+  //         "Warehouse",
+  //         "Reference Type",
+  //         "Direction",
+  //         "Quantity",
+  //         "UOM",
+  //         "Unit Cost",
+  //         "Value",
+  //         "Running Qty",
+  //         "Running Value",
+  //         "Running Avg Cost",
+  //         "User",
+  //       ];
 
-        const csvContent = [headers, ...csvRows]
-          .map((row) => row.map((field) => `"${field}"`).join(","))
-          .join("\n");
+  //       const csvRows = entries.map((entry) => [
+  //         new Date(entry.postedAt).toLocaleDateString(),
+  //         entry.item.sku,
+  //         entry.item.name,
+  //         entry.item.type,
+  //         entry.warehouse.name,
+  //         entry.refType,
+  //         entry.direction,
+  //         entry.qty.toString(),
+  //         entry.item.uom,
+  //         entry.unitCost.toString(),
+  //         entry.value.toString(),
+  //         entry.runningQty.toString(),
+  //         entry.runningValue.toString(),
+  //         entry.runningAvgCost.toString(),
+  //         entry.user?.name || "System",
+  //       ]);
 
-        res.setHeader("Content-Type", "text/csv");
-        res.setHeader(
-          "Content-Disposition",
-          `attachment; filename="inventory-ledger-${
-            new Date().toISOString().split("T")[0]
-          }.csv"`,
-        );
-        res.send(csvContent);
-      } else {
-        // Return JSON for Excel/PDF processing
-        res.json({ entries });
-      }
-    } catch (error) {
-      console.error("Export inventory ledger error:", error);
-      res.status(500).json({ error: "Failed to export inventory ledger" });
-    }
-  }
+  //       const csvContent = [headers, ...csvRows]
+  //         .map((row) => row.map((field) => `"${field}"`).join(","))
+  //         .join("\n");
+
+  //       res.setHeader("Content-Type", "text/csv");
+  //       res.setHeader(
+  //         "Content-Disposition",
+  //         `attachment; filename="inventory-ledger-${
+  //           new Date().toISOString().split("T")[0]
+  //         }.csv"`,
+  //       );
+  //       res.send(csvContent);
+  //     } else {
+  //       // Return JSON for Excel/PDF processing
+  //       res.json({ entries });
+  //     }
+  //   } catch (error) {
+  //     console.error("Export inventory ledger error:", error);
+  //     res.status(500).json({ error: "Failed to export inventory ledger" });
+  //   }
+  // }
 
   // async getInventoryValuation(req: AuthRequest, res: Response) {
   //   try {
@@ -919,6 +943,442 @@ export class InventoryController {
   //     res.status(500).json({ error: "Failed to fetch inventory valuation" });
   //   }
   // }
+
+  async exportInventoryLedger(req: AuthRequest, res: Response) {
+    try {
+      const {
+        format = "csv",
+        itemId,
+        warehouseId,
+        userId,
+        itemType,
+        refType,
+        direction,
+        dateFrom,
+        dateTo,
+      } = req.query;
+
+      // =====================================================
+      // BUILD FILTERS
+      // =====================================================
+
+      const where: any = {};
+
+      if (itemId) where.itemId = itemId;
+      if (warehouseId) where.warehouseId = warehouseId;
+      if (userId) where.userId = userId;
+      if (refType) where.refType = refType;
+      if (direction) where.direction = direction;
+
+      if (dateFrom || dateTo) {
+        where.postedAt = {};
+
+        if (dateFrom) {
+          where.postedAt.gte = new Date(dateFrom as string);
+        }
+
+        if (dateTo) {
+          where.postedAt.lte = new Date(dateTo as string);
+        }
+      }
+
+      if (itemType) {
+        where.item = {
+          type: itemType,
+        };
+      }
+
+      // =====================================================
+      // POS USER WAREHOUSE RESTRICTION
+      // =====================================================
+
+      if (req.user?.roles.includes("POS User")) {
+        const user = await prisma.user.findUnique({
+          where: {
+            id: req.user.id,
+          },
+          select: {
+            warehouseId: true,
+          },
+        });
+
+        if (user?.warehouseId) {
+          where.warehouseId = user.warehouseId;
+        }
+      }
+
+      // =====================================================
+      // FETCH DATA
+      // =====================================================
+
+      const entries = await prisma.inventoryLedger.findMany({
+        where,
+        take: 10000,
+        include: {
+          item: {
+            select: {
+              sku: true,
+              name: true,
+              type: true,
+              uom: true,
+            },
+          },
+
+          warehouse: {
+            select: {
+              code: true,
+              name: true,
+            },
+          },
+
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+
+        orderBy: {
+          postedAt: "desc",
+        },
+      });
+
+      // =====================================================
+      // FORMAT DATA
+      // =====================================================
+
+      const rows = entries.map((entry) => ({
+        date: new Date(entry.postedAt).toLocaleDateString(),
+
+        sku: entry.item?.sku || "",
+
+        itemName: entry.item?.name || "",
+
+        itemType: entry.item?.type || "",
+
+        warehouse: entry.warehouse?.name || "",
+
+        refType: entry.refType || "",
+
+        direction: entry.direction || "",
+
+        qty: Number(entry.qty || 0),
+
+        uom: entry.item?.uom || "",
+
+        unitCost: Number(entry.unitCost || 0),
+
+        value: Number(entry.value || 0),
+
+        runningQty: Number(entry.runningQty || 0),
+
+        runningValue: Number(entry.runningValue || 0),
+
+        runningAvgCost: Number(entry.runningAvgCost || 0),
+
+        user: entry.user?.name || "System",
+      }));
+
+      const today = new Date().toISOString().split("T")[0];
+
+      // =====================================================
+      // CSV EXPORT
+      // =====================================================
+
+      if (format === "csv") {
+        const headers = [
+          "Date",
+          "SKU",
+          "Item Name",
+          "Item Type",
+          "Warehouse",
+          "Reference Type",
+          "Direction",
+          "Quantity",
+          "UOM",
+          "Unit Cost",
+          "Value",
+          "Running Qty",
+          "Running Value",
+          "Running Avg Cost",
+          "User",
+        ];
+
+        const csvRows = rows.map((row) => [
+          row.date,
+          row.sku,
+          row.itemName,
+          row.itemType,
+          row.warehouse,
+          row.refType,
+          row.direction,
+          row.qty,
+          row.uom,
+          row.unitCost,
+          row.value,
+          row.runningQty,
+          row.runningValue,
+          row.runningAvgCost,
+          row.user,
+        ]);
+
+        const csvContent = [headers, ...csvRows]
+          .map((row) =>
+            row
+              .map((field) => `"${String(field).replace(/"/g, '""')}"`)
+              .join(","),
+          )
+          .join("\n");
+
+        res.setHeader("Content-Type", "text/csv");
+
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="inventory-ledger-${today}.csv"`,
+        );
+
+        return res.status(200).send(csvContent);
+      }
+
+      // =====================================================
+      // EXCEL EXPORT
+      // =====================================================
+
+      if (format === "excel") {
+        const workbook = new ExcelJS.Workbook();
+
+        workbook.creator = "ProfitPilot";
+
+        workbook.created = new Date();
+
+        const worksheet = workbook.addWorksheet("Inventory Ledger");
+
+        worksheet.columns = [
+          { header: "Date", key: "date", width: 15 },
+
+          { header: "SKU", key: "sku", width: 20 },
+
+          { header: "Item Name", key: "itemName", width: 35 },
+
+          { header: "Item Type", key: "itemType", width: 20 },
+
+          { header: "Warehouse", key: "warehouse", width: 25 },
+
+          { header: "Reference Type", key: "refType", width: 20 },
+
+          { header: "Direction", key: "direction", width: 15 },
+
+          { header: "Qty", key: "qty", width: 12 },
+
+          { header: "UOM", key: "uom", width: 10 },
+
+          { header: "Unit Cost", key: "unitCost", width: 15 },
+
+          { header: "Value", key: "value", width: 15 },
+
+          { header: "Running Qty", key: "runningQty", width: 15 },
+
+          { header: "Running Value", key: "runningValue", width: 18 },
+
+          {
+            header: "Running Avg Cost",
+            key: "runningAvgCost",
+            width: 18,
+          },
+
+          { header: "User", key: "user", width: 20 },
+        ];
+
+        worksheet.addRows(rows);
+
+        // Header styling
+        const headerRow = worksheet.getRow(1);
+
+        headerRow.font = {
+          bold: true,
+          color: {
+            argb: "FFFFFFFF",
+          },
+        };
+
+        headerRow.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: {
+            argb: "FF1F4E78",
+          },
+        };
+
+        headerRow.alignment = {
+          vertical: "middle",
+          horizontal: "center",
+        };
+
+        // Freeze top row
+        worksheet.views = [
+          {
+            state: "frozen",
+            ySplit: 1,
+          },
+        ];
+
+        // Currency formatting
+        ["J", "K", "M", "N"].forEach((col) => {
+          worksheet.getColumn(col).numFmt = "#,##0.00";
+        });
+
+        // Auto filter
+        worksheet.autoFilter = {
+          from: "A1",
+          to: "O1",
+        };
+
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        );
+
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="inventory-ledger-${today}.xlsx"`,
+        );
+
+        await workbook.xlsx.write(res);
+
+        return res.end();
+      }
+
+      // =====================================================
+      // PDF EXPORT
+      // =====================================================
+
+      if (format === "pdf") {
+        const doc = new PDFDocument({
+          margin: 20,
+          size: "A4",
+          layout: "landscape",
+        });
+
+        res.setHeader("Content-Type", "application/pdf");
+
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="inventory-ledger-${today}.pdf"`,
+        );
+
+        doc.pipe(res);
+
+        // =====================================================
+        // TITLE
+        // =====================================================
+
+        doc.fontSize(18).text("Inventory Ledger Report", {
+          align: "center",
+        });
+
+        doc.moveDown();
+
+        // =====================================================
+        // TABLE HEADERS
+        // =====================================================
+
+        const headers = [
+          "Date",
+          "SKU",
+          "Item",
+          "Qty",
+          "Unit Cost",
+          "Value",
+          "Warehouse",
+        ];
+
+        const columnPositions = [20, 90, 180, 380, 440, 520, 610];
+
+        let y = 90;
+
+        headers.forEach((header, index) => {
+          doc
+            .fontSize(10)
+            .font("Helvetica-Bold")
+            .text(header, columnPositions[index], y);
+        });
+
+        y += 20;
+
+        // =====================================================
+        // TABLE ROWS
+        // =====================================================
+
+        rows.forEach((row) => {
+          // Add new page if needed
+          if (y > 540) {
+            doc.addPage();
+
+            y = 40;
+
+            headers.forEach((header, index) => {
+              doc
+                .fontSize(10)
+                .font("Helvetica-Bold")
+                .text(header, columnPositions[index], y);
+            });
+
+            y += 20;
+          }
+
+          const values = [
+            row.date,
+            row.sku,
+            row.itemName,
+            row.qty.toFixed(2),
+            row.unitCost.toFixed(2),
+            row.value.toFixed(2),
+            row.warehouse,
+          ];
+
+          values.forEach((value, index) => {
+            doc
+              .fontSize(9)
+              .font("Helvetica")
+              .text(String(value), columnPositions[index], y, {
+                width: 70,
+              });
+          });
+
+          y += 18;
+        });
+
+        // =====================================================
+        // FOOTER
+        // =====================================================
+
+        doc.moveDown(2);
+
+        doc.fontSize(10).text(`Generated On: ${new Date().toLocaleString()}`, {
+          align: "right",
+        });
+
+        doc.end();
+
+        return;
+      }
+
+      // =====================================================
+      // INVALID FORMAT
+      // =====================================================
+
+      return res.status(400).json({
+        error: "Invalid export format",
+      });
+    } catch (error) {
+      console.error("Export inventory ledger error:", error);
+
+      return res.status(500).json({
+        error: "Failed to export inventory ledger",
+      });
+    }
+  }
 
   async getInventoryValuation(req: AuthRequest, res: Response) {
     try {
@@ -993,7 +1453,7 @@ export class InventoryController {
       // Apply warehouse filtering for non-admin users
       let where: any = { isActive: true };
       if (
-        !req.user!.roles.includes("CFO") &&
+        !req.user!.roles.includes("Senior Accountant") &&
         !req.user!.roles.includes("General Manager")
       ) {
         const user = await prisma.user.findUnique({

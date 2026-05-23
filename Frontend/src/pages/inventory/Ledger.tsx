@@ -16,7 +16,7 @@ import StatusBadge from "../../components/StatusBadge";
 import { InventoryLedgerEntry } from "../../types/api";
 import toast from "react-hot-toast";
 import { ItemSelect } from "../../components/ItemSelect";
-
+import { useAuthStore } from "../../store/authStore";
 const InventoryLedger = () => {
   const [page, setPage] = useState(1);
   const [itemFilter, setItemFilter] = useState("");
@@ -28,6 +28,11 @@ const InventoryLedger = () => {
   const [dateFromFilter, setDateFromFilter] = useState("");
   const [dateToFilter, setDateToFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+
+  const userRoles = useAuthStore((state) => state.user?.roles || []);
+  const user = useAuthStore((state) => state.user || []);
+  console.log("User Roles in Ledger:", userRoles);
+  console.log("User in Ledger:", user);
 
   const { data: ledgerData, isLoading } = useQuery({
     queryKey: [
@@ -58,6 +63,7 @@ const InventoryLedger = () => {
         ...(dateToFilter && { dateTo: dateToFilter }),
       }),
   });
+  console.log("Ledger Data:", ledgerData);
 
   const { data: items } = useQuery({
     queryKey: ["items-for-filter"],
@@ -68,11 +74,32 @@ const InventoryLedger = () => {
     queryKey: ["warehouses-for-filter"],
     queryFn: () => inventoryApi.getWarehouses(),
   });
-
+  console.log("Warehouses:", warehouses);
   const { data: users } = useQuery({
     queryKey: ["users-for-filter"],
     queryFn: () => userApi.getUsers({ limit: 100 }),
   });
+
+  console.log("Users:", users);
+
+  // if (userRoles.includes("POS User")) {
+  //   //filter ledger data with warehouseId of the user's assigned warehouse
+  //   const filteredLedgerData = ledgerData?.entries.filter(
+  //     (entry: InventoryLedgerEntry) =>
+  //       entry.warehouseId === filteredUser[0]?.warehouse?.id,
+  //   );
+  // }
+
+  // const isPosUser = userRoles.includes("POS User");
+  // const displayedLedgerData =
+  //   isPosUser && filteredUser[0]?.warehouse
+  //     ? ledgerData?.entries.filter(
+  //         (entry: InventoryLedgerEntry) =>
+  //           entry.warehouseId === filteredUser[0].warehouse.id,
+  //       )
+  //     : ledgerData?.entries || [];
+
+  // console.log("Displayed Ledger Data:", displayedLedgerData);
 
   const columns = [
     {
@@ -373,6 +400,8 @@ const InventoryLedger = () => {
                 <option value="PURCHASE">Purchase</option>
                 <option value="PRODUCTION">Production</option>
                 <option value="SALE">Sale</option>
+                <option value="POS_SALE">POS Sale</option>
+                <option value="POS_RETURN">POS Return</option>
                 <option value="ADJUSTMENT">Adjustment</option>
                 <option value="TRANSFER">Transfer</option>
                 <option value="OPENING_BALANCE">Opening Balance</option>
@@ -429,7 +458,7 @@ const InventoryLedger = () => {
                   <Download className="h-4 w-4 mr-2" />
                   Export CSV
                 </button>
-                <button
+                {/* <button
                   onClick={() => handleExport("excel")}
                   className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
@@ -442,7 +471,7 @@ const InventoryLedger = () => {
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Export PDF
-                </button>
+                </button> */}
               </div>
             </div>
             <p className="mt-2 text-sm text-gray-500">
@@ -532,7 +561,7 @@ const InventoryLedger = () => {
                   <dd className="text-4xl font-bold text-black/80">
                     {ledgerData?.entries
                       ? new Set(
-                          ledgerData.entries
+                          ledgerData?.entries
                             .filter((e: InventoryLedgerEntry) => e.user)
                             .map((e: InventoryLedgerEntry) => e.user?.name),
                         ).size

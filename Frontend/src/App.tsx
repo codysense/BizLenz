@@ -97,7 +97,7 @@ const queryClient = new QueryClient({
 
 // src/auth/rolePermissions.ts
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  "POS User": ["dashboard", "pos", "sales"],
+  "POS User": ["dashboard", "pos", "sales", "inventory"],
 
   "Inventory Manager": ["dashboard", "inventory", "purchases"],
   "Assistant Inventory Manager": ["dashboard", "inventory", "purchases"],
@@ -136,6 +136,8 @@ function ProtectedRoute({
 
   const userRoles = user?.roles ?? [];
 
+  // console.log("User Roles:", userRoles);
+
   const hasAccess = userRoles.some((role) => {
     const permissions = ROLE_PERMISSIONS[role];
     if (!permissions) return false;
@@ -143,7 +145,11 @@ function ProtectedRoute({
     return permissions.some((p) => allowedModules.includes(p));
   });
 
-  if (!hasAccess) {
+  // console.log("Has Access:", hasAccess);
+
+  if (!hasAccess && userRoles.includes("POS User")) {
+    return <Navigate to="/pos" replace />;
+  } else if (!hasAccess) {
     return <Navigate to="/" replace />;
   }
 
@@ -153,6 +159,8 @@ function ProtectedRoute({
 function App() {
   const { isAuthenticated } = useAuthStore();
 
+  const userRoles = useAuthStore((state) => state.user?.roles || []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
@@ -161,7 +169,13 @@ function App() {
             <Route
               path="/login"
               element={
-                isAuthenticated ? <Navigate to="/" replace /> : <Login />
+                userRoles.includes("POS User") ? (
+                  <Navigate to="/pos" replace />
+                ) : isAuthenticated ? (
+                  <Navigate to="/" replace />
+                ) : (
+                  <Login />
+                )
               }
             />
 
@@ -395,6 +409,14 @@ function App() {
               element={
                 <ProtectedRoute allowedModules={["pos"]}>
                   <PosReturnsHistory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventory/ledger"
+              element={
+                <ProtectedRoute allowedModules={["pos", "inventory"]}>
+                  <InventoryLedger />
                 </ProtectedRoute>
               }
             />

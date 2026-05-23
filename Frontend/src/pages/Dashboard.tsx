@@ -70,10 +70,10 @@ const Dashboard = () => {
   });
 
   // Charts + insights
-  const { data: expenseBreakdown } = useQuery({
-    queryKey: ["expense-breakdown"],
-    queryFn: dashboardApi.getExpenseBreakdown,
-  });
+  // const { data: expenseBreakdown } = useQuery({
+  //   queryKey: ["expense-breakdown"],
+  //   queryFn: dashboardApi.getExpenseBreakdown,
+  // });
 
   // console.log(
   //   executive?.breakDownExpense.filter((e: any) => e.amount > 0),
@@ -89,7 +89,7 @@ const Dashboard = () => {
     amount: Number(item.amount),
   }));
 
-  console.log("Formatted Expense Breakdown: ", formattedExpenseBreakdown);
+  // console.log("Formatted Expense Breakdown: ", formattedExpenseBreakdown);
 
   const { data: topProducts } = useQuery({
     queryKey: ["top-products"],

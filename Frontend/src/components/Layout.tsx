@@ -81,6 +81,7 @@ const Layout = ({ children }: LayoutProps) => {
         { name: "POS Terminal", href: "/pos" },
         { name: "Sales History", href: "/pos/sales" },
         { name: "Returns", href: "/pos/returns" },
+        { name: "Stock Register", href: "/inventory/ledger" },
       ],
     },
     {
@@ -91,7 +92,6 @@ const Layout = ({ children }: LayoutProps) => {
         "General Manager",
         "Auditor",
         "Manager",
-
         "Inventory Manager",
         "Assistant Inventory Manager",
         "Production Manager",
@@ -104,7 +104,10 @@ const Layout = ({ children }: LayoutProps) => {
         { name: "Locations", href: "/inventory/locations" },
         { name: "Warehouses", href: "/inventory/warehouses" },
         { name: "Transfers", href: "/inventory/transfers" },
-        { name: "Ledger", href: "/inventory/ledger" },
+        {
+          name: "Ledger",
+          href: "/inventory/ledger",
+        },
         { name: "Valuation", href: "/inventory/valuation" },
       ],
     },
@@ -155,7 +158,7 @@ const Layout = ({ children }: LayoutProps) => {
         "General Manager",
         "Auditor",
         "Manager",
-        ,
+
         "Senior Accountant",
       ],
       children: [
@@ -173,7 +176,7 @@ const Layout = ({ children }: LayoutProps) => {
         "General Manager",
         "Auditor",
         "Manager",
-        ,
+
         "Senior Accountant",
       ],
     },
@@ -185,7 +188,7 @@ const Layout = ({ children }: LayoutProps) => {
         "General Manager",
         "Auditor",
         "Manager",
-        ,
+
         "Senior Accountant",
       ],
     },
@@ -197,7 +200,7 @@ const Layout = ({ children }: LayoutProps) => {
         "General Manager",
         "Auditor",
         "Manager",
-        ,
+
         "Senior Accountant",
       ],
     },
@@ -228,7 +231,7 @@ const Layout = ({ children }: LayoutProps) => {
         "General Manager",
         "Auditor",
         "Manager",
-        ,
+
         "Accountant",
         "Senior Accountant",
       ],
