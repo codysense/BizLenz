@@ -65,6 +65,8 @@ app.use("/api/v1/journal", journal);
 app.use("/api/v1/adjustment", adjustment);
 app.use("/api/v1/dashboard", dashboardRoutes);
 
+app.use("/uploads", express.static("uploads"));
+
 // app.use("/api", memoRoutes);
 
 // app.use("/api/memos", memoRoutes);

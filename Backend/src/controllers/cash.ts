@@ -10,6 +10,34 @@ import {
 
 const prisma = new PrismaClient();
 
+function startOfDayUTC(date: Date) {
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      0,
+      0,
+      0,
+      0,
+    ),
+  );
+}
+
+function endOfDayUTC(date: Date) {
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      23,
+      59,
+      59,
+      999,
+    ),
+  );
+}
+
 export class CashController {
   // Get all cash accounts
   async getCashAccounts(req: AuthRequest, res: Response) {
@@ -746,6 +774,8 @@ export class CashController {
       } = req.query;
 
       const where: any = {};
+      const newDateFrom = startOfDayUTC(new Date(startDate as string));
+      const newDateTo = endOfDayUTC(new Date(endDate as string));
 
       if (status) where.status = status;
       if (cashAccountId) where.cashAccountId = cashAccountId;
@@ -762,9 +792,8 @@ export class CashController {
 
       if (startDate || endDate) {
         where.transactionDate = {};
-        if (startDate)
-          where.transactionDate.gte = new Date(startDate as string);
-        if (endDate) where.transactionDate.lte = new Date(endDate as string);
+        if (startDate) where.transactionDate.gte = newDateFrom;
+        if (endDate) where.transactionDate.lte = newDateTo;
       }
 
       const skip = (Number(page) - 1) * Number(limit);
