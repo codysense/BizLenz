@@ -190,6 +190,7 @@ export const inventoryApi = {
 
   getItemById: (id: string) => api.get(`/inventory/items/${id}`),
   createItem: (data: any) => api.post("/inventory/items", data),
+  updateItem: (data: any) => api.put("/inventory/items", data),
   deleteItem: (sku: string) => api.delete(`/inventory/items/${sku}`),
   getBoms: (params?: { itemId?: string }) =>
     api.get(

@@ -189,18 +189,35 @@ export class InventoryController {
     try {
       const { sku } = req.params;
 
-      // Check if item can be deleted
+      // Check if item can be deleted,
       const item = await prisma.item.findUnique({
         //check if item is active , quantity is zero not in any inventory transfer
         where: { sku },
-        select: { isActive: true },
+        select: { isActive: true, id: true },
       });
 
       if (!item) {
         return res
-          .status(400)
-          .json({ error: "Cannot delete item in current status" });
+          .status(404)
+          .json({ error: "Item not found or already deleted" });
       }
+
+      //Check if item has transaction or has BOM
+      const transaction = await prisma.inventoryLedger.findMany({
+        where: { itemId: item.id },
+      });
+
+      const bomEntry = await prisma.bom.findMany({
+        where: { itemId: item.id },
+      });
+
+      if (transaction.length > 0 || bomEntry.length > 0) {
+        return res
+          .status(400)
+          .json({ error: "Cannot delete item with transaction" });
+      }
+
+      //Delete item
 
       await prisma.item.delete({
         where: { sku },
@@ -237,10 +254,21 @@ export class InventoryController {
       const validatedData = createItemSchema.parse(req.body);
       const { priceList, ...itemData } = validatedData;
 
-      const item = await prisma.item.upsert({
+      //check if item with the same sku exist
+      const existingItem = await prisma.item.findUnique({
         where: { sku: itemData.sku },
-        update: { ...itemData },
-        create: { ...itemData },
+      });
+
+      if (existingItem) {
+        return res
+          .status(400)
+          .json({ error: "Item with this SKU already exists" });
+      }
+
+      const item = await prisma.item.create({
+        //where: { sku: itemData.sku },
+        //update: { ...itemData },
+        data: { ...itemData },
       });
 
       if (priceList && Array.isArray(priceList)) {
@@ -259,8 +287,38 @@ export class InventoryController {
 
       res.status(201).json(item);
     } catch (error) {
-      console.error("Create/Update item error:", error);
+      console.error("Create item error:", error);
       res.status(400).json({ error: "Failed to create or update item" });
+    }
+  }
+
+  async updateItem(req: AuthRequest, res: Response) {
+    try {
+      const validatedData = createItemSchema.parse(req.body);
+      const { priceList, ...itemData } = validatedData;
+
+      const item = await prisma.item.update({
+        where: { sku: itemData.sku },
+        data: { ...itemData },
+      });
+      if (priceList && Array.isArray(priceList)) {
+        // Delete old price list entries
+        await prisma.itemPriceList.deleteMany({ where: { itemId: item.id } });
+
+        // Create new price list entries
+        await prisma.itemPriceList.createMany({
+          data: priceList.map((p: any) => ({
+            itemId: item.id,
+            customerGroup: p.customerGroup,
+            price: p.price,
+          })),
+        });
+      }
+
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Update item error:", error);
+      res.status(400).json({ error: "Failed to  update item" });
     }
   }
 
@@ -998,6 +1056,8 @@ export class InventoryController {
       // =====================================================
 
       const where: any = {};
+      const newDateFrom = startOfDayUTC(new Date(dateFrom as string));
+      const newDateTo = endOfDayUTC(new Date(dateTo as string));
 
       if (itemId) where.itemId = itemId;
       if (warehouseId) where.warehouseId = warehouseId;
@@ -1009,11 +1069,11 @@ export class InventoryController {
         where.postedAt = {};
 
         if (dateFrom) {
-          where.postedAt.gte = new Date(dateFrom as string);
+          where.postedAt.gte = newDateFrom;
         }
 
         if (dateTo) {
-          where.postedAt.lte = new Date(dateTo as string);
+          where.postedAt.lte = newDateTo;
         }
       }
 

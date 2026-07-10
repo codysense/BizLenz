@@ -18,11 +18,12 @@ const glService = new GeneralLedgerService();
 export class ProductionController {
   async getProductionOrders(req: AuthRequest, res: Response) {
     try {
-      const { page = 1, limit = 10, status } = req.query;
+      const { page = 1, limit = 10, status, itemId } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
 
       const where: any = {};
       if (status) where.status = status;
+      if (itemId) where.itemId = itemId;
 
       const [orders, total] = await Promise.all([
         prisma.productionOrder.findMany({
@@ -121,14 +122,22 @@ export class ProductionController {
   async releaseProductionOrder(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-
-      const order = await prisma.productionOrder.update({
+      const order = await prisma.productionOrder.findUnique({
         where: { id },
+        select: { status: true },
+      });
+
+      const orderresult = await prisma.productionOrder.updateMany({
+        where: { id, status: "PLANNED" },
         data: {
           status: "RELEASED",
           startedAt: new Date(),
         },
       });
+
+      if (orderresult.count === 0) {
+        throw new Error("Production order not found or not in PLANNED status");
+      }
 
       res.json(order);
     } catch (error) {
@@ -145,6 +154,18 @@ export class ProductionController {
       await prisma.$transaction(
         async (tx) => {
           let totalIssueValue = 0;
+
+          // Update production order status
+          const updateResult = await tx.productionOrder.updateMany({
+            where: { id, status: "RELEASED" },
+            data: { status: "IN_PROGRESS" },
+          });
+
+          if (updateResult.count === 0) {
+            throw new Error(
+              "Production order not found or not in RELEASED status",
+            );
+          }
 
           // Issue each material
           for (const material of validatedData.materials) {
@@ -180,12 +201,6 @@ export class ProductionController {
               },
             });
           }
-
-          // Update production order status
-          await tx.productionOrder.update({
-            where: { id },
-            data: { status: "IN_PROGRESS" },
-          });
 
           // Post to general ledger
           const order = await tx.productionOrder.findUnique({
@@ -246,6 +261,10 @@ export class ProductionController {
               qtyTarget: true,
             },
           });
+
+          if (!order) {
+            throw new Error("Production order not found");
+          }
 
           // Record labor time
           await tx.laborTime.create({

@@ -158,9 +158,9 @@ const CreateItemModal = ({ onClose, onSuccess }: CreateItemModalProps) => {
                     {...register("type")}
                     className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
                   >
+                    <option value="FINISHED_GOODS">Finished Goods</option>
                     <option value="RAW_MATERIAL">Raw Material</option>
                     <option value="WORK_IN_PROGRESS">Work in Progress</option>
-                    <option value="FINISHED_GOODS">Finished Goods</option>
                     <option value="CONSUMABLE">Consumable</option>
                   </select>
                   {errors.type && (

@@ -133,17 +133,17 @@ const Items = () => {
     setSelectedItem(null);
   };
 
-  //  const handleDeleteItem = async (item: Item) => {
-  //     if (confirm(`Are you sure you want to delete Inventory ${item.name}?`)) {
-  //       try {
-  //         await inventoryApi.deleteItem(item.sku);
-  //         toast.success('Item deleted successfully');
-  //         refetch();
-  //       } catch (error) {
-  //         console.error('Delete Item error:', error);
-  //       }
-  //     }
-  //   };
+  const handleDeleteItem = async (item: Item) => {
+    if (confirm(`Are you sure you want to delete Inventory ${item.name}?`)) {
+      try {
+        await inventoryApi.deleteItem(item.sku);
+        toast.success("Item deleted successfully");
+        refetch();
+      } catch (error) {
+        console.error("Delete Item error:", error);
+      }
+    }
+  };
 
   const actions = (item: Item) => (
     <div className="flex space-x-2">
@@ -158,13 +158,13 @@ const Items = () => {
         <Edit className="h-4 w-4" />
       </button>
 
-      {/* <button
-                  onClick={() => handleDeleteItem(item)}
-                  className="text-red-600 hover:text-red-900"
-                  title="Delete Item"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button> */}
+      <button
+        onClick={() => handleDeleteItem(item)}
+        className="text-red-600 hover:text-red-900"
+        title="Delete Item"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
     </div>
   );
 

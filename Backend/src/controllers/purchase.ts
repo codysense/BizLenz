@@ -186,14 +186,18 @@ export class PurchaseController {
         const purchaseLineMap = new Map(purchaseLines.map((pl) => [pl.id, pl]));
 
         // 2️ Update purchase header
-        await tx.purchase.update({
-          where: { id },
+        const updateresult = await tx.purchase.updateMany({
+          where: { id, status: "ORDERED" },
           data: {
             status: "RECEIVED",
             receivedBy: req.user!.id,
             receivedAt: new Date(),
           },
         });
+
+        if (updateresult.count === 0) {
+          throw new Error("Purchase not found or not in ORDERED status");
+        }
 
         // 3️ Update each purchase line
         for (const receiptLine of validatedData.receiptLines) {
@@ -275,9 +279,17 @@ export class PurchaseController {
 
       await prisma.$transaction(
         async (tx) => {
-          // 1️ Update purchase status
-          const purchase = await tx.purchase.update({
+          const purchase = await tx.purchase.findUnique({
             where: { id },
+            select: { status: true, totalAmount: true, orderNo: true },
+          });
+
+          if (!purchase || purchase.status !== "RECEIVED") {
+            throw new Error("Purchase not found ");
+          }
+          // 1️ Update purchase status
+          const purchaseResult = await tx.purchase.updateMany({
+            where: { id, status: "RECEIVED" },
             data: {
               status: "INVOICED",
               invoicedBy: req.user!.id,
@@ -285,9 +297,13 @@ export class PurchaseController {
             },
           });
 
+          if (purchaseResult.count === 0) {
+            throw new Error("Purchase not found or not in RECEIVED status");
+          }
+
           // 2️ Post GL INSIDE transaction
           await glService.postJournal(
-            tx, // 👈 pass transaction client
+            tx, //  pass transaction client
             [
               {
                 accountCode: "2000",

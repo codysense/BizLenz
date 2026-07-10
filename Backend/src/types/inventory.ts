@@ -6,7 +6,7 @@ export const createItemSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   type: z.nativeEnum(ItemType),
-  uom: z.string().default("EA"),
+  uom: z.string().default("Pcs"),
   minimumStockLevel: z.number().positive().optional(),
   costingMethod: z.nativeEnum(CostingMethod).default("GLOBAL"),
   standardCost: z.number().optional(),

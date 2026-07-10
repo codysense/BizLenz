@@ -276,23 +276,37 @@ export class ReportsService {
 
       if (account.accountType === "INCOME") {
         revenues.push(accountData);
-        totalRevenue += netAmount;
+        totalRevenue += accountData.amount;
+        //totalRevenue += netAmount;
       } else if (account.accountType === "OTHER_INCOME") {
         otherIncomes.push(accountData);
-        totalOtherIncome += netAmount;
+        totalOtherIncome += accountData.amount;
+        //totalOtherIncome += netAmount;
       } else if (account.accountType === "COST_OF_SALES") {
         costOfSales.push(accountData);
-        totalCostOfSales += netAmount;
+        totalCostOfSales += accountData.amount;
+        //totalCostOfSales += netAmount;
       } else if (account.accountType === "EXPENSES") {
         expenses.push(accountData);
-        totalExpense += netAmount;
+        totalExpense += accountData.amount;
+        //totalExpense += netAmount;
+      } else {
+        totalExpense += accountData.amount;
+        // totalExpense += netAmount;
       }
     });
     const grossProfit = totalRevenue - totalCostOfSales;
 
     const netIncome = grossProfit + totalOtherIncome - totalExpense;
 
-    // console.log(otherIncomes)
+    // console.log(
+    //   "Net Income",
+    //   netIncome,
+    //   "Gross Profit",
+    //   grossProfit,
+    //   "Total Other Income",
+    //   totalOtherIncome,
+    // );
 
     return {
       fromDate,

@@ -35,6 +35,7 @@ const CreatePurchasePaymentModal = ({
     handleSubmit,
     watch,
     setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<CreatePurchasePaymentFormData>({
     resolver: zodResolver(createPurchasePaymentSchema),
@@ -82,6 +83,8 @@ const CreatePurchasePaymentModal = ({
   const selectedPurchase = invoicedPurchases?.purchases?.find(
     (purchase: any) => purchase.id === selectedPurchaseId,
   );
+
+  
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

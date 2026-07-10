@@ -467,7 +467,7 @@ async function main() {
       name: "CodySense IT Solutions",
       baseCurrency: "NGN",
       timezone: "Africa/Lagos",
-      address: "123 Industrial Area, Lagos, Nigeria",
+      address: "123 Industrial Estate, Lagos, Nigeria",
       phone: "+234-800-123-4567",
       email: "info@codysense.com",
     },
@@ -483,7 +483,7 @@ async function main() {
       create: {
         code: "LAG",
         name: "Lagos Location",
-        address: "Industrial Area, Lagos",
+        address: "Industrial Estate, Lagos",
         city: "Lagos",
         state: "Lagos",
         country: "Nigeria",
@@ -622,7 +622,7 @@ async function main() {
       update: {},
       create: {
         code: "CUST-001",
-        name: "ABC Corporation Ltd",
+        name: "Walk-in Customers",
         address: "123 Business District, Victoria Island, Lagos",
         phone: "+234-801-234-5678",
         email: "procurement@abc-corp.com",
@@ -636,7 +636,7 @@ async function main() {
       update: {},
       create: {
         code: "CUST-002",
-        name: "XYZ Enterprises",
+        name: "Tunde and Tunji Ventures",
         address: "456 Industrial Layout, Ikeja, Lagos",
         phone: "+234-802-345-6789",
         email: "orders@xyz-ent.com",
@@ -656,7 +656,7 @@ async function main() {
       update: {},
       create: {
         code: "VEND-001",
-        name: "Steel Suppliers Nigeria Ltd",
+        name: " Solape Nigeria Ltd",
         address: "789 Industrial Zone, Port Harcourt",
         phone: "+234-803-456-7890",
         email: "sales@steelsuppliers.ng",
@@ -669,7 +669,7 @@ async function main() {
       update: {},
       create: {
         code: "VEND-002",
-        name: "Aluminum Works Ltd",
+        name: "Kola & Sons Ltd",
         address: "321 Metal Street, Kano",
         phone: "+234-804-567-8901",
         email: "info@aluminumworks.ng",

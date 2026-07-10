@@ -170,14 +170,18 @@ export class SalesController {
       await prisma.$transaction(
         async (tx) => {
           // Update sale status
-          await tx.sale.update({
-            where: { id },
+          const updateResult = await tx.sale.updateMany({
+            where: { id, status: "CONFIRMED" },
             data: {
               status: "DELIVERED",
               deliveredBy: req.user!.id,
               deliveredAt: new Date(),
             },
           });
+
+          if (updateResult.count === 0) {
+            throw new Error("Sale not found or not in CONFIRMED status");
+          }
 
           // Post to general ledger
           const sale = await tx.sale.findUnique({
@@ -271,14 +275,18 @@ export class SalesController {
     try {
       const { id } = req.params;
 
-      await prisma.sale.update({
-        where: { id },
+      const updateResult = await prisma.sale.updateMany({
+        where: { id, status: "CONFIRMED" },
         data: {
           status: "INVOICED",
           invoicedBy: req.user!.id,
           invoicedAt: new Date(),
         },
       });
+
+      if (updateResult.count === 0) {
+        throw new Error("Sale not found or not in CONFIRMED status");
+      }
 
       res.json({ message: "Sale invoiced successfully" });
     } catch (error) {

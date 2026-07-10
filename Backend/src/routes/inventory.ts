@@ -50,6 +50,28 @@ router.post(
   inventoryController.createItem,
 );
 
+router.put(
+  "/items",
+  requireRole([
+    "Inventory Manager",
+    "Senior Accountant, Production Manager",
+    "Manager",
+  ]),
+  auditLogger("UPDATE", "ITEM"),
+  inventoryController.updateItem,
+);
+router.delete(
+  "/items/:sku",
+  requireRole([
+    "Inventory Manager",
+    "Senior Accountant",
+    "Production Manager",
+    "Manager",
+  ]),
+  auditLogger("DELETE", "ITEM"),
+  inventoryController.deleteItem,
+);
+
 // BOMs
 router.get(
   "/boms",

@@ -96,7 +96,7 @@ const EditItemModal = ({ item, onClose, onSuccess }: EditItemModalProps) => {
   // Submit handler
   const onSubmit = async (data: EditItemFormData) => {
     try {
-      await inventoryApi.createItem(data);
+      await inventoryApi.updateItem(data);
       toast.success("Item updated successfully");
       onSuccess();
       onClose();
@@ -146,6 +146,7 @@ const EditItemModal = ({ item, onClose, onSuccess }: EditItemModalProps) => {
                     {...register("sku")}
                     className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="e.g., RM-001"
+                    disabled
                   />
                   {errors.sku && (
                     <p className="text-xs text-red-500 mt-1">
@@ -177,6 +178,7 @@ const EditItemModal = ({ item, onClose, onSuccess }: EditItemModalProps) => {
                   Name *
                 </label>
                 <input
+                  disabled
                   {...register("name")}
                   className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />

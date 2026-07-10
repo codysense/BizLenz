@@ -21,10 +21,12 @@ import { useAuthStore } from "../../store/authStore";
 import { ReportExporter } from "../../utils/reportExport";
 import toast from "react-hot-toast";
 import QRCode from "qrcode";
+import { CustomerSelect } from "../../components/CustomerSelect";
 
 const SalesOrders = () => {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [customerFilter, setCustomerFilter] = useState<string>("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showDeliverModal, setShowDeliverModal] = useState(false);
@@ -41,12 +43,16 @@ const SalesOrders = () => {
     user?.roles.includes("Accountant");
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["sales", { page, status: statusFilter }],
+    queryKey: [
+      "sales",
+      { page, status: statusFilter, customerId: customerFilter },
+    ],
     queryFn: () =>
       salesApi.getSales({
         page,
         limit: 10,
         ...(statusFilter && { status: statusFilter }),
+        ...(customerFilter && { customerId: customerFilter }),
       }),
   });
 
@@ -552,6 +558,16 @@ const SalesOrders = () => {
               <option value="INVOICED">Invoiced</option>
               <option value="PAID">Paid</option>
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Customer
+            </label>
+            <CustomerSelect
+              value={customerFilter}
+              onChange={(customerId) => setCustomerFilter(customerId)}
+              placeholder="Select Customer"
+            />
           </div>
         </div>
       </div>

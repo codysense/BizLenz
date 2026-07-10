@@ -182,6 +182,9 @@ export class CostingService {
     //async (tx) => {
     const costingMethod = await this.getCostingMethod(tx, itemId);
 
+    // Lock the item record to serialize costing updates for this item
+    await tx.$executeRaw`SELECT id FROM items WHERE id = ${itemId} FOR UPDATE`;
+
     // Get current running totals
     const lastEntry = await tx.inventoryLedger.findFirst({
       where: { itemId, warehouseId },
@@ -242,6 +245,9 @@ export class CostingService {
     refId: string,
     userId?: string,
   ): Promise<{ unitCost: number; value: number; ledgerEntries: any[] }> {
+    // Lock the item record to serialize costing updates for this item
+    await tx.$executeRaw`SELECT id FROM items WHERE id = ${itemId} FOR UPDATE`;
+
     // Get current running totals
     const lastEntry = await tx.inventoryLedger.findFirst({
       where: { itemId, warehouseId },

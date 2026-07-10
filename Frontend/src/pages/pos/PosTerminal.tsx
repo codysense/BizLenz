@@ -47,9 +47,9 @@ const posSaleSchema = z.object({
   customerId: z.string().optional(),
   saleLines: z.array(
     z.object({
-      itemId: z.string().min(1),
-      qty: z.number().positive(),
-      unitPrice: z.number().positive(),
+      itemId: z.string(),
+      qty: z.number(),
+      unitPrice: z.number(),
       discountPercent: z.number().min(0).max(100).default(0),
     }),
   ),
@@ -244,10 +244,28 @@ const PosTerminal = ({
 
   const onSubmit = async (data: PosSaleFormData) => {
     try {
+      if (!data.saleLines.length) {
+        toast.error("Please select at least one product");
+        return;
+      }
+
+      for (const line of data.saleLines) {
+        if (line.qty <= 0) {
+          toast.error("Quantity must be greater than zero");
+          return;
+        }
+
+        if (line.unitPrice < 0) {
+          toast.error("Unit price must be greater than zero");
+          return;
+        }
+      }
       const result = await posApi.createSale({
         sessionId: session.id,
         customerId: data.customerId,
-        saleLines: data.saleLines,
+        saleLines: data.saleLines.filter(
+          (line) => line.itemId && line.itemId.trim() !== "",
+        ),
         subtotal,
         totalAmount: totalAmount,
         payments: data.payments,
@@ -444,6 +462,35 @@ const PosTerminal = ({
     }
   };
 
+  //auto fill with walk-in customer
+  useEffect(() => {
+    if (!customersWithBalances?.customers?.length) return;
+
+    const walkInCustomer = customersWithBalances.customers.find(
+      (c: any) => c.name?.toLowerCase() === "walk-in customer",
+    );
+
+    if (walkInCustomer && !getValues("customerId")) {
+      setValue("customerId", walkInCustomer.id);
+
+      setSelectedCustomer(walkInCustomer);
+    }
+  }, [customersWithBalances, getValues, setValue]);
+
+  // Auto append new salesline
+  useEffect(() => {
+    const lastLine = watchedLines[watchedLines.length - 1];
+
+    if (!lastLine?.itemId) return;
+
+    append({
+      itemId: "",
+      qty: 1,
+      unitPrice: 0,
+      discountPercent: 0,
+    });
+  }, [watchedLines[watchedLines.length - 1]?.itemId]);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm">
       <div className="h-screen w-screen flex items-center justify-center p-4">
@@ -493,12 +540,27 @@ const PosTerminal = ({
                   <label className="block text-sm text-gray-600 mb-2">
                     Customer
                   </label>
-                  <CustomerSelect
+                  {/* <CustomerSelect
                     customers={customersWithBalances?.customers || []}
                     value={watch("customerId")}
                     onChange={(val) =>
                       reset({ ...getValues(), customerId: val })
                     }
+                    error={errors.customerId?.message}
+                  /> */}
+
+                  <CustomerSelect
+                    customers={customersWithBalances?.customers || []}
+                    value={watch("customerId")}
+                    onChange={(val) => {
+                      setValue("customerId", val);
+
+                      const customer = customersWithBalances?.customers?.find(
+                        (c: any) => c.id === val,
+                      );
+
+                      setSelectedCustomer(customer || null);
+                    }}
                     error={errors.customerId?.message}
                   />
                 </div>
@@ -620,7 +682,7 @@ const PosTerminal = ({
               </div>
 
               {/* ADD ITEM */}
-              <div className="p-5 border-t border-gray-200 bg-white">
+              {/* <div className="p-5 border-t border-gray-200 bg-white">
                 <button
                   type="button"
                   onClick={() =>
@@ -636,7 +698,7 @@ const PosTerminal = ({
                   <Plus className="w-5 h-5 mr-2" />
                   Add Product
                 </button>
-              </div>
+              </div> */}
             </div>
 
             {/* RIGHT SECTION */}

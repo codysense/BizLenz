@@ -36,7 +36,8 @@ const formatCurrency = (value: number) =>
   Number(value || 0).toLocaleString("en-NG", {
     style: "currency",
     currency: "NGN",
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
   });
 
 const COLORS = ["#096828", "#15ad07", "#C8B6D9", "#EDE7F6"];
@@ -89,12 +90,14 @@ const Dashboard = () => {
     amount: Number(item.amount),
   }));
 
-  // console.log("Formatted Expense Breakdown: ", formattedExpenseBreakdown);
+  console.log("Formatted Expense Breakdown: ", formattedExpenseBreakdown);
 
   const { data: topProducts } = useQuery({
     queryKey: ["top-products"],
     queryFn: dashboardApi.getTopProducts,
   });
+
+  //console.log("Top Products: ", topProducts);
 
   const { data: topCustomers } = useQuery({
     queryKey: ["top-customers"],
@@ -105,7 +108,7 @@ const Dashboard = () => {
     queryKey: ["dashboard-alerts"],
     queryFn: dashboardApi.getAlerts,
   });
-  console.log("alerts: ", alerts);
+  // console.log("alerts: ", alerts);
 
   const { data: productionOrders } = useQuery({
     queryKey: ["production-orders", { limit: 10 }],
@@ -265,6 +268,10 @@ const Dashboard = () => {
               className="flex justify-between py-3 border-b border-gray-100"
             >
               <span className="text-gray-700">{product.itemname}</span>
+              <span className="font-medium text-gray-900">
+                {product.qtysold}
+              </span>
+              <span className="font-medium text-gray-900">@</span>
               <span className="font-medium text-gray-900">
                 {formatCurrency(product.revenue)}
               </span>

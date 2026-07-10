@@ -158,7 +158,7 @@ const Login = () => {
                 </p>
               )}
 
-              <div className="flex items-center justify-between mt-4">
+              {/*<div className="flex items-center justify-between mt-4">
                 <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                   <input
                     type="checkbox"
@@ -175,7 +175,7 @@ const Login = () => {
                 >
                   Forgot Password?
                 </Link>
-              </div>
+              </div>*/}
             </div>
 
             <button

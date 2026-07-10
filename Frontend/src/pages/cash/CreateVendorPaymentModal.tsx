@@ -42,6 +42,7 @@ const CreateVendorPaymentModal = ({ onClose, onSuccess }: Props) => {
     handleSubmit,
     watch,
     setValue,
+    getValues,
     control,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
@@ -114,7 +115,7 @@ const CreateVendorPaymentModal = ({ onClose, onSuccess }: Props) => {
   //   });
   // }, [watchedLines, vendorPurchases?.purchases, setValue]);
 
-  /* ----------------------- TOTAL CALC -------------------------- */
+  //Calculate Total
   const calculateTotal = () => {
     return watchedLines.reduce((sum, line) => sum + (line.lineAmount || 0), 0);
   };
@@ -132,8 +133,7 @@ const CreateVendorPaymentModal = ({ onClose, onSuccess }: Props) => {
   const hasInsufficientBalance =
     selectedCashAccount &&
     calculateTotal() > Number(selectedCashAccount.balance);
-
-  /* ------------------------ SUBMIT ---------------------------- */
+  //Submit
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -153,6 +153,29 @@ const CreateVendorPaymentModal = ({ onClose, onSuccess }: Props) => {
       toast.error("Failed to create payment");
     }
   };
+
+  const payableAcct = chartAccounts?.accounts.find(
+    (a: any) => String(a.code) === "2000",
+  );
+
+  useEffect(() => {
+    if (!chartAccounts?.accounts?.length) return;
+
+    const payableAcct = chartAccounts?.accounts.find(
+      (a: any) => String(a.code) === "2000",
+    );
+
+    if (!payableAcct) return;
+
+    const currentValue = getValues("lines.0.glAccountId");
+
+    if (!currentValue) {
+      setValue("lines.0.glAccountId", String(payableAcct.id), {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+  }, [chartAccounts?.accounts, getValues, setValue]);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -273,7 +296,7 @@ const CreateVendorPaymentModal = ({ onClose, onSuccess }: Props) => {
                     onClick={() =>
                       append({
                         purchaseId: null,
-                        glAccountId: "",
+                        glAccountId: payableAcct.id || "",
                         lineAmount: 0,
                         description: "",
                       })

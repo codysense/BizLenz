@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 import { CustomerSelect } from "../../components/CustomerSelect";
 import { ChartAccountSelect } from "../../components/ChartAccountSelect";
 
-/* ------------------------- ZOD SCHEMA ------------------------- */
+//Schema
 const createCustomerPaymentSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
   cashAccountId: z.string().min(1, "Cash account is required"),
@@ -42,6 +42,7 @@ const CreateCustomerPaymentModal = ({ onClose, onSuccess }: Props) => {
     handleSubmit,
     watch,
     setValue,
+    getValues,
     control,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
@@ -57,7 +58,7 @@ const CreateCustomerPaymentModal = ({ onClose, onSuccess }: Props) => {
   const selectedCustomerId = watch("customerId");
   const watchedLines = watch("lines");
 
-  /* ------------------------- QUERIES -------------------------- */
+  //Queries
   const { data: customers } = useQuery({
     queryKey: ["customers-for-payment"],
     queryFn: () => salesApi.getCustomers({ limit: 100 }),
@@ -86,13 +87,17 @@ const CreateCustomerPaymentModal = ({ onClose, onSuccess }: Props) => {
     queryFn: () => managementApi.getChartOfAccounts(),
   });
 
-  /* ------------------------- FIELD ARRAY ------------------------ */
+  //Field arrays
   const { fields, append, remove } = useFieldArray({
     control,
     name: "lines",
   });
 
-  /* --------------------- AUTO-FILL AMOUNT ---------------------- */
+  const receivableAcct = chartAccounts?.accounts?.find(
+    (a: any) => String(a.code) === "1200",
+  );
+
+  //Atuo filled amount
   useEffect(() => {
     if (!customerSales?.sales) return;
 
@@ -112,7 +117,7 @@ const CreateCustomerPaymentModal = ({ onClose, onSuccess }: Props) => {
     });
   }, [watchedLines, customerSales?.sales, setValue]);
 
-  /* ----------------------- TOTAL CALC -------------------------- */
+  // Total Calculation
   const calculateTotal = () => {
     return watchedLines.reduce((sum, line) => sum + (line.lineAmount || 0), 0);
   };
@@ -127,6 +132,26 @@ const CreateCustomerPaymentModal = ({ onClose, onSuccess }: Props) => {
       toast.error("Failed to create payment");
     }
   };
+
+  // Pre fill chart of account
+  useEffect(() => {
+    if (!chartAccounts?.accounts?.length) return;
+
+    const receivableAcct = chartAccounts.accounts.find(
+      (a: any) => String(a.code) === "1200",
+    );
+
+    if (!receivableAcct) return;
+
+    const currentValue = getValues("lines.0.glAccountId");
+
+    if (!currentValue) {
+      setValue("lines.0.glAccountId", String(receivableAcct.id), {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+  }, [chartAccounts?.accounts, getValues, setValue]);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -239,7 +264,7 @@ const CreateCustomerPaymentModal = ({ onClose, onSuccess }: Props) => {
                       onClick={() =>
                         append({
                           saleId: null,
-                          glAccountId: "",
+                          glAccountId: receivableAcct?.id || "",
                           lineAmount: 0,
                           description: "",
                         })

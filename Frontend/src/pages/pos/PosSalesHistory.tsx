@@ -347,16 +347,18 @@ const PosSalesHistory = () => {
 
   // Calculate summary stats
   const totalSales = data?.sales?.length || 0;
+
+  console.log("Sales Payments: ", data?.sales);
   const totalRevenue =
     data?.sales?.reduce(
       (sum: number, sale: PosSale) => sum + Number(sale.totalAmount),
       0,
     ) || 0;
   const cashSales =
-    data?.sales?.filter((sale: PosSale) => sale.paymentMethod === "CASH")
+    data?.sales?.filter((sale: PosSale) => sale?.payments?.method === "CASH")
       .length || 0;
   const cardSales =
-    data?.sales?.filter((sale: PosSale) => sale.paymentMethod === "CARD")
+    data?.sales?.filter((sale: PosSale) => sale.payments?.method === "CARD")
       .length || 0;
 
   return (

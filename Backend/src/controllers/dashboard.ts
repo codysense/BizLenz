@@ -30,6 +30,7 @@ export class DashboardController {
         payables,
         vendorPayments,
         operationalPayments,
+        customerPayments,
         cashInflows,
         profitLoss,
       ] = await Promise.all([
@@ -92,6 +93,18 @@ export class DashboardController {
           },
         }),
 
+        prisma.customerPayment.aggregate({
+          where: {
+            paymentDate: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          _sum: {
+            totalAmount: true,
+          },
+        }),
+
         prisma.cashTransaction.aggregate({
           where: {
             transactionType: "RECEIPT",
@@ -116,7 +129,9 @@ export class DashboardController {
         Number(vendorPayments._sum.totalAmount || 0) +
         Number(operationalPayments._sum.amount || 0);
 
-      const inflow = Number(cashInflows._sum.amount || 0);
+      const inflow =
+        Number(cashInflows._sum.amount || 0) +
+        Number(customerPayments._sum.totalAmount || 0);
       const outflow = Number(operationalPayments._sum.amount || 0);
 
       // console.log("Executive Summary:", {
@@ -126,13 +141,20 @@ export class DashboardController {
       //   payables: Number(payables._sum.balanceAmount || 0),
       // });
 
+      console.log(
+        "Net Profit",
+        profitLoss.netIncome,
+        "Gross Profit",
+        profitLoss.grossProfit,
+      );
+
       res.json({
         revenue,
         receivables: Number(receivables._sum.totalAmount || 0),
         payables: Number(payables._sum.balanceAmount || 0),
         expenses: profitLoss.totalExpense,
         cashInflow: inflow,
-        cashOutflow: outflow,
+        cashOutflow: expenses,
         netCashFlow: inflow - outflow,
         grossProfit: profitLoss.grossProfit,
         netProfit: profitLoss.netIncome,
@@ -153,21 +175,35 @@ export class DashboardController {
       const endDate = new Date();
 
       const topProducts = await prisma.$queryRaw`
+          WITH regular_sales_agg AS (
+            SELECT sl."itemId", SUM(sl.qty) as qty, SUM(sl."lineTotal") as revenue
+            FROM sale_lines sl
+            JOIN sales s ON s.id = sl."saleId"
+            WHERE s.status IN ('INVOICED', 'PAID', 'DELIVERED')
+              AND s."orderDate" >= ${startDate} AND s."orderDate" <= ${endDate}
+            GROUP BY sl."itemId"
+          ),
+          pos_sales_agg AS (
+            SELECT psl."itemId", SUM(psl.qty) as qty, SUM(psl."lineTotal") as revenue
+            FROM pos_sale_lines psl
+            JOIN pos_sales ps ON ps.id = psl."posSaleId"
+            WHERE ps.status = 'COMPLETED'
+              AND ps."createdAt" >= ${startDate} AND ps."createdAt" <= ${endDate}
+            GROUP BY psl."itemId"
+          )
           SELECT
-            i.name AS itemName,
-            SUM(CASE WHEN sl.id IS NOT NULL THEN sl.qty ELSE 0 END) +
-            SUM(CASE WHEN psl.id IS NOT NULL THEN psl.qty ELSE 0 END) AS qtySold,
-            SUM(CASE WHEN sl.id IS NOT NULL THEN sl."lineTotal" ELSE 0 END) +
-            SUM(CASE WHEN psl.id IS NOT NULL THEN psl."lineTotal" ELSE 0 END) AS revenue
+            i.name AS itemname,
+            COALESCE(rs.qty, 0) + COALESCE(ps.qty, 0) AS qtysold,
+            COALESCE(rs.revenue, 0) + COALESCE(ps.revenue, 0) AS revenue
           FROM items i
-          LEFT JOIN sale_lines sl ON sl."itemId" = i.id
-          LEFT JOIN sales s ON s.id = sl."saleId" AND s.status IN ('INVOICED', 'PAID') AND s."orderDate" >= ${startDate} AND s."orderDate" <= ${endDate}
-          LEFT JOIN pos_sale_lines psl ON psl."itemId" = i.id
-          LEFT JOIN pos_sales ps ON ps.id = psl."posSaleId" AND ps.status = 'COMPLETED' AND ps."createdAt" >= ${startDate} AND ps."createdAt" <= ${endDate}
-          GROUP BY i.id
+          LEFT JOIN regular_sales_agg rs ON rs."itemId" = i.id
+          LEFT JOIN pos_sales_agg ps ON ps."itemId" = i.id
+          WHERE rs."itemId" IS NOT NULL OR ps."itemId" IS NOT NULL
           ORDER BY revenue DESC
           LIMIT 5;
         `;
+
+      console.log(topProducts);
 
       res.json(topProducts);
     } catch (error) {
