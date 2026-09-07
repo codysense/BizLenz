@@ -352,7 +352,7 @@ export class ReportsService {
       LEFT JOIN warehouses w   ON ps."warehouseId"   = w.id
       LEFT JOIN cash_accounts ca ON ps."cashAccountId" = ca.id
       LEFT JOIN users u       ON ps."userId"        = u.id
-      WHERE ps."createdAt"::date BETWEEN $1::date AND $2::date and status = 'COMPLETED'
+      WHERE ps."createdAt"::date BETWEEN $1::date AND $2::date and ps.status = 'COMPLETED'
   `;
 
     const values: any[] = [newFromDate, newToDate];
@@ -908,6 +908,19 @@ FROM (
 
   UNION ALL
 
+  /* ---------------- SALES RETURNS (CREDIT AR) ---------------- */
+  /* Only returns settled as customer credit or applied to another
+     invoice actually move the AR balance. REFUND_CASH returns net
+     to zero on AR (base return credit + cash-refund debit cancel out),
+     so they're intentionally excluded here. */
+  SELECT -str."totalAmount" AS balance
+  FROM sales_returns str
+  WHERE str."customerId" = $1
+    AND str.status = 'CONFIRMED'
+    AND str."settlementMethod" IN ('CUSTOMER_CREDIT', 'APPLY_TO_INVOICE')
+    AND str."returnDate" < $2
+
+  UNION ALL
   /* ---------------- REFUNDS (DEBIT) ---------------- */
   SELECT srr."amountRefunded" AS balance
   FROM sales_refunds srr
@@ -999,6 +1012,29 @@ WHERE c.id = $1
   AND cp.status = 'PAID'
   AND cp."paymentDate" >= $2
   AND cp."paymentDate" < ($3 + INTERVAL '1 day')
+
+UNION ALL
+
+/* ---------------- SALES RETURNS (AR CREDIT) ---------------- */
+SELECT
+  'CUSTOMER' AS type,
+  c."code" AS account_code,
+  c."name" AS account_name,
+  'SALES_RETURN' AS transaction_type,
+  sr."returnNo" AS reference,
+  sr."returnDate" AS date,
+  0 AS debit,
+  sr."totalAmount" AS credit,
+  sr."totalAmount" AS amount,
+  CONCAT('Sales return against ', so."orderNo") AS description
+FROM sales_returns sr
+INNER JOIN customers c ON sr."customerId" = c.id
+INNER JOIN sales so ON sr."saleId" = so.id
+WHERE c.id = $1
+  AND sr.status = 'CONFIRMED'
+  AND sr."settlementMethod" IN ('CUSTOMER_CREDIT', 'APPLY_TO_INVOICE')
+  AND sr."returnDate" >= $2
+  AND sr."returnDate" < ($3 + INTERVAL '1 day')
 
 UNION ALL
 
@@ -1121,6 +1157,18 @@ FROM (
     WHERE vp."vendorId" = $1
       AND vp.status = 'PAID'
       AND vp."paymentDate" < $2
+    UNION ALL
+
+    /* PURCHASE RETURNS (AP CLEARING) */
+    /* Only SUPPLIER_CREDIT returns reduce AP. REFUND_CASH returns net
+       to zero on AP — the base return debit is reversed by the cash
+       refund's AP credit — so they're excluded here. */
+    SELECT -pret."totalAmount" AS balance
+    FROM purchase_returns pret
+    WHERE pret."vendorId" = $1
+      AND pret.status = 'CONFIRMED'
+      AND pret."settlementMethod" = 'SUPPLIER_CREDIT'
+      AND pret."returnDate" < $2
 
     UNION ALL
 
@@ -1222,6 +1270,29 @@ GROUP BY vp.id, v."code", v."name"
 
 UNION ALL
 
+/* ---------------- PURCHASE RETURNS (AP DEBIT) ---------------- */
+SELECT
+    'VENDOR' AS type,
+    v."code" AS account_code,
+    v."name" AS account_name,
+    'PURCHASE_RETURN' AS transaction_type,
+    pret."returnNo" AS reference,
+    pret."returnDate" AS date,
+    pret."totalAmount" AS debit,
+    0 AS credit,
+    -pret."totalAmount" AS balance,
+    CONCAT('Purchase return against ', po."orderNo") AS description
+FROM purchase_returns pret
+INNER JOIN vendors v ON pret."vendorId" = v."id"
+INNER JOIN purchases po ON pret."purchaseId" = po.id
+WHERE v."id" = $1
+  AND pret.status = 'CONFIRMED'
+  AND pret."settlementMethod" = 'SUPPLIER_CREDIT'
+  AND pret."returnDate" >= $2
+  AND pret."returnDate" < ($3 + INTERVAL '1 day')
+
+UNION ALL
+
 /* ---------------- PURCHASE REFUNDS / CREDIT NOTES ---------------- */
 SELECT 
     'VENDOR' AS type,
@@ -1269,7 +1340,7 @@ SELECT
     'CREDIT_MEMO' AS transaction_type,
     m."memoNo" AS reference,
     m."date" AS date,
-    0 AS debit,
+    0 AS credit,
     m."amount" AS credit,
     m."amount" AS balance,
     m."description" AS description
@@ -1336,6 +1407,7 @@ ORDER BY date, transaction_type, reference;
         vendor_name: string;
         total_purchases: number;
         total_payments: number;
+        total_returns: number;
         // total_refunds: number;
         outstanding_balance: number;
       }[]
@@ -1348,12 +1420,14 @@ ORDER BY date, transaction_type, reference;
 
     COALESCE(p.total_purchases, 0) AS total_purchases,
     COALESCE(pay.total_payments, 0) AS total_payments,
+    COALESCE(pret.total_returns, 0) AS total_returns,
     COALESCE(r.total_refunds, 0) AS total_refunds,
     COALESCE(dm.total_debit_memos, 0) AS total_debit_memos,
     COALESCE(cm.total_credit_memos, 0) AS total_credit_memos,
 
     COALESCE(p.total_purchases, 0)
       - COALESCE(pay.total_payments, 0)
+      - COALESCE(pret.total_returns, 0)
       - COALESCE(r.total_refunds, 0)
       - COALESCE(dm.total_debit_memos, 0)
       + COALESCE(cm.total_credit_memos, 0)
@@ -1388,6 +1462,18 @@ LEFT JOIN (
     GROUP BY vp."vendorId"
 ) pay ON pay."vendorId" = v.id
 
+/* PURCHASE RETURNS (SUPPLIER_CREDIT only — reduce AP) */
+LEFT JOIN (
+    SELECT
+        "vendorId",
+        SUM("totalAmount") AS total_returns
+    FROM purchase_returns
+    WHERE "returnDate" <= $1
+      AND status = 'CONFIRMED'
+      AND "settlementMethod" = 'SUPPLIER_CREDIT'
+    GROUP BY "vendorId"
+) pret ON pret."vendorId" = v.id
+
 /* REFUNDS */
 LEFT JOIN (
     SELECT 
@@ -1418,6 +1504,7 @@ LEFT JOIN (
     FROM memo
     WHERE "memoType" = 'CREDIT'
       AND "date" <= $1
+      AND "vendorId" IS NOT NULL
     GROUP BY "vendorId"
 ) cm ON cm."vendorId" = v.id
 
@@ -1833,26 +1920,79 @@ ORDER BY v.name;
     return varianceReport;
   }
 
+  // async getSalesByItem(fromDate: Date, toDate: Date, itemId?: string) {
+  //   const newToDate = endOfDayUTC(toDate);
+  //   const newFromDate = startOfDayUTC(fromDate);
+  //   console.log("Getting sales by item with params:", {
+  //     fromDate: newFromDate,
+  //     toDate: newToDate,
+  //     itemId,
+  //   });
+
+  //   //Get Item ID if item code or name is provided
+  //   // let itemId: string | undefined = undefined;
+  //   // if (item) {
+  //   //   const foundItem = await prisma.item.findFirst({
+  //   //     where: {
+  //   //       OR: [{ sku: item }, { name: item }],
+  //   //     },
+  //   //   });
+  //   //   itemId = foundItem?.id;
+  //   // }
+
+  //   const sales = await prisma.sale.findMany({
+  //     where: {
+  //       orderDate: {
+  //         gte: newFromDate,
+  //         lte: newToDate,
+  //       },
+  //       status: { in: ["DELIVERED", "INVOICED", "PAID"] },
+  //     },
+  //     include: {
+  //       saleLines: {
+  //         where: itemId !== "undefined" ? { itemId: itemId } : undefined,
+  //         include: {
+  //           item: {
+  //             select: { sku: true, name: true, type: true },
+  //           },
+  //         },
+  //       },
+  //     },
+  //   });
+
+  //   const itemSalesMap = new Map();
+
+  //   sales.forEach((sale) => {
+  //     sale.saleLines.forEach((line) => {
+  //       const key = line.itemId;
+  //       if (!itemSalesMap.has(key)) {
+  //         itemSalesMap.set(key, {
+  //           item: line.item,
+  //           totalQty: 0,
+  //           totalValue: 0,
+  //           orderCount: 0,
+  //         });
+  //       }
+
+  //       const itemSales = itemSalesMap.get(key);
+  //       itemSales.totalQty += line.qty.toNumber();
+  //       itemSales.totalValue += line.lineTotal.toNumber();
+  //       itemSales.orderCount += 1;
+  //     });
+  //   });
+
+  //   return Array.from(itemSalesMap.values()).sort(
+  //     (a, b) => b.totalValue - a.totalValue,
+  //   );
+  // }
+
   async getSalesByItem(fromDate: Date, toDate: Date, itemId?: string) {
     const newToDate = endOfDayUTC(toDate);
     const newFromDate = startOfDayUTC(fromDate);
-    console.log("Getting sales by item with params:", {
-      fromDate: newFromDate,
-      toDate: newToDate,
-      itemId,
-    });
 
-    //Get Item ID if item code or name is provided
-    // let itemId: string | undefined = undefined;
-    // if (item) {
-    //   const foundItem = await prisma.item.findFirst({
-    //     where: {
-    //       OR: [{ sku: item }, { name: item }],
-    //     },
-    //   });
-    //   itemId = foundItem?.id;
-    // }
+    const hasItemFilter = itemId && itemId !== "undefined";
 
+    // ───── Regular Sales ─────
     const sales = await prisma.sale.findMany({
       where: {
         orderDate: {
@@ -1862,8 +2002,9 @@ ORDER BY v.name;
         status: { in: ["DELIVERED", "INVOICED", "PAID"] },
       },
       include: {
+        customer: { select: { code: true, name: true } },
         saleLines: {
-          where: itemId !== "undefined" ? { itemId: itemId } : undefined,
+          where: hasItemFilter ? { itemId } : undefined,
           include: {
             item: {
               select: { sku: true, name: true, type: true },
@@ -1873,32 +2014,159 @@ ORDER BY v.name;
       },
     });
 
-    const itemSalesMap = new Map();
+    // ───── POS Sales ─────
+    const posSales = await prisma.posSale.findMany({
+      where: {
+        createdAt: {
+          gte: newFromDate,
+          lte: newToDate,
+        },
+        status: "COMPLETED",
+      },
+      include: {
+        customer: { select: { code: true, name: true } },
+        saleLines: {
+          where: hasItemFilter ? { itemId } : undefined,
+          include: {
+            item: {
+              select: { sku: true, name: true, type: true },
+            },
+          },
+        },
+      },
+    });
+
+    interface SaleDetailRow {
+      source: "SALE" | "POS";
+      reference: string;
+      date: Date;
+      itemId: string;
+      item: { sku: string; name: string; type: string };
+      customer: string | null;
+      qty: number;
+      unitPrice: number;
+      lineTotal: number;
+    }
+
+    const rows: SaleDetailRow[] = [];
 
     sales.forEach((sale) => {
       sale.saleLines.forEach((line) => {
-        const key = line.itemId;
-        if (!itemSalesMap.has(key)) {
-          itemSalesMap.set(key, {
-            item: line.item,
-            totalQty: 0,
-            totalValue: 0,
-            orderCount: 0,
-          });
-        }
-
-        const itemSales = itemSalesMap.get(key);
-        itemSales.totalQty += line.qty.toNumber();
-        itemSales.totalValue += line.lineTotal.toNumber();
-        itemSales.orderCount += 1;
+        rows.push({
+          source: "SALE",
+          reference: sale.orderNo,
+          date: sale.orderDate,
+          itemId: line.itemId,
+          item: line.item,
+          customer: sale.customer?.name || null,
+          qty: line.qty.toNumber(),
+          unitPrice: line.unitPrice.toNumber(),
+          lineTotal: line.lineTotal.toNumber(),
+        });
       });
     });
 
-    return Array.from(itemSalesMap.values()).sort(
-      (a, b) => b.totalValue - a.totalValue,
+    posSales.forEach((posSale) => {
+      posSale.saleLines.forEach((line) => {
+        rows.push({
+          source: "POS",
+          reference: posSale.saleNo,
+          date: posSale.createdAt,
+          itemId: line.itemId,
+          item: line.item,
+          customer: posSale.customer?.name || null,
+          qty: line.qty.toNumber(),
+          unitPrice: line.unitPrice.toNumber(),
+          lineTotal: line.lineTotal.toNumber(),
+        });
+      });
+    });
+
+    // Most recent first
+    rows.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    // ───── Summary (for the footer) ─────
+    const summary = rows.reduce(
+      (acc, row) => {
+        acc.totalQty += row.qty;
+        acc.totalValue += row.lineTotal;
+        acc.totalOrders += 1;
+        if (row.source === "SALE") acc.salesOrderCount += 1;
+        else acc.posOrderCount += 1;
+        return acc;
+      },
+      {
+        totalQty: 0,
+        totalValue: 0,
+        totalOrders: 0,
+        salesOrderCount: 0,
+        posOrderCount: 0,
+      },
     );
+
+    return { rows, summary };
   }
 
+  async getOutOfStockItems(warehouseId?: string) {
+    const hasWarehouseFilter = warehouseId && warehouseId !== "undefined";
+
+    const rows = await prisma.$queryRawUnsafe<
+      {
+        item_id: string;
+        sku: string;
+        name: string;
+        type: string;
+        warehouse_id: string;
+        warehouse_name: string;
+        running_qty: number;
+        running_value: number;
+        last_movement_date: Date;
+        last_ref_type: string;
+        last_ref_id: string;
+      }[]
+    >(
+      `
+    SELECT
+      il."itemId"        AS item_id,
+      i."sku"             AS sku,
+      i."name"            AS name,
+      i."type"            AS type,
+      il."warehouseId"    AS warehouse_id,
+      w."name"            AS warehouse_name,
+      il."runningQty"     AS running_qty,
+      il."runningValue"   AS running_value,
+      il."postedAt"       AS last_movement_date,
+      il."refType"        AS last_ref_type,
+      il."refId"          AS last_ref_id
+    FROM (
+      SELECT DISTINCT ON (il2."itemId", il2."warehouseId")
+        il2.*
+      FROM inventory_ledger il2
+      ${hasWarehouseFilter ? `WHERE il2."warehouseId" = $1` : ""}
+      ORDER BY il2."itemId", il2."warehouseId", il2."postedAt" DESC, il2."id" DESC
+    ) il
+    INNER JOIN items i ON i.id = il."itemId"
+    INNER JOIN warehouses w ON w.id = il."warehouseId"
+    WHERE il."runningQty" = 0
+    ORDER BY il."postedAt" DESC;
+    `,
+      ...(hasWarehouseFilter ? [warehouseId] : []),
+    );
+
+    return rows.map((row) => ({
+      itemId: row.item_id,
+      sku: row.sku,
+      name: row.name,
+      type: row.type,
+      warehouseId: row.warehouse_id,
+      warehouseName: row.warehouse_name,
+      runningQty: Number(row.running_qty),
+      runningValue: Number(row.running_value),
+      lastMovementDate: row.last_movement_date,
+      lastMovementType: row.last_ref_type,
+      lastMovementRef: row.last_ref_id,
+    }));
+  }
   async getSalesByCustomer(fromDate: Date, toDate: Date) {
     const newToDate = endOfDayUTC(toDate);
     const newFromDate = startOfDayUTC(fromDate);

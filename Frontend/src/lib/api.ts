@@ -2,6 +2,7 @@ import { useAuthStore } from "../store/authStore";
 import toast from "react-hot-toast";
 import { CreatePosReturnRequest } from "../types/api";
 import { get } from "react-hook-form";
+//import ImportItems from "../pages/inventory/ImportItems";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
 
@@ -174,6 +175,11 @@ export const userApi = {
   updateUser: (id: string, data: any) => api.put(`/auth/users/${id}`, data),
 };
 
+//ItemImport
+export const itemImportApi = {
+  importItems: (data: any) => api.post("/items-import", data),
+};
+
 // Inventory API
 export const inventoryApi = {
   getItems: (params?: {
@@ -181,8 +187,26 @@ export const inventoryApi = {
     limit?: number;
     type?: string;
     search?: string;
+    noZeroItem?: boolean;
   }) =>
-    api.get(
+    api.get<{
+      items: Array<{
+        id: string;
+        sku: string;
+        name: string;
+        description: string;
+        stockQty: number;
+        cartonQuantity?: number;
+        uom: string;
+        priceList?: Array<{ id: string; customerGroup: string; price: number }>;
+      }>;
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        pages: number;
+      };
+    }>(
       `/inventory/items?includeStock=true${
         params ? "&" + new URLSearchParams(params as any).toString() : ""
       }`,
@@ -218,6 +242,7 @@ export const inventoryApi = {
         params ? "?" + new URLSearchParams(params as any).toString() : ""
       }`,
     ),
+
   exportInventoryLedger: async (
     format: "csv" | "excel" | "pdf",
     filters: any,
@@ -369,6 +394,27 @@ export const productionApi = {
 
 // Purchase API
 export const purchaseApi = {
+  //  Purchase Returns
+  getReturnableLines: (purchaseId: string) =>
+    api.get(`/purchase/purchase-returns/returnable-lines/${purchaseId}`),
+  createPurchaseReturn: (data: any) =>
+    api.post("/purchase/purchase-returns/create", data),
+  confirmPurchaseReturn: (id: string, data: any) =>
+    api.post(`/purchase/purchase-returns/confirm/${id}`, data),
+  getPurchaseReturns: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    vendorId?: string;
+  }) =>
+    api.get(
+      `/purchase/purchase-returns${
+        params ? "?" + new URLSearchParams(params as any).toString() : ""
+      }`,
+    ),
+  cancelPurchaseReturn: (id: string) =>
+    api.post(`/purchase/purchase-returns/${id}/cancel`),
+
   getPurchases: (params?: {
     page?: number;
     limit?: number;
@@ -400,17 +446,77 @@ export const purchaseApi = {
   createVendor: (data: any) => api.post("/purchase/vendors", data),
 };
 
+// Opening Stock API
+export const openingStockApi = {
+  getOpeningStocks: (params?: {
+    page?: number;
+    limit?: number;
+    warehouseId?: string;
+    search?: string;
+  }) =>
+    api.get(
+      `/opening-stock${
+        params ? "?" + new URLSearchParams(params as any).toString() : ""
+      }`,
+    ),
+
+  getOpeningStock: (id: string) => api.get(`/opening-stock/${id}`),
+
+  createOpeningStock: (data: any) => api.post("/opening-stock", data),
+};
 //Dashboard API
 export const dashboardApi = {
-  getExpenseBreakdown: () => api.get("/dashboard/expense-breakdown"),
+  getExpenseBreakdown: (params?: { period?: string; startDate?: string; endDate?: string }) =>
+    api.get(
+      `/dashboard/expense-breakdown${
+        params ? "?" + new URLSearchParams(params as any).toString() : ""
+      }`,
+    ),
   getAlerts: () => api.get("/dashboard/alerts"),
-  getTopProducts: () => api.get("/dashboard/top-products"),
-  getTopCustomers: () => api.get("/dashboard/top-customers"),
-  getExecutiveSummary: () => api.get("/dashboard/executive-summary"),
+  getTopProducts: (params?: { period?: string; startDate?: string; endDate?: string }) =>
+    api.get(
+      `/dashboard/top-products${
+        params ? "?" + new URLSearchParams(params as any).toString() : ""
+      }`,
+    ),
+  getTopCustomers: (params?: { period?: string; startDate?: string; endDate?: string }) =>
+    api.get(
+      `/dashboard/top-customers${
+        params ? "?" + new URLSearchParams(params as any).toString() : ""
+      }`,
+    ),
+  getExecutiveSummary: (params?: { period?: string; startDate?: string; endDate?: string }) =>
+    api.get(
+      `/dashboard/executive-summary${
+        params ? "?" + new URLSearchParams(params as any).toString() : ""
+      }`,
+    ),
 };
 
 // Sales API
 export const salesApi = {
+  getSalesReturns: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    customerId?: string;
+  }) =>
+    api.get(
+      `/sales/sales-returns/get-sales-returns${
+        params ? "?" + new URLSearchParams(params as any).toString() : ""
+      }`,
+    ),
+
+  cancelSalesReturn: (id: string) =>
+    api.post(`/sales/sales-return/cancel/${id}`),
+
+  getReturnableLines: (saleId: string) =>
+    api.get(`/sales/sales-return/returnable-lines/${saleId}`),
+
+  createSalesReturn: (data: any) => api.post("/sales/sales-return/", data),
+  confirmSalesReturn: (id: string, data: any) =>
+    api.post(`/sales/sales-return/confirm/${id}`, data),
+
   getSales: (params?: {
     page?: number;
     limit?: number;
@@ -695,6 +801,11 @@ export const reportsApi = {
     itemId?: string;
   }) =>
     api.get(`/reports/sales-by-item?${new URLSearchParams(params).toString()}`),
+
+  getOutOfStockItems: (params: { warehouseId?: string }) =>
+    api.get(
+      `/reports/out-stock-items?${new URLSearchParams(params).toString()}`,
+    ),
   getPOSSalesReport: (params: {
     dateFrom: string;
     dateTo: string;
@@ -906,6 +1017,10 @@ export const posApi = {
 
   // Sales
   createSale: (data: CreatePosSaleRequest) => api.post("/pos/sales", data),
+  createPendingSale: (data: CreatePosSaleRequest) =>
+    api.post("/pos/pending-sales", data),
+  getPendingSales: () => api.get("/pos/pending-sales"),
+  deletePendingSale: (id: string) => api.delete(`/pos/pending-sales/${id}`),
   getPOSsalePayments: (saleId: string) =>
     api.get(`/pos/sales/${saleId}/payments`),
   getSales: (params?: {

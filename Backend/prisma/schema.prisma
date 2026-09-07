@@ -8,6 +8,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  refreshToken String   @unique
+
+  user User @relation(fields: [userId], references: [id])
+}
+
 model User {
   id                          String                   @id @default(cuid())
   email                       String                   @unique
@@ -69,12 +79,25 @@ model User {
   salesInvoiced  Sale[] @relation("SaleInvoicer")
   salesPaid      Sale[] @relation("SalePayer")
 
+  // ───── Sales return stage actors ─────
+  salesReturnsPrepared  SalesReturn[] @relation("SalesReturnPreparer")
+  salesReturnsConfirmed SalesReturn[] @relation("SalesReturnConfirmer")
+  salesReturnsCancelled SalesReturn[] @relation("SalesReturnCanceller")
+
   // ───── Purchase stage actors ─────
   purchasesPrepared Purchase[]     @relation("PurchasePreparer")
   purchasesReceived Purchase[]     @relation("PurchaseReceiver")
   purchasesInvoiced Purchase[]     @relation("PurchaseInvoicer")
   purchasesPaid     Purchase[]     @relation("PurchasePayer")
-  refreshTokens     RefreshToken[]
+
+  // ───── Purchase return stage actors ─────
+  purchaseReturnsPrepared  PurchaseReturn[] @relation("PurchaseReturnPreparer")
+  purchaseReturnsConfirmed PurchaseReturn[] @relation("PurchaseReturnConfirmer")
+  purchaseReturnsCancelled PurchaseReturn[] @relation("PurchaseReturnCanceller")
+  refreshTokens            RefreshToken[]
+  UserSession       UserSession[]
+
+  openingStocks OpeningStock[]
 
   @@map("users")
 }
@@ -181,6 +204,7 @@ model Warehouse {
   posSessions       PosSession[]
   productionOrders  ProductionOrder[]
   StockAdjustment   StockAdjustment[]
+  openingStocks     OpeningStock[]
   users             User[]
   location          Location            @relation(fields: [locationId], references: [id])
 
@@ -215,7 +239,7 @@ model Item {
   updatedAt             DateTime                @updatedAt
   sellingPriceBulk      Decimal?                @db.Decimal(15, 4)
   sellingPriceOrdinary  Decimal?                @db.Decimal(15, 4)
-  sellingPriceWIC       Decimal?                @db.Decimal(15, 4)
+  cartonQuantity        Decimal?                @db.Decimal(15, 4)
   InventoryTransferItem InventoryTransferItem[]
   priceList             ItemPriceList[]
   AdjustmentLines       AdjustmentLines[]
@@ -227,8 +251,13 @@ model Item {
   posSaleLines          PosSaleLine[]
   productionOrders      ProductionOrder[]
   purchaseLines         PurchaseLine[]
+  purchaseReturnLines   PurchaseReturnLine[]
   saleLines             SaleLine[]
+  salesReturnLines      SalesReturnLine[]
   wipLedgers            WipLedger[]
+
+  openingStockLines  OpeningStockLine[]
+  PendingPOSSaleLine PendingPOSSaleLine[]
 
   @@map("items")
 }
@@ -445,6 +474,7 @@ model Vendor {
   purchasePayments   PurchasePayment[]
   PurchaseRefund     PurchaseRefund[]
   purchases          Purchase[]
+  purchaseReturns    PurchaseReturn[]
   vendorPaymentLines VendorPaymentLine[]
   vendorPayments     VendorPayment[]
   //relation
@@ -485,7 +515,9 @@ model Customer {
   posSales         PosSale[]
   sales            Sale[]
   salesReceipts    SalesReceipt[]
+  salesReturns     SalesReturn[]
   SalesRefund      SalesRefund[]
+  PendingPOSSale   PendingPOSSale[]
 
   @@map("customers")
 }
@@ -522,11 +554,12 @@ model Purchase {
   updatedAt DateTime @updatedAt
 
   // Relations
-  assets             Asset[]
-  purchaseLines      PurchaseLine[]
-  purchasePayments   PurchasePayment[]
-  PurchaseRefunds    PurchaseRefund[]
-  vendorPaymentLines VendorPaymentLine[]
+  assets              Asset[]
+  purchaseLines       PurchaseLine[]
+  purchasePayments    PurchasePayment[]
+  PurchaseRefunds     PurchaseRefund[]
+  purchaseReturns     PurchaseReturn[]
+  vendorPaymentLines  VendorPaymentLine[]
 
   vendor Vendor @relation(fields: [vendorId], references: [id])
 
@@ -545,28 +578,103 @@ enum PurchaseOrderType {
 }
 
 model PurchaseLine {
-  id         String   @id @default(cuid())
-  purchaseId String
-  itemId     String?
-  assetName  String?
-  qty        Decimal  @db.Decimal(15, 4)
-  unitPrice  Decimal  @db.Decimal(15, 4)
-  lineTotal  Decimal  @db.Decimal(15, 4)
-  item       Item?    @relation(fields: [itemId], references: [id])
-  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  id                  String               @id @default(cuid())
+  purchaseId          String
+  itemId              String?
+  assetName           String?
+  qty                 Decimal              @db.Decimal(15, 4)
+  unitPrice           Decimal              @db.Decimal(15, 4)
+  lineTotal           Decimal              @db.Decimal(15, 4)
+  item                Item?                @relation(fields: [itemId], references: [id])
+  purchase            Purchase             @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  purchaseReturnLines PurchaseReturnLine[]
 
   @@map("purchase_lines")
 }
 
-model SaleLine {
-  id        String  @id @default(cuid())
-  saleId    String
-  itemId    String
+enum PurchaseReturnStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+enum PurchaseReturnSettlementMethod {
+  REFUND_CASH
+  SUPPLIER_CREDIT
+}
+
+model PurchaseReturn {
+  id         String @id @default(cuid())
+  returnNo   String @unique
+  purchaseId String
+  vendorId   String
+
+  returnDate DateTime @default(now())
+  reason     String?
+
+  status PurchaseReturnStatus @default(DRAFT)
+
+  subtotal    Decimal @db.Decimal(15, 2)
+  tax         Decimal @default(0) @db.Decimal(15, 2)
+  totalAmount Decimal @db.Decimal(15, 2) // = subtotal + tax, at ORIGINAL purchase price (AP basis)
+
+  // Weighted-avg inventory value actually removed, and the resulting
+  // variance posted to 5900. Populated only at CONFIRM.
+  inventoryValue Decimal @default(0) @db.Decimal(15, 2)
+  costVariance   Decimal @default(0) @db.Decimal(15, 2)
+
+  settlementMethod PurchaseReturnSettlementMethod?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  preparedBy  String
+  confirmedBy String?
+  confirmedAt DateTime?
+
+  cancelledBy String?
+  cancelledAt DateTime?
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id])
+  vendor   Vendor   @relation(fields: [vendorId], references: [id])
+
+  preparer  User  @relation("PurchaseReturnPreparer", fields: [preparedBy], references: [id])
+  confirmer User? @relation("PurchaseReturnConfirmer", fields: [confirmedBy], references: [id])
+  canceller User? @relation("PurchaseReturnCanceller", fields: [cancelledBy], references: [id])
+
+  purchaseReturnLines PurchaseReturnLine[]
+
+  @@map("purchase_returns")
+}
+
+model PurchaseReturnLine {
+  id               String @id @default(cuid())
+  purchaseReturnId String
+  purchaseLineId   String
+  itemId           String
+
   qty       Decimal @db.Decimal(15, 4)
-  unitPrice Decimal @db.Decimal(15, 4)
-  lineTotal Decimal @db.Decimal(15, 4)
-  item      Item    @relation(fields: [itemId], references: [id])
-  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  unitPrice Decimal @db.Decimal(15, 4) // original purchase price — AP basis
+  unitCost  Decimal @default(0) @db.Decimal(15, 4) // current weighted-avg at confirm — inventory basis
+  lineTotal Decimal @db.Decimal(15, 2) // qty × unitPrice
+
+  purchaseReturn PurchaseReturn @relation(fields: [purchaseReturnId], references: [id], onDelete: Cascade)
+  purchaseLine   PurchaseLine   @relation(fields: [purchaseLineId], references: [id])
+  item           Item           @relation(fields: [itemId], references: [id])
+
+  @@map("purchase_return_lines")
+}
+
+model SaleLine {
+  id          String            @id @default(cuid())
+  saleId      String
+  itemId      String
+  qty         Decimal           @db.Decimal(15, 4)
+  unitPrice   Decimal           @db.Decimal(15, 4)
+  lineTotal   Decimal           @db.Decimal(15, 4)
+  item        Item              @relation(fields: [itemId], references: [id])
+  sale        Sale              @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  returnLines SalesReturnLine[]
 
   @@map("sale_lines")
 }
@@ -656,30 +764,31 @@ model AuditLog {
 }
 
 model CashAccount {
-  id               String            @id @default(cuid())
-  code             String            @unique
-  name             String
-  accountType      String
-  accountNumber    String?
-  bankName         String?
-  balance          Decimal           @default(0) @db.Decimal(15, 2)
-  isActive         Boolean           @default(true)
-  createdAt        DateTime          @default(now())
-  glAccountId      String?
-  chartOfAccountId String?
-  warehouseId      String?
-  chartOfAccount   ChartOfAccount?   @relation("CashAccountGLAccount", fields: [chartOfAccountId], references: [id])
-  warehouse        Warehouse?        @relation(fields: [warehouseId], references: [id])
-  cashTransactions CashTransaction[]
-  customerPayments CustomerPayment[]
-  posSales         PosSale[]
-  posSessions      PosSession[]
-  purchasePayments PurchasePayment[]
-  PurchaseRefund   PurchaseRefund[]
-  salesReceipts    SalesReceipt[]
-  SalesRefund      SalesRefund[]
-  vendorPayments   VendorPayment[]
-  posSalePayments  PosSalePayment[]
+  id                String              @id @default(cuid())
+  code              String              @unique
+  name              String
+  accountType       String
+  accountNumber     String?
+  bankName          String?
+  balance           Decimal             @default(0) @db.Decimal(15, 2)
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  glAccountId       String?
+  chartOfAccountId  String?
+  warehouseId       String?
+  chartOfAccount    ChartOfAccount?     @relation("CashAccountGLAccount", fields: [chartOfAccountId], references: [id])
+  warehouse         Warehouse?          @relation(fields: [warehouseId], references: [id])
+  cashTransactions  CashTransaction[]
+  customerPayments  CustomerPayment[]
+  posSales          PosSale[]
+  posSessions       PosSession[]
+  purchasePayments  PurchasePayment[]
+  PurchaseRefund    PurchaseRefund[]
+  salesReceipts     SalesReceipt[]
+  SalesRefund       SalesRefund[]
+  vendorPayments    VendorPayment[]
+  posSalePayments   PosSalePayment[]
+  PendingPOSPayment PendingPOSPayment[]
 
   @@map("cash_accounts")
 }
@@ -886,6 +995,7 @@ model Sale {
   saleLines            SaleLine[]
   salesReceipts        SalesReceipt[]
   SalesRefunds         SalesRefund[]
+  salesReturns         SalesReturn[]
 
   customer Customer @relation(fields: [customerId], references: [id])
 
@@ -896,6 +1006,77 @@ model Sale {
   memos     Memo[]
 
   @@map("sales")
+}
+
+enum SalesReturnStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+enum ReturnSettlementMethod {
+  REFUND_CASH
+  CUSTOMER_CREDIT
+  APPLY_TO_INVOICE
+}
+
+model SalesReturn {
+  id         String @id @default(cuid())
+  returnNo   String @unique
+  saleId     String
+  customerId String
+
+  returnDate DateTime @default(now())
+  reason     String?
+
+  status SalesReturnStatus @default(DRAFT)
+
+  subtotal    Decimal @db.Decimal(15, 2)
+  tax         Decimal @default(0) @db.Decimal(15, 2)
+  totalAmount Decimal @db.Decimal(15, 2)
+
+  settlementMethod ReturnSettlementMethod?
+
+  // ───── Stage tracking ─────
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  preparedBy  String
+  confirmedBy String?
+  confirmedAt DateTime?
+
+  cancelledBy String?
+  cancelledAt DateTime?
+
+  // ───── Relations ─────
+  sale     Sale     @relation(fields: [saleId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  preparer  User  @relation("SalesReturnPreparer", fields: [preparedBy], references: [id])
+  confirmer User? @relation("SalesReturnConfirmer", fields: [confirmedBy], references: [id])
+  canceller User? @relation("SalesReturnCanceller", fields: [cancelledBy], references: [id])
+
+  salesReturnLines SalesReturnLine[]
+
+  @@map("sales_returns")
+}
+
+model SalesReturnLine {
+  id            String @id @default(cuid())
+  salesReturnId String
+  saleLineId    String
+  itemId        String
+
+  qty       Decimal @db.Decimal(15, 4)
+  unitPrice Decimal @db.Decimal(15, 4) // from original sale line — customer credit basis
+  unitCost  Decimal @db.Decimal(15, 4) // resolved at confirm time — inventory/COGS basis
+  lineTotal Decimal @db.Decimal(15, 2)
+
+  salesReturn SalesReturn @relation(fields: [salesReturnId], references: [id], onDelete: Cascade)
+  saleLine    SaleLine    @relation(fields: [saleLineId], references: [id])
+  item        Item        @relation(fields: [itemId], references: [id])
+
+  @@map("sales_return_lines")
 }
 
 model PurchasePayment {
@@ -1251,6 +1432,53 @@ enum PosPaymentMethod {
   TRANSFER
 }
 
+model PendingPOSSale {
+  id           String   @id @default(cuid())
+  saleNo       String   @unique // Auto-generated temporary number, e.g., P-0001
+  sessionId    String
+  customerId   String?
+  subtotal     Decimal  @db.Decimal(15, 4)
+  totalAmount  Decimal  @db.Decimal(15, 4)
+  totalPaid    Decimal  @db.Decimal(15, 4)
+  changeAmount Decimal  @db.Decimal(15, 4)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  pendingSaleLines PendingPOSSaleLine[]
+  payments         PendingPOSPayment[]
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@map("pending_pos_sales")
+}
+
+model PendingPOSSaleLine {
+  id              String         @id @default(cuid())
+  pendingSaleId   String
+  itemId          String
+  qty             Decimal        @db.Decimal(15, 4)
+  unitPrice       Decimal        @db.Decimal(15, 4)
+  discountPercent Decimal        @default(0) @db.Decimal(15, 4)
+  pendingSale     PendingPOSSale @relation(fields: [pendingSaleId], references: [id], onDelete: Cascade)
+  item            Item           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("pending_pos_sale_lines")
+}
+
+model PendingPOSPayment {
+  id            String         @id @default(cuid())
+  pendingSaleId String
+  method        String // CASH, CARD, TRANSFER
+  cashAccountId String?
+  amount        Decimal        @db.Decimal(15, 4)
+  pendingSale   PendingPOSSale @relation(fields: [pendingSaleId], references: [id], onDelete: Cascade)
+  cashAccount   CashAccount?    @relation(fields: [cashAccountId], references: [id], onDelete: Cascade)
+
+  @@map("pending_pos_payments")
+}
+
 model PosSale {
   id            String  @id @default(cuid())
   saleNo        String  @unique
@@ -1364,7 +1592,7 @@ model Memo {
   date   DateTime
 
   module   MemoModule // SALES | PURCHASES
-  memoType MemoType   // CREDIT | DEBIT
+  memoType MemoType // CREDIT | DEBIT
   category memoCategory @default(FINANCIAL)
 
   amount    Decimal
@@ -1396,10 +1624,10 @@ model Memo {
   journal   Journal? @relation(fields: [journalId], references: [id])
 
   //  REVERSAL FIELDS (NEW)
-  isReversal     Boolean   @default(false)
+  isReversal     Boolean @default(false)
   reversedFromId String?
-  reversedFrom   Memo?     @relation("MemoReversal", fields: [reversedFromId], references: [id])
-  reversals      Memo[]    @relation("MemoReversal")
+  reversedFrom   Memo?   @relation("MemoReversal", fields: [reversedFromId], references: [id])
+  reversals      Memo[]  @relation("MemoReversal")
 
   //  Optional audit enhancement
   reversalReason String?
@@ -1414,7 +1642,6 @@ model Memo {
   @@index([customerId])
   @@index([vendorId])
   @@index([reversedFromId]) // 🔥 important for reversal lookup
-
   @@map("memo")
 }
 
@@ -1447,6 +1674,43 @@ model AdjustmentLines {
   item           Item            @relation(fields: [itemId], references: [id])
 
   @@map("adjustment_lines")
+}
+
+model OpeningStock {
+  id          String   @id @default(cuid())
+  referenceNo String   @unique
+  warehouseId String
+  openingDate DateTime
+  remarks     String?
+
+  totalQty   Decimal @db.Decimal(15, 4)
+  totalValue Decimal @db.Decimal(15, 4)
+
+  createdById String
+  createdAt   DateTime @default(now())
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  openingLines OpeningStockLine[]
+
+  @@map("opening_stock")
+}
+
+model OpeningStockLine {
+  id String @id @default(cuid())
+
+  openingStockId String
+  itemId         String
+
+  qty       Decimal @db.Decimal(15, 4)
+  unitCost  Decimal @db.Decimal(15, 4)
+  lineTotal Decimal @db.Decimal(15, 4)
+
+  openingStock OpeningStock @relation(fields: [openingStockId], references: [id])
+  item         Item         @relation(fields: [itemId], references: [id])
+
+  @@map("opening_stock_lines")
 }
 
 enum ItemType {

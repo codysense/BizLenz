@@ -8,6 +8,7 @@ import {
   Edit,
   Trash2,
   Printer,
+  RotateCcw,
 } from "lucide-react";
 import { managementApi, purchaseApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
@@ -22,6 +23,7 @@ import { ReportExporter } from "../../utils/reportExport";
 import toast from "react-hot-toast";
 import QRCode from "qrcode";
 import { VendorSelect } from "../../components/VendorSelect";
+import CreatePurchaseReturnModal from "./CreatePurchaseReturnModal";
 
 const PurchaseOrders = () => {
   const [page, setPage] = useState(1);
@@ -31,6 +33,7 @@ const PurchaseOrders = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(
     null,
   );
@@ -154,6 +157,12 @@ const PurchaseOrders = () => {
         console.error("Delete purchase error:", error);
       }
     }
+  };
+
+  const handleReturnSuccess = () => {
+    refetch();
+    setShowReturnModal(false);
+    setSelectedPurchase(null);
   };
 
   const handlePrintPurchaseOrder = async (purchase: Purchase) => {
@@ -542,6 +551,21 @@ const PurchaseOrders = () => {
                 <FileText className="h-4 w-4" />
               </button>
             )}
+
+            {/* Return */}
+            {["RECEIVED", "INVOICED", "PAID"].includes(purchase.status) &&
+              canPerformActions && (
+                <button
+                  onClick={() => {
+                    setSelectedPurchase(purchase);
+                    setShowReturnModal(true);
+                  }}
+                  className="text-orange-600 hover:text-orange-900"
+                  title="Create Return"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              )}
           </>
         )}
       </div>
@@ -694,6 +718,17 @@ const PurchaseOrders = () => {
             setSelectedPurchase(null);
           }}
           onSuccess={handleReceiveSuccess}
+        />
+      )}
+
+      {showReturnModal && selectedPurchase && (
+        <CreatePurchaseReturnModal
+          purchaseId={selectedPurchase.id}
+          onClose={() => {
+            setShowReturnModal(false);
+            setSelectedPurchase(null);
+          }}
+          onSuccess={handleReturnSuccess}
         />
       )}
     </div>

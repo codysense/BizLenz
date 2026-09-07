@@ -32,23 +32,8 @@ export class GeneralLedgerService {
     }
 
     // Generate journal number
-    // 2. Lock the last journal record to serialize concurrent number generation
-
-    const lastJournals: any[] = await tx.$queryRaw`
-      SELECT "journalNo" FROM "journals" 
-      ORDER BY "journalNo" DESC 
-      LIMIT 1 
-      FOR UPDATE
-    `;
-
-    let nextNumber = 1;
-    if (lastJournals.length > 0) {
-      const lastNoStr = lastJournals[0].journalNo; // e.g. "J000100"
-      const lastNoInt = parseInt(lastNoStr.replace("J", ""), 10);
-      nextNumber = lastNoInt + 1;
-    }
-
-    const journalNo = `J${String(nextNumber).padStart(6, "0")}`;
+    const count = await tx.journal.count();
+    const journalNo = `J${String(count + 1).padStart(6, "0")}`;
 
     // Create journal header
     const journal = await tx.journal.create({

@@ -17,12 +17,10 @@ import { useAuthStore } from "../../store/authStore";
 import { ReportExporter } from "../../utils/reportExport";
 import toast from "react-hot-toast";
 import QRCode from "qrcode";
-import { ItemSelect } from "../../components/ItemSelect";
 
 const ProductionOrders = () => {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [selectedItem, setSelectedItem] = useState<string>("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showIssueMaterialsModal, setShowIssueMaterialsModal] = useState(false);
@@ -43,16 +41,12 @@ const ProductionOrders = () => {
   const canReverseOrder = user?.roles.includes("General Manager");
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: [
-      "production-orders",
-      { page, status: statusFilter, selectedItem },
-    ],
+    queryKey: ["production-orders", { page, status: statusFilter }],
     queryFn: () =>
       productionApi.getProductionOrders({
         page,
         limit: 10,
         ...(statusFilter && { status: statusFilter }),
-        ...(selectedItem && { itemId: selectedItem }),
       }),
   });
 
@@ -632,16 +626,6 @@ const ProductionOrders = () => {
               <option value="FINISHED">Finished</option>
               <option value="CLOSED">Closed</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Item
-            </label>
-            <ItemSelect
-              value={selectedItem}
-              onChange={(itemId) => setSelectedItem(itemId)}
-              placeholder="Select Item"
-            />
           </div>
         </div>
       </div>

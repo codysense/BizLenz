@@ -80,7 +80,10 @@ const Layout = ({ children }: LayoutProps) => {
       children: [
         { name: "POS Terminal", href: "/pos" },
         { name: "Sales History", href: "/pos/sales" },
+        { name: "Pending Sales History", href: "/pos/pending-sales" },
+
         { name: "Returns", href: "/pos/returns" },
+
         { name: "Stock Register", href: "/inventory/ledger" },
       ],
     },
@@ -103,7 +106,9 @@ const Layout = ({ children }: LayoutProps) => {
         { name: "BOMs", href: "/inventory/boms" },
         { name: "Locations", href: "/inventory/locations" },
         { name: "Warehouses", href: "/inventory/warehouses" },
-        { name: "Transfers", href: "/inventory/transfers" },
+        { name: "OpeningStock", href: "/inventory/openingstock" },
+        { name: "Import Items", href: "/inventory/import-items" },
+        // { name: "Transfers", href: "/inventory/transfers" },
         {
           name: "Ledger",
           href: "/inventory/ledger",
@@ -145,6 +150,7 @@ const Layout = ({ children }: LayoutProps) => {
       children: [
         { name: "Orders", href: "/purchases/orders" },
         { name: "Vendors", href: "/purchases/vendors" },
+        { name: "Purchase Returns", href: "/purchases/purchase-returns" },
         // { name: 'Memos', href: '/purchases/memos' },
       ],
     },
@@ -165,6 +171,7 @@ const Layout = ({ children }: LayoutProps) => {
         { name: "Orders", href: "/sales/orders" },
         { name: "Customers", href: "/sales/customers" },
         { name: "CustomerGroups", href: "/sales/customergroups" },
+        { name: "Sales Returns", href: "/sales/sales-returns" },
         //   { name: 'Memos', href: '/sales/memos' },
       ],
     },
@@ -261,7 +268,7 @@ const Layout = ({ children }: LayoutProps) => {
         { name: "Fiscal Calendar", href: "/management/fiscal" },
         { name: "Chart of Accounts", href: "/management/chart-of-accounts" },
         { name: "Cash Accounts", href: "/management/cash-accounts" },
-        { name: "Approval Flows", href: "/management/approvals" },
+        // { name: "Approval Flows", href: "/management/approvals" },
         { name: "Role Management", href: "/management/roles" },
         { name: "User Management", href: "/management/users" },
         { name: "Audit Log", href: "/management/audit-log" },

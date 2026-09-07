@@ -252,23 +252,25 @@ export class InventoryController {
   async createItem(req: AuthRequest, res: Response) {
     try {
       const validatedData = createItemSchema.parse(req.body);
-      const { priceList, ...itemData } = validatedData;
+      const { priceList, sku: inputSku, ...itemData } = validatedData;
 
-      //check if item with the same sku exist
-      const existingItem = await prisma.item.findUnique({
-        where: { sku: itemData.sku },
+      const lastItem = await prisma.item.findFirst({
+        where: { type: "FINISHED_GOODS" },
+        orderBy: { createdAt: "desc" },
       });
 
-      if (existingItem) {
-        return res
-          .status(400)
-          .json({ error: "Item with this SKU already exists" });
+      let nextNumber = 1;
+      if (lastItem) {
+        // Extract the numeric part of the transactionNo
+        const lastNumber = parseInt(lastItem?.sku.replace(/^ITM-/, ""), 10);
+        nextNumber = lastNumber + 1;
+        // console.log("Last Item", lastItem, "Last Number", lastNumber);
       }
 
+      const nextItemSku = `ITM-${String(nextNumber).padStart(8, "0")}`;
+
       const item = await prisma.item.create({
-        //where: { sku: itemData.sku },
-        //update: { ...itemData },
-        data: { ...itemData },
+        data: { sku: nextItemSku, ...itemData },
       });
 
       if (priceList && Array.isArray(priceList)) {
@@ -2150,6 +2152,7 @@ export class InventoryController {
         AND (
           i."sku" ILIKE ${"%" + search + "%"} COLLATE "C"
           OR i."name" ILIKE ${"%" + search + "%"} COLLATE "C"
+           OR trim(i."description") ILIKE ${"%" + search + "%"} COLLATE "C"
         )
         ORDER BY i."createdAt" DESC
         LIMIT ${limit} OFFSET ${skip};
@@ -2167,6 +2170,7 @@ export class InventoryController {
         AND (
           i."sku" ILIKE ${"%" + search + "%"} COLLATE "C"
           OR i."name" ILIKE ${"%" + search + "%"} COLLATE "C"
+          OR trim(i."description") ILIKE ${"%" + search + "%"} COLLATE "C"
         );
       `;
 

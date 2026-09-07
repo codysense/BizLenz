@@ -20,13 +20,16 @@ import Items from "./pages/inventory/Items";
 import BOMs from "./pages/inventory/BOMs";
 import Locations from "./pages/inventory/Locations";
 import Warehouses from "./pages/inventory/Warehouses";
+import OpeningStock from "./pages/inventory/OpeningStocks";
 import InventoryTransfer from "./pages/inventory/InventoryTransfer";
 import InventoryLedger from "./pages/inventory/Ledger";
 import InventoryValuation from "./pages/inventory/Valuation";
+import ImportItems from "./pages/inventory/ImportItems";
 
 // Purchase Pages
 import PurchaseOrders from "./pages/purchases/Orders";
 import Vendors from "./pages/purchases/Vendors";
+import PurchaseReturns from "./pages/purchases/PurchaseReturns";
 // import Memos from './pages/purchases/PurchaseMemosPage';
 
 // Sales Pages
@@ -34,6 +37,7 @@ import SalesOrders from "./pages/sales/Orders";
 import Customers from "./pages/sales/Customers";
 import SalesMemos from "./pages/sales/SalesMemosPage";
 import CustomerGroups from "./pages/sales/CustomerGroups";
+import SalesReturn from "./pages/sales/SalesReturn";
 
 // Production Pages
 import ProductionOrders from "./pages/production/Orders";
@@ -77,6 +81,7 @@ import AssetCategories from "./pages/assets/AssetCategories";
 import PosDashboard from "./pages/pos/PosDashboard";
 import PosSalesHistory from "./pages/pos/PosSalesHistory";
 import PosReturnsHistory from "./pages/pos/PosReturnsHistory";
+import PendingPOSSales from "./pages/pos/PendingPOSSales";
 
 //Memo Pages
 import { Memos } from "./pages/memo/Memos";
@@ -230,10 +235,26 @@ function App() {
               }
             />
             <Route
+              path="/inventory/openingstock"
+              element={
+                <ProtectedRoute allowedModules={["inventory", "production"]}>
+                  <OpeningStock />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/inventory/transfers"
               element={
                 <ProtectedRoute allowedModules={["inventory", "production"]}>
                   <InventoryTransfer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventory/import-items"
+              element={
+                <ProtectedRoute allowedModules={["inventory", "production"]}>
+                  <ImportItems />
                 </ProtectedRoute>
               }
             />
@@ -272,6 +293,14 @@ function App() {
               }
             />
             <Route
+              path="/purchases/purchase-returns"
+              element={
+                <ProtectedRoute allowedModules={["inventory", "purchases"]}>
+                  <PurchaseReturns />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/purchases/memos"
               element={
                 <ProtectedRoute allowedModules={["inventory", "purchases"]}>
@@ -302,6 +331,14 @@ function App() {
               element={
                 <ProtectedRoute allowedModules={["sales", "pos"]}>
                   <CustomerGroups />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sales/sales-returns"
+              element={
+                <ProtectedRoute allowedModules={["sales", "pos"]}>
+                  <SalesReturn />
                 </ProtectedRoute>
               }
             />
@@ -401,6 +438,14 @@ function App() {
               element={
                 <ProtectedRoute allowedModules={["pos"]}>
                   <PosSalesHistory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pos/pending-sales"
+              element={
+                <ProtectedRoute allowedModules={["pos"]}>
+                  <PendingPOSSales session={null as any} onResumeSale={() => {}} />
                 </ProtectedRoute>
               }
             />

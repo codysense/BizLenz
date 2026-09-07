@@ -404,7 +404,7 @@ async function main() {
       where: { email: "gm@company.com" },
       update: {},
       create: {
-        name: "Jeleel Kolapo",
+        name: "General Manager",
         email: "gm@company.com",
         password: hashedPassword,
         status: "ACTIVE",
@@ -412,7 +412,7 @@ async function main() {
     }),
   ]);
 
-  console.log("✅ Users created");
+  console.log("✅ User created");
 
   // Assign roles to users
   await Promise.all([
@@ -516,21 +516,21 @@ async function main() {
         code: "MAIN",
         name: "Main Warehouse",
         locationId: locations[0].id,
-        address: "Main Storage Facility, Lagos",
+        address: "Main Warehouse, Ayekale, Osogbo, Osun State",
         isActive: true,
       },
     }),
-    prisma.warehouse.upsert({
-      where: { code: "PROD" },
-      update: {},
-      create: {
-        code: "PROD",
-        name: "Production Warehouse",
-        locationId: locations[0].id,
-        address: "Production Floor, Lagos",
-        isActive: true,
-      },
-    }),
+    // prisma.warehouse.upsert({
+    //   where: { code: "PROD" },
+    //   update: {},
+    //   create: {
+    //     code: "PROD",
+    //     name: "Production Warehouse",
+    //     locationId: locations[0].id,
+    //     address: "Production Floor, Lagos",
+    //     isActive: true,
+    //   },
+    // }),
   ]);
 
   console.log("✅ Warehouses created");
@@ -701,7 +701,7 @@ async function main() {
         code: "1100",
         name: "Cash and Bank",
         accountType: "CURRENT_ASSETS",
-        parentId: null, // Will be updated after creation
+        parentId: null,
         isActive: true,
       },
     }),
@@ -859,6 +859,26 @@ async function main() {
       },
     }),
     await prisma.chartOfAccount.upsert({
+      where: { code: "4900" },
+      update: {},
+      create: {
+        code: "4900",
+        name: "Sales Returns",
+        accountType: "INCOME",
+        isActive: true,
+      },
+    }),
+    await prisma.chartOfAccount.upsert({
+      where: { code: "5900" },
+      update: {},
+      create: {
+        code: "5900",
+        name: "Purchase Returns",
+        accountType: "EXPENSES",
+        isActive: true,
+      },
+    }),
+    await prisma.chartOfAccount.upsert({
       where: { code: "1500" },
       update: {},
       create: {
@@ -875,6 +895,18 @@ async function main() {
         code: "1510",
         name: "Asset Clearing Account",
         accountType: "NON_CURRENT_ASSETS",
+        isActive: true,
+      },
+    }),
+
+    //Add Equity Account with code 3000
+    await prisma.chartOfAccount.upsert({
+      where: { code: "3000" },
+      update: {},
+      create: {
+        code: "3000",
+        name: "Opening Stock",
+        accountType: "EQUITY",
         isActive: true,
       },
     }),

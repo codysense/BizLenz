@@ -21,6 +21,114 @@ function generateToken(
 }
 
 export class AuthController {
+  // async login(req: Request, res: Response) {
+  //   try {
+  //     const { email, password } = loginSchema.parse(req.body);
+
+  //     //Check if number of concurrent users reached
+  //     const activeSessions = await prisma.userSession.count({
+  //       where: {
+  //         expiresAt: {
+  //           gt: new Date(),
+  //         },
+  //       },
+  //     });
+
+  //     if (activeSessions >= 3) {
+  //       throw new Error("Maximum concurrent users reached");
+  //     }
+
+  //     const user = await prisma.user.findUnique({
+  //       where: { email },
+  //       include: {
+  //         userRoles: {
+  //           include: {
+  //             role: {
+  //               include: {
+  //                 rolePermissions: {
+  //                   include: {
+  //                     permission: true,
+  //                   },
+  //                 },
+  //               },
+  //             },
+  //           },
+  //         },
+  //       },
+  //     });
+
+  //     if (!user || user.status !== "ACTIVE") {
+  //       return res.status(401).json({ error: "Non-Active User" });
+  //     }
+
+  //     const isValidPassword = await bcrypt.compare(password, user.password);
+  //     if (!isValidPassword) {
+  //       return res.status(401).json({ error: "Invalid credentials" });
+  //     }
+
+  //     // Update last login
+  //     await prisma.$transaction(async (tx) => {
+  //       await tx.user.update({
+  //         where: { id: user.id },
+  //         data: { lastLoginAt: new Date() },
+  //       });
+
+  //       // const refreshToken = jwt.sign(
+  //       //   { userId: user.id },
+  //       //   process.env.REFRESH_SECRET!,
+  //       //   { expiresIn: "7d" },
+  //       // );
+
+  //       const refreshToken = generateToken(
+  //         { userId: user.id },
+  //         process.env.JWT_REFRESH_SECRET as string,
+  //         process.env.JWT_REFRESH_EXPIRY as string,
+  //       );
+
+  //       const hashedRefreshToken = crypto
+  //         .createHash("sha256")
+  //         .update(refreshToken)
+  //         .digest("hex");
+
+  //       await tx.refreshToken.create({
+  //         data: {
+  //           token: hashedRefreshToken,
+  //           userId: user.id,
+  //           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  //         },
+  //       });
+  //       const accessToken = generateToken(
+  //         { userId: user.id, email: user.email },
+  //         process.env.JWT_SECRET as string,
+  //         process.env.JWT_ACCESS_EXPIRY as string,
+  //       );
+
+  //       // Extract user roles & permissions
+  //       const roles = user.userRoles.map((ur) => ur.role.name);
+  //       const permissions = user.userRoles.flatMap((ur) =>
+  //         ur.role.rolePermissions.map((rp) => rp.permission.name),
+  //       );
+
+  //       res.json({
+  //         user: {
+  //           id: user.id,
+  //           email: user.email,
+  //           name: user.name,
+  //           roles,
+  //           permissions,
+  //         },
+  //         accessToken,
+  //         refreshToken,
+  //       });
+  //     });
+
+  //     // Generate tokens
+  //   } catch (error) {
+  //     console.error("Login error:", error);
+  //     res.status(400).json({ error: "Invalid request data" });
+  //   }
+  // }
+
   async login(req: Request, res: Response) {
     try {
       const { email, password } = loginSchema.parse(req.body);
@@ -45,26 +153,71 @@ export class AuthController {
       });
 
       if (!user || user.status !== "ACTIVE") {
-        return res.status(401).json({ error: "Non-Active User" });
+        return res.status(401).json({
+          error: "Non-Active User",
+        });
       }
 
       const isValidPassword = await bcrypt.compare(password, user.password);
+
       if (!isValidPassword) {
-        return res.status(401).json({ error: "Invalid credentials" });
+        return res.status(401).json({
+          error: "Invalid credentials",
+        });
       }
 
-      // Update last login
-      await prisma.$transaction(async (tx) => {
-        await tx.user.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() },
+      // Execute all checks and session creations inside the transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Clean expired sessions inside transaction first
+        await tx.userSession.deleteMany({
+          where: {
+            expiresAt: {
+              lte: new Date(),
+            },
+          },
         });
 
-        // const refreshToken = jwt.sign(
-        //   { userId: user.id },
-        //   process.env.REFRESH_SECRET!,
-        //   { expiresIn: "7d" },
-        // );
+        // 2. ENFORCE SINGLE SESSION: Delete all existing active sessions and
+        // refresh tokens for THIS user (this logs them out of any other devices)
+        await tx.userSession.deleteMany({
+          where: {
+            userId: user.id,
+          },
+        });
+
+        await tx.refreshToken.deleteMany({
+          where: {
+            userId: user.id,
+          },
+        });
+
+        // 3. Count other active sessions across the entire system
+        const activeSessions = await tx.userSession.count({
+          where: {
+            expiresAt: {
+              gt: new Date(),
+            },
+          },
+        });
+
+        // 4. LIMIT CONCURRENT USERS TO 20: Reject if 2 other users are logged in
+        if (activeSessions >= 20) {
+          const error = new Error(
+            "Maximum concurrent users reached. Logout another user first.",
+          );
+          (error as any).statusCode = 403;
+          throw error;
+        }
+
+        // 5. Update user last login
+        await tx.user.update({
+          where: {
+            id: user.id,
+          },
+          data: {
+            lastLoginAt: new Date(),
+          },
+        });
 
         const refreshToken = generateToken(
           { userId: user.id },
@@ -77,26 +230,41 @@ export class AuthController {
           .update(refreshToken)
           .digest("hex");
 
+        const expiryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
         await tx.refreshToken.create({
           data: {
             token: hashedRefreshToken,
             userId: user.id,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            expiresAt: expiryDate,
           },
         });
+
+        // Create new active session
+        await tx.userSession.create({
+          data: {
+            userId: user.id,
+            refreshToken: hashedRefreshToken,
+            expiresAt: expiryDate,
+          },
+        });
+
         const accessToken = generateToken(
-          { userId: user.id, email: user.email },
+          {
+            userId: user.id,
+            email: user.email,
+            sessionToken: hashedRefreshToken,
+          },
           process.env.JWT_SECRET as string,
           process.env.JWT_ACCESS_EXPIRY as string,
         );
 
-        // Extract user roles & permissions
         const roles = user.userRoles.map((ur) => ur.role.name);
         const permissions = user.userRoles.flatMap((ur) =>
           ur.role.rolePermissions.map((rp) => rp.permission.name),
         );
 
-        res.json({
+        return {
           user: {
             id: user.id,
             email: user.email,
@@ -106,13 +274,17 @@ export class AuthController {
           },
           accessToken,
           refreshToken,
-        });
+        };
       });
 
-      // Generate tokens
+      return res.json(result);
     } catch (error) {
       console.error("Login error:", error);
-      res.status(400).json({ error: "Invalid request data" });
+
+      const statusCode = (error as any).statusCode || 400;
+      return res.status(statusCode).json({
+        error: error instanceof Error ? error.message : "Invalid request data",
+      });
     }
   }
 
@@ -202,7 +374,7 @@ export class AuthController {
 
       // 6️ Generate new tokens
       const newAccessToken = generateToken(
-        { userId: user.id, email: user.email },
+        { userId: user.id, email: user.email, sessionToken: hashedToken },
         process.env.JWT_SECRET as string,
         process.env.JWT_ACCESS_EXPIRY as string,
       );
@@ -242,27 +414,68 @@ export class AuthController {
     res.json(req.user);
   }
 
+  // async logout(req: AuthRequest, res: Response) {
+  //   const refreshToken = req.body.refreshToken;
+
+  //   if (!refreshToken) {
+  //     return res.status(400).json({ message: "Refresh token required" });
+  //   }
+
+  //   const hashedToken = crypto
+  //     .createHash("sha256")
+  //     .update(refreshToken)
+  //     .digest("hex");
+
+  //   await prisma.refreshToken.deleteMany({
+  //     where: { token: hashedToken },
+  //   });
+
+  //   // await prisma.refreshToken.deleteMany({
+  //   //   where: { token: refreshToken },
+  //   // });
+
+  //   res.json({ message: "Logged out successfully" });
+  // }
+
   async logout(req: AuthRequest, res: Response) {
-    const refreshToken = req.body.refreshToken;
+    try {
+      const { refreshToken } = req.body;
 
-    if (!refreshToken) {
-      return res.status(400).json({ message: "Refresh token required" });
+      if (!refreshToken) {
+        return res.status(400).json({
+          message: "Refresh token required",
+        });
+      }
+
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(refreshToken)
+        .digest("hex");
+
+      await prisma.$transaction(async (tx) => {
+        await tx.refreshToken.deleteMany({
+          where: {
+            token: hashedToken,
+          },
+        });
+
+        await tx.userSession.deleteMany({
+          where: {
+            refreshToken: hashedToken,
+          },
+        });
+      });
+
+      return res.json({
+        message: "Logged out successfully",
+      });
+    } catch (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        message: "Logout failed",
+      });
     }
-
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(refreshToken)
-      .digest("hex");
-
-    await prisma.refreshToken.deleteMany({
-      where: { token: hashedToken },
-    });
-
-    // await prisma.refreshToken.deleteMany({
-    //   where: { token: refreshToken },
-    // });
-
-    res.json({ message: "Logged out successfully" });
   }
 
   async getUsers(req: AuthRequest, res: Response) {
@@ -349,6 +562,18 @@ export class AuthController {
       const existingUser = await prisma.user.findUnique({ where: { email } });
       if (existingUser) {
         return res.status(400).json({ error: "User already exists" });
+      }
+
+      const activeUsersCount = await prisma.user.count({
+        where: {
+          status: "ACTIVE",
+        },
+      });
+
+      if (activeUsersCount >= 3) {
+        return res.status(400).json({
+          error: "Maximum of 3 active users allowed",
+        });
       }
 
       const hashedPassword = await bcrypt.hash(password, 12);

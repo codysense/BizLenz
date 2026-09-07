@@ -8,6 +8,7 @@ import {
   Edit,
   Trash2,
   Printer,
+  RotateCcw,
 } from "lucide-react";
 import { managementApi, salesApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
@@ -22,6 +23,7 @@ import { ReportExporter } from "../../utils/reportExport";
 import toast from "react-hot-toast";
 import QRCode from "qrcode";
 import { CustomerSelect } from "../../components/CustomerSelect";
+import CreateSalesReturnModal from "./CreateSalesReturnModal";
 
 const SalesOrders = () => {
   const [page, setPage] = useState(1);
@@ -32,6 +34,8 @@ const SalesOrders = () => {
   const [showDeliverModal, setShowDeliverModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  //const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const { user } = useAuthStore();
 
   // Check if user can perform actions (Accountant or GM only)
@@ -149,6 +153,12 @@ const SalesOrders = () => {
     } catch (error) {
       console.error("Invoice sale error:", error);
     }
+  };
+
+  const handleReturnSuccess = () => {
+    refetch();
+    setShowReturnModal(false);
+    setSelectedSale(null);
   };
 
   const { data: companyInformations } = useQuery({
@@ -519,6 +529,20 @@ const SalesOrders = () => {
           <FileText className="h-4 w-4" />
         </button>
       )}
+
+      {["DELIVERED", "INVOICED", "PAID"].includes(sale.status) &&
+        canPerformActions && (
+          <button
+            onClick={() => {
+              setSelectedSale(sale);
+              setShowReturnModal(true);
+            }}
+            className="text-orange-600 hover:text-orange-900"
+            title="Create Return"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+        )}
     </div>
   );
 
@@ -665,6 +689,18 @@ const SalesOrders = () => {
             setSelectedSale(null);
           }}
           onSuccess={handleDeliverSuccess}
+        />
+      )}
+
+      {/* Create Return Modal */}
+      {showReturnModal && selectedSale && (
+        <CreateSalesReturnModal
+          saleId={selectedSale.id}
+          onClose={() => {
+            setShowReturnModal(false);
+            setSelectedSale(null);
+          }}
+          onSuccess={handleReturnSuccess}
         />
       )}
     </div>

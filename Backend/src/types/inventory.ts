@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ItemType, CostingMethod, LedgerDirection } from "@prisma/client";
 
 export const createItemSchema = z.object({
-  sku: z.string().min(1, "SKU is required"),
+  sku: z.string(),
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   type: z.nativeEnum(ItemType),
@@ -12,7 +12,7 @@ export const createItemSchema = z.object({
   standardCost: z.number().optional(),
   sellingPriceOrdinary: z.number().optional(),
   sellingPriceBulk: z.number().optional(),
-  sellingPriceWIC: z.number().optional(),
+  cartonQuantity: z.number().optional(),
   priceList: z.array(
     z.object({
       // itemId: z.string().cuid(),
@@ -20,6 +20,7 @@ export const createItemSchema = z.object({
       price: z.number().positive(),
     }),
   ),
+
   taxCode: z.string().optional(),
 });
 
