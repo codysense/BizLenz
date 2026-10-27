@@ -14,7 +14,7 @@ const createCustomerSchema = z.object({
   //mode: z.enum(["create", "update"]),
   phone: z.string().optional(),
   email: z.string().email("Invalid email format").optional().or(z.literal("")),
-  creditLimit: z.number().optional(),
+  creditLimit: z.number().nonnegative("Credit limit cannot be negative").optional(),
   customerGroupId: z.string().min(1, "Customer Group Id is required"),
 });
 
@@ -196,13 +196,22 @@ const CreateCustomerModal = ({
                     Credit Limit
                   </label>
                   <input
-                    {...register("creditLimit", { valueAsNumber: true })}
+                    {...register("creditLimit", {
+                      setValueAs: (value) => value === "" ? undefined : Number(value),
+                    })}
                     type="number"
+                    min="0"
                     step="0.01"
                     placeholder="0.00"
                     className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 
                   focus:ring-2 focus:ring-blue-500 outline-none"
                   />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Leave blank for no limit. Outstanding sales must stay within this amount before delivery or invoicing.
+                  </p>
+                  {errors.creditLimit && (
+                    <p className="mt-1 text-sm text-red-500">{errors.creditLimit.message}</p>
+                  )}
                 </div>
 
                 <div>

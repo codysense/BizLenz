@@ -9,11 +9,13 @@ import {
   Trash2,
   Printer,
   RotateCcw,
+  AlertTriangle,
+  X,
 } from "lucide-react";
 import { managementApi, salesApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
 import StatusBadge from "../../components/StatusBadge";
-import { Sale } from "../../types/api";
+import { CreditLimitRejection, Sale } from "../../types/api";
 import CreateSaleModal from "./CreateSaleModal";
 import EditSaleModal from "./EditSaleModal";
 import SaleDetailsModal from "./SaleDetailsModal";
@@ -35,6 +37,10 @@ const SalesOrders = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [creditLimitWarning, setCreditLimitWarning] = useState<{
+    details: CreditLimitRejection;
+    action: "delivery" | "invoicing";
+  } | null>(null);
   //const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const { user } = useAuthStore();
 
@@ -140,6 +146,7 @@ const SalesOrders = () => {
   };
 
   const handleDeliverSuccess = () => {
+    setCreditLimitWarning(null);
     refetch();
     setShowDeliverModal(false);
     setSelectedSale(null);
@@ -148,11 +155,27 @@ const SalesOrders = () => {
   const handleInvoiceSale = async (sale: Sale) => {
     try {
       await salesApi.invoiceSale(sale.id);
+      setCreditLimitWarning(null);
       toast.success("Sales order invoiced successfully");
       refetch();
     } catch (error) {
       console.error("Invoice sale error:", error);
+      const rejection = (error as any)?.response?.data;
+      if (rejection?.code === "CREDIT_LIMIT_EXCEEDED") {
+        setCreditLimitWarning({
+          details: rejection as CreditLimitRejection,
+          action: "invoicing",
+        });
+      } else {
+        toast.error("Could not invoice this sale. Please try again.");
+      }
     }
+  };
+
+  const handleCreditLimitRejection = (details: CreditLimitRejection) => {
+    setCreditLimitWarning({ details, action: "delivery" });
+    setShowDeliverModal(false);
+    setSelectedSale(null);
   };
 
   const handleReturnSuccess = () => {
@@ -563,6 +586,38 @@ const SalesOrders = () => {
         </button>
       </div>
 
+      {creditLimitWarning && (
+        <div
+          role="alert"
+          className="relative rounded-xl border border-amber-300 bg-amber-50 px-5 py-4 pr-12 text-amber-950 shadow-sm"
+        >
+          <button
+            type="button"
+            onClick={() => setCreditLimitWarning(null)}
+            className="absolute right-3 top-3 rounded p-1 text-amber-800 hover:bg-amber-100"
+            aria-label="Dismiss credit limit warning"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+            <div>
+              <p className="font-semibold">
+                {creditLimitWarning.action === "delivery" ? "Sale delivery" : "Sale invoicing"} blocked by credit limit
+              </p>
+              <p className="mt-1 text-sm">
+                {creditLimitWarning.details.customerName} has an outstanding balance of ₦
+                {creditLimitWarning.details.currentOutstanding.toLocaleString()} and a credit limit of ₦
+                {creditLimitWarning.details.creditLimit.toLocaleString()}. This sale is ₦
+                {creditLimitWarning.details.saleAmount.toLocaleString()}, which would bring the balance to ₦
+                {creditLimitWarning.details.projectedOutstanding.toLocaleString()} — ₦
+                {creditLimitWarning.details.excessAmount.toLocaleString()} over the limit. Record customer payment or adjust the credit limit before retrying.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -689,6 +744,7 @@ const SalesOrders = () => {
             setSelectedSale(null);
           }}
           onSuccess={handleDeliverSuccess}
+          onCreditLimitRejected={handleCreditLimitRejection}
         />
       )}
 

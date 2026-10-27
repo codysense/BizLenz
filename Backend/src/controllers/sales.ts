@@ -15,6 +15,77 @@ import { z } from "zod";
 const prisma = new PrismaClient();
 const costingService = new CostingService();
 const glService = new GeneralLedgerService();
+class CreditLimitExceededError extends Error {
+  constructor(
+    public readonly details: {
+      customerName: string;
+      creditLimit: number;
+      currentOutstanding: number;
+      saleAmount: number;
+      projectedOutstanding: number;
+      excessAmount: number;
+    },
+  ) {
+    super("Customer credit limit would be exceeded");
+  }
+}
+
+async function getCustomerOutstandingBalance(
+  tx: PrismaClient | Prisma.TransactionClient,
+  customerId: string,
+) {
+  const result = (await tx.$queryRaw`
+    SELECT
+      COALESCE((SELECT SUM(s."totalAmount") FROM sales s
+       WHERE s."customerId" = ${customerId}
+       AND s.status IN ('DELIVERED', 'INVOICED', 'PAID')), 0) -
+      COALESCE((SELECT SUM(sr."amountReceived") FROM sales_receipts sr
+       WHERE sr."customerId" = ${customerId}), 0) -
+      COALESCE((SELECT SUM(sret."totalAmount") FROM sales_returns sret
+       WHERE sret."customerId" = ${customerId}
+       AND sret.status = 'CONFIRMED'
+       AND sret."settlementMethod" IN ('CUSTOMER_CREDIT', 'APPLY_TO_INVOICE')), 0)
+      AS balance
+  `) as { balance: Prisma.Decimal | number | null }[];
+
+  return Number(result[0]?.balance || 0);
+}
+
+async function assertSaleWithinCreditLimit(
+  tx: Prisma.TransactionClient,
+  sale: { customerId: string; totalAmount: Prisma.Decimal },
+  includeSaleAmount: boolean,
+) {
+  const customer = await tx.customer.findUnique({
+    where: { id: sale.customerId },
+    select: { name: true, creditLimit: true },
+  });
+  if (!customer || customer.creditLimit === null) return;
+
+  const balanceIncludingThisSale = await getCustomerOutstandingBalance(
+    tx,
+    sale.customerId,
+  );
+  const currentOutstanding = includeSaleAmount
+    ? balanceIncludingThisSale
+    : balanceIncludingThisSale - Number(sale.totalAmount);
+  const saleAmount = includeSaleAmount ? Number(sale.totalAmount) : 0;
+  const projectedOutstanding = includeSaleAmount
+    ? currentOutstanding + saleAmount
+    : balanceIncludingThisSale;
+  const creditLimit = Number(customer.creditLimit);
+
+  if (projectedOutstanding > creditLimit) {
+    throw new CreditLimitExceededError({
+      customerName: customer.name,
+      creditLimit,
+      currentOutstanding,
+      saleAmount: Number(sale.totalAmount),
+      projectedOutstanding,
+      excessAmount: projectedOutstanding - creditLimit,
+    });
+  }
+}
 const createCustomerGroupSchema = z.object({
   name: z.string().min(1, "Group name is required"),
   code: z.string().optional(),
@@ -116,19 +187,16 @@ export class SalesController {
       // Add outstanding balances to customers
       const salesWithBalances = await Promise.all(
         sales.map(async (sale) => {
-          const balanceResult = (await prisma.$queryRaw`
-            SELECT COALESCE(
-              (SELECT SUM(s."totalAmount") FROM sales s WHERE s."customerId" = ${sale.customerId} AND s.status IN ('INVOICED', 'PAID')) -
-              (SELECT SUM(sr."amountReceived") FROM sales_receipts sr WHERE sr."customerId" = ${sale.customerId}), 
-              0
-            ) as balance
-          `) as any[];
+          const outstandingBalance = await getCustomerOutstandingBalance(
+            prisma,
+            sale.customerId,
+          );
 
           return {
             ...sale,
             customer: {
               ...sale.customer,
-              outstandingBalance: Number(balanceResult[0]?.balance || 0),
+              outstandingBalance,
             },
           };
         }),
@@ -228,6 +296,13 @@ export class SalesController {
 
       await prisma.$transaction(
         async (tx) => {
+          const saleForCreditCheck = await tx.sale.findUnique({
+            where: { id },
+            select: { id: true, customerId: true, totalAmount: true },
+          });
+          if (!saleForCreditCheck) throw new Error("Sale not found");
+          await assertSaleWithinCreditLimit(tx, saleForCreditCheck, true);
+
           // Update sale status
           await tx.sale.update({
             where: { id },
@@ -316,12 +391,20 @@ export class SalesController {
         {
           maxWait: 5000, // 5s wait for connection
           timeout: 20000, // 20s max runtime
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         },
       );
 
       res.json({ message: "Sale delivered successfully" });
     } catch (error) {
       console.error("Deliver sale error:", error);
+      if (error instanceof CreditLimitExceededError) {
+        return res.status(409).json({
+          code: "CREDIT_LIMIT_EXCEEDED",
+          error: error.message,
+          ...error.details,
+        });
+      }
       res.status(400).json({ error: "Failed to deliver sale" });
     }
   }
@@ -330,18 +413,38 @@ export class SalesController {
     try {
       const { id } = req.params;
 
-      await prisma.sale.update({
-        where: { id },
-        data: {
-          status: "INVOICED",
-          invoicedBy: req.user!.id,
-          invoicedAt: new Date(),
+      await prisma.$transaction(
+        async (tx) => {
+          const sale = await tx.sale.findUnique({
+            where: { id },
+            select: { id: true, customerId: true, totalAmount: true },
+          });
+          if (!sale) throw new Error("Sale not found");
+
+          // Delivered sales are already included in current outstanding balance.
+          await assertSaleWithinCreditLimit(tx, sale, false);
+          await tx.sale.update({
+            where: { id },
+            data: {
+              status: "INVOICED",
+              invoicedBy: req.user!.id,
+              invoicedAt: new Date(),
+            },
+          });
         },
-      });
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
 
       res.json({ message: "Sale invoiced successfully" });
     } catch (error) {
       console.error("Invoice sale error:", error);
+      if (error instanceof CreditLimitExceededError) {
+        return res.status(409).json({
+          code: "CREDIT_LIMIT_EXCEEDED",
+          error: error.message,
+          ...error.details,
+        });
+      }
       res.status(400).json({ error: "Failed to invoice sale" });
     }
   }
@@ -735,17 +838,14 @@ export class SalesController {
       // Calculate outstanding balances for each customer
       const customersWithBalances = await Promise.all(
         customers.map(async (customer) => {
-          const balanceResult = (await prisma.$queryRaw`
-            SELECT COALESCE(
-              (SELECT SUM(s."totalAmount") FROM sales s WHERE s."customerId" = ${customer.id} AND s.status IN ('INVOICED', 'PAID')) -
-              (SELECT SUM(sr."amountReceived") FROM sales_receipts sr WHERE sr."customerId" = ${customer.id}), 
-              0
-            ) as balance
-          `) as any[];
+          const outstandingBalance = await getCustomerOutstandingBalance(
+            prisma,
+            customer.id,
+          );
 
           return {
             ...customer,
-            outstandingBalance: Number(balanceResult[0]?.balance || 0),
+            outstandingBalance,
           };
         }),
       );
@@ -780,17 +880,12 @@ export class SalesController {
         return res.status(404).json({ error: "Customer not found" });
       }
 
-      const balanceResult = (await prisma.$queryRaw`
-      SELECT COALESCE(
-        (SELECT SUM(s."totalAmount") FROM sales s WHERE s."customerId" = ${customer.id} AND s.status IN ('INVOICED', 'PAID')) -
-        (SELECT SUM(sr."amountReceived") FROM sales_receipts sr WHERE sr."customerId" = ${customer.id}),
-        0
-      ) as balance
-    `) as any[];
-
       const customerWithBalance = {
         ...customer,
-        outstandingBalance: Number(balanceResult[0]?.balance || 0),
+        outstandingBalance: await getCustomerOutstandingBalance(
+          prisma,
+          customer.id,
+        ),
       };
 
       res.json(customerWithBalance);

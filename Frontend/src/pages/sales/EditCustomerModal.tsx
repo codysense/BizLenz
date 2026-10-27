@@ -16,7 +16,7 @@ const createCustomerSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email("Invalid email format").optional().or(z.literal("")),
-  creditLimit: z.number().optional(),
+  creditLimit: z.number().nonnegative("Credit limit cannot be negative").nullable().optional(),
   mode: z.enum(["create", "update"]),
   customerGroupId: z.string().optional(),
 });
@@ -201,8 +201,11 @@ const EditCustomerModal = ({
                 Credit Limit
               </label>
               <input
-                {...register("creditLimit", { valueAsNumber: true })}
+                {...register("creditLimit", {
+                  setValueAs: (value) => value === "" ? null : Number(value),
+                })}
                 type="number"
+                min="0"
                 step="0.01"
                 placeholder="0.00"
                 className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"

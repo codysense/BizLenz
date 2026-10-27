@@ -32,7 +32,7 @@ export const createCustomerSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email("Invalid email format").optional().or(z.literal("")),
   mode: z.enum(["create", "update"]),
-  creditLimit: z.number().optional(),
+  creditLimit: z.number().nonnegative("Credit limit cannot be negative").nullable().optional(),
   // customerGroup: z.string().optional(),
   customerGroupId: z.string().optional(),
 });

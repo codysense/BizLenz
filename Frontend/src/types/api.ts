@@ -185,7 +185,7 @@ export interface Customer {
   address?: string;
   phone?: string;
   email?: string;
-  creditLimit?: number;
+  creditLimit?: number | null;
   customerGroupId: string;
   customerGroup?: CustomerGroup[];
   isActive: boolean;
@@ -234,6 +234,17 @@ export interface Sale {
   preparer?: {
     name: string;
   };
+}
+
+export interface CreditLimitRejection {
+  code: "CREDIT_LIMIT_EXCEEDED";
+  error: string;
+  customerName: string;
+  creditLimit: number;
+  currentOutstanding: number;
+  saleAmount: number;
+  projectedOutstanding: number;
+  excessAmount: number;
 }
 
 export interface CreateSaleRequest {

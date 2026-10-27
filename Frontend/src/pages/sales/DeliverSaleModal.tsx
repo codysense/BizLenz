@@ -5,7 +5,7 @@ import { z } from "zod";
 import { X, Plus, Trash2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { salesApi, inventoryApi } from "../../lib/api";
-import { Sale } from "../../types/api";
+import { CreditLimitRejection, Sale } from "../../types/api";
 import toast from "react-hot-toast";
 
 const deliverSaleSchema = z.object({
@@ -26,12 +26,14 @@ interface DeliverSaleModalProps {
   sale: Sale;
   onClose: () => void;
   onSuccess: () => void;
+  onCreditLimitRejected: (details: CreditLimitRejection) => void;
 }
 
 const DeliverSaleModal = ({
   sale,
   onClose,
   onSuccess,
+  onCreditLimitRejected,
 }: DeliverSaleModalProps) => {
   const {
     register,
@@ -70,6 +72,13 @@ const DeliverSaleModal = ({
       onSuccess();
     } catch (error) {
       console.error("Deliver sale error:", error);
+      const rejection = (error as any)?.response?.data;
+      if (rejection?.code === "CREDIT_LIMIT_EXCEEDED") {
+        onCreditLimitRejected(rejection as CreditLimitRejection);
+        toast.error("Delivery blocked by the customer's credit limit");
+      } else {
+        toast.error("Could not deliver this sale. Please try again.");
+      }
     }
   };
 
