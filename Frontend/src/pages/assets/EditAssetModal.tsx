@@ -11,6 +11,11 @@ import toast from "react-hot-toast";
 const updateAssetSchema = z.object({
   name: z.string().min(1, "Asset name is required"),
   description: z.string().optional(),
+  acquisitionDate: z.string().min(1, "Acquisition date is required"),
+  usefulLife: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number().int().positive("Useful life must be positive").optional(),
+  ),
   categoryId: z.string().min(1, "Category is required"),
   locationId: z.string().optional(),
   serialNumber: z.string().optional(),
@@ -36,6 +41,8 @@ const EditAssetModal = ({ asset, onClose, onSuccess }: EditAssetModalProps) => {
     defaultValues: {
       name: asset.name,
       description: asset.description || "",
+      acquisitionDate: asset.acquisitionDate.slice(0, 10),
+      usefulLife: asset.usefulLife,
       categoryId: asset.categoryId,
       locationId: asset.locationId || "",
       serialNumber: asset.serialNumber || "",
@@ -57,6 +64,8 @@ const EditAssetModal = ({ asset, onClose, onSuccess }: EditAssetModalProps) => {
     reset({
       name: asset.name,
       description: asset.description || "",
+      acquisitionDate: asset.acquisitionDate.slice(0, 10),
+      usefulLife: asset.usefulLife,
       categoryId: asset.categoryId,
       locationId: asset.locationId || "",
       serialNumber: asset.serialNumber || "",
@@ -208,6 +217,18 @@ const EditAssetModal = ({ asset, onClose, onSuccess }: EditAssetModalProps) => {
               </div>
 
               {/* Financial Info */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Acquisition Date *</label>
+                  <input {...register("acquisitionDate")} type="date" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500" />
+                  {errors.acquisitionDate && <p className="mt-1 text-sm text-red-500">{errors.acquisitionDate.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Useful Life (Years)</label>
+                  <input {...register("usefulLife")} type="number" min="1" step="1" className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500" />
+                  {errors.usefulLife && <p className="mt-1 text-sm text-red-500">{errors.usefulLife.message}</p>}
+                </div>
+              </div>
               <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 space-y-1">
                 <h4 className="text-sm font-semibold text-gray-800 mb-2">
                   Financial Details (Read-only)
@@ -219,14 +240,9 @@ const EditAssetModal = ({ asset, onClose, onSuccess }: EditAssetModalProps) => {
                     {asset.acquisitionCost.toLocaleString()}
                   </p>
                   <p>
-                    • Acquisition Date:{" "}
-                    {new Date(asset.acquisitionDate).toLocaleDateString()}
-                  </p>
-                  <p>
                     • Depreciation Method:{" "}
                     {asset.depreciationMethod.replace("_", " ")}
                   </p>
-                  <p>• Useful Life: {asset.usefulLife} years</p>
                 </div>
               </div>
 

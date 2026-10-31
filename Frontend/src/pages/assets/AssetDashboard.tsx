@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   Building,
@@ -11,15 +11,22 @@ import {
 import { assetsApi } from "../../lib/api";
 import CapitalizeFromPurchaseModal from "./CapitalizeFromPurchaseModal";
 import RunDepreciationModal from "./RunDepreciationModal";
+import RecapitalizeAssetModal from "./RecapitalizeAssetModal";
 import { useAuthStore } from "../../store/authStore";
 
 const AssetDashboard = () => {
   const [showCapitalizeModal, setShowCapitalizeModal] = useState(false);
   const [showDepreciationModal, setShowDepreciationModal] = useState(false);
+  const [showRecapitalizeModal, setShowRecapitalizeModal] = useState(false);
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+  const canRecapitalizeAssets =
+    user?.roles.includes("General Manager") ||
+    user?.roles.includes("Senior Accountant");
 
   const canManageAssets =
-    user?.roles.includes("Auditor") || user?.roles.includes("General Manager");
+    user?.roles.includes("Senior Accountant") ||
+    user?.roles.includes("General Manager");
 
   const { data: valuationData } = useQuery({
     queryKey: ["asset-valuation"],
@@ -28,17 +35,29 @@ const AssetDashboard = () => {
 
   const { data: registerData } = useQuery({
     queryKey: ["asset-register-summary"],
-    queryFn: () => assetsApi.getAssetRegister({ limit: 500 }),
+    queryFn: () => assetsApi.getAssetRegister({ status: "ACTIVE", limit: 1000 }),
   });
 
   const handleCapitalizeSuccess = () => {
     setShowCapitalizeModal(false);
-    // Refetch data
+    queryClient.invalidateQueries({ queryKey: ["asset-valuation"] });
+    queryClient.invalidateQueries({ queryKey: ["asset-register-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["assets"] });
   };
 
   const handleDepreciationSuccess = () => {
     setShowDepreciationModal(false);
-    // Refetch data
+    queryClient.invalidateQueries({ queryKey: ["asset-valuation"] });
+    queryClient.invalidateQueries({ queryKey: ["asset-register-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["assets"] });
+    queryClient.invalidateQueries({ queryKey: ["active-assets-for-depreciation"] });
+  };
+
+  const handleRecapitalizeSuccess = () => {
+    setShowRecapitalizeModal(false);
+    queryClient.invalidateQueries({ queryKey: ["asset-valuation"] });
+    queryClient.invalidateQueries({ queryKey: ["asset-register-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["assets"] });
   };
 
   // Group assets by category for summary
@@ -75,6 +94,15 @@ const AssetDashboard = () => {
           </p>
         </div>
         <div className="flex space-x-2">
+          {canRecapitalizeAssets && (
+            <button
+              onClick={() => setShowRecapitalizeModal(true)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Calculator className="h-4 w-4 mr-2" />
+              Recapitalize Asset
+            </button>
+          )}
           <button
             onClick={() => setShowCapitalizeModal(true)}
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -308,6 +336,12 @@ const AssetDashboard = () => {
         <RunDepreciationModal
           onClose={() => setShowDepreciationModal(false)}
           onSuccess={handleDepreciationSuccess}
+        />
+      )}
+      {showRecapitalizeModal && (
+        <RecapitalizeAssetModal
+          onClose={() => setShowRecapitalizeModal(false)}
+          onSuccess={handleRecapitalizeSuccess}
         />
       )}
     </div>

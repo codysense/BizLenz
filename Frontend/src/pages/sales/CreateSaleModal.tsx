@@ -11,6 +11,7 @@ import { useAuthStore } from "../../store/authStore";
 // import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid'
 import { CustomerSelect } from "../../components/CustomerSelect";
 import { ItemSelect } from "../../components/ItemSelect";
+import { formatCurrency, roundCurrency, roundToPlaces } from "../../utils/decimalPrecision";
 
 const createSaleSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
@@ -146,9 +147,9 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
   ]);
 
   const calculateTotal = () => {
-    return watchedLines.reduce((sum, line) => {
-      return sum + (line.qty || 0) * (line.unitPrice || 0);
-    }, 0);
+    return roundCurrency(watchedLines.reduce((sum, line) => {
+      return sum + roundToPlaces((line.qty || 0) * (line.unitPrice || 0), 4);
+    }, 0));
   };
 
   const onSubmit = async (data: CreateSaleFormData) => {
@@ -343,7 +344,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
                             valueAsNumber: true,
                           })}
                           type="number"
-                          step="0.01"
+                          step="0.0001"
                           disabled={!canPerformActions}
                           className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 
                         focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -359,10 +360,10 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
 
                           <div className="rounded-xl bg-gray-100 px-4 py-3 font-medium text-gray-900">
                             ₦
-                            {(
+                            {formatCurrency(
                               (watchedLines[index]?.qty || 0) *
-                              (watchedLines[index]?.unitPrice || 0)
-                            ).toLocaleString()}
+                                (watchedLines[index]?.unitPrice || 0),
+                            )}
                           </div>
                         </div>
 
@@ -390,7 +391,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
                 </span>
 
                 <span className="text-3xl font-bold text-blue-600">
-                  ₦{calculateTotal().toLocaleString()}
+                  ₦{formatCurrency(calculateTotal())}
                 </span>
               </div>
             </div>

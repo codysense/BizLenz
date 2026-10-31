@@ -13,6 +13,7 @@ import {
 import { AuthRequest } from "../middleware/auth";
 import { CostingService } from "../services/costing";
 import { GeneralLedgerService } from "../services/gl";
+import { nextDocumentNumber } from "../services/documentNumbers";
 // import prisma from '@prisma/client';
 import { Prisma } from "@prisma/client";
 // import prisma from "../prisma"; //
@@ -254,38 +255,25 @@ export class InventoryController {
       const validatedData = createItemSchema.parse(req.body);
       const { priceList, sku: inputSku, ...itemData } = validatedData;
 
-      const lastItem = await prisma.item.findFirst({
-        where: { type: "FINISHED_GOODS" },
-        orderBy: { createdAt: "desc" },
-      });
-
-      let nextNumber = 1;
-      if (lastItem) {
-        // Extract the numeric part of the transactionNo
-        const lastNumber = parseInt(lastItem?.sku.replace(/^ITM-/, ""), 10);
-        nextNumber = lastNumber + 1;
-        // console.log("Last Item", lastItem, "Last Number", lastNumber);
-      }
-
-      const nextItemSku = `ITM-${String(nextNumber).padStart(8, "0")}`;
-
-      const item = await prisma.item.create({
-        data: { sku: nextItemSku, ...itemData },
-      });
-
-      if (priceList && Array.isArray(priceList)) {
-        // Delete old price list entries
-        await prisma.itemPriceList.deleteMany({ where: { itemId: item.id } });
-
-        // Create new price list entries
-        await prisma.itemPriceList.createMany({
-          data: priceList.map((p: any) => ({
-            itemId: item.id,
-            customerGroup: p.customerGroup,
-            price: p.price,
-          })),
+      const item = await prisma.$transaction(async (tx) => {
+        const createdItem = await tx.item.create({
+          data: {
+            sku: await nextDocumentNumber(tx, "item_sku", "ITM-", 8),
+            ...itemData,
+          },
         });
-      }
+
+        if (priceList && Array.isArray(priceList)) {
+          await tx.itemPriceList.createMany({
+            data: priceList.map((p: any) => ({
+              itemId: createdItem.id,
+              customerGroup: p.customerGroup,
+              price: p.price,
+            })),
+          });
+        }
+        return createdItem;
+      });
 
       res.status(201).json(item);
     } catch (error) {

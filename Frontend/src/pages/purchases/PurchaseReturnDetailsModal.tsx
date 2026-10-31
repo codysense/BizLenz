@@ -1,4 +1,5 @@
 import React from "react";
+import { formatStoredAmount } from "../../utils/decimalPrecision";
 import {
   X,
   FileText,
@@ -152,7 +153,7 @@ const PurchaseReturnDetailsModal = ({
                           {Number(line.qty).toLocaleString()}
                         </td>
                         <td className="px-4 py-2 text-sm text-right text-gray-900">
-                          ₦{Number(line.unitPrice).toLocaleString()}
+                          ₦{formatStoredAmount(Number(line.unitPrice))}
                         </td>
                         <td className="px-4 py-2 text-sm text-right text-gray-500">
                           {purchaseReturn.status === "CONFIRMED"
@@ -160,7 +161,7 @@ const PurchaseReturnDetailsModal = ({
                             : "—"}
                         </td>
                         <td className="px-4 py-2 text-sm text-right font-medium text-gray-900">
-                          ₦{Number(line.lineTotal).toLocaleString()}
+                          ₦{formatStoredAmount(Number(line.lineTotal))}
                         </td>
                       </tr>
                     ))}

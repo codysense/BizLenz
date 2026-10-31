@@ -9,6 +9,7 @@ import { Purchase } from "../../types/api";
 import toast from "react-hot-toast";
 import { ItemSelect } from "../../components/ItemSelect";
 import { VendorSelect } from "../../components/VendorSelect";
+import { formatCurrency, roundCurrency, roundToPlaces } from "../../utils/decimalPrecision";
 
 const editPurchaseSchema = z.object({
   vendorId: z.string().min(1, "Vendor is required"),
@@ -93,9 +94,9 @@ const EditPurchaseModal = ({
   }, [purchase, reset]);
 
   const calculateTotal = () => {
-    return watchedLines.reduce((sum, line) => {
-      return sum + (line.qty || 0) * (line.unitPrice || 0);
-    }, 0);
+    return roundCurrency(watchedLines.reduce((sum, line) => {
+      return sum + roundToPlaces((line.qty || 0) * (line.unitPrice || 0), 4);
+    }, 0));
   };
 
   const onSubmit = async (data: EditPurchaseFormData) => {
@@ -241,7 +242,7 @@ const EditPurchaseModal = ({
                           valueAsNumber: true,
                         })}
                         type="number"
-                        step="0.01"
+                        step="any"
                         className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition"
                       />
                     </div>
@@ -256,7 +257,7 @@ const EditPurchaseModal = ({
                           valueAsNumber: true,
                         })}
                         type="number"
-                        step="0.01"
+                        step="0.0001"
                         className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition"
                       />
                     </div>
@@ -269,10 +270,10 @@ const EditPurchaseModal = ({
                         </label>
                         <div className="mt-2 font-semibold text-gray-900">
                           ₦
-                          {(
+                          {formatCurrency(
                             (watchedLines[index]?.qty || 0) *
-                            (watchedLines[index]?.unitPrice || 0)
-                          ).toLocaleString()}
+                              (watchedLines[index]?.unitPrice || 0),
+                          )}
                         </div>
                       </div>
 
@@ -298,7 +299,7 @@ const EditPurchaseModal = ({
                   Total Amount
                 </span>
                 <span className="text-2xl font-bold text-blue-600">
-                  ₦{calculateTotal().toLocaleString()}
+                  ₦{formatCurrency(calculateTotal())}
                 </span>
               </div>
 

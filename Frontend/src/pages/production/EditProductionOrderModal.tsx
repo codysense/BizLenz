@@ -7,10 +7,14 @@ import { useQuery } from "@tanstack/react-query";
 import { productionApi, inventoryApi } from "../../lib/api";
 import { ProductionOrder } from "../../types/api";
 import toast from "react-hot-toast";
+import { hasAtMostDecimalPlaces } from "../../utils/decimalPrecision";
 
 const editProductionOrderSchema = z.object({
   itemId: z.string().min(1, "Item is required"),
-  qtyTarget: z.number().positive("Target quantity must be positive"),
+  qtyTarget: z
+    .number()
+    .positive("Target quantity must be positive")
+    .refine((value) => hasAtMostDecimalPlaces(value, 12), "Maximum 12 decimal places"),
   warehouseId: z.string().min(1, "Warehouse is required"),
   bomId: z.string().optional(),
 });
@@ -192,7 +196,7 @@ const EditProductionOrderModal = ({
                   <input
                     {...register("qtyTarget", { valueAsNumber: true })}
                     type="number"
-                    step="0.001"
+                    step="any"
                     placeholder="100"
                     className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
                   />

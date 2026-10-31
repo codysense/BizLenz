@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { inventoryApi } from "../../lib/api";
 import toast from "react-hot-toast";
 import { ItemSelect } from "../../components/ItemSelect";
+import { hasAtMostDecimalPlaces } from "../../utils/decimalPrecision";
 
 const createBomSchema = z.object({
   itemId: z.string().min(1, "Item is required"),
@@ -15,7 +16,10 @@ const createBomSchema = z.object({
     .array(
       z.object({
         componentItemId: z.string().min(1, "Component is required"),
-        qtyPer: z.number().positive("Quantity must be positive"),
+        qtyPer: z
+          .number()
+          .positive("Quantity must be positive")
+          .refine((value) => hasAtMostDecimalPlaces(value, 12), "Maximum 12 decimal places"),
         scrapPercent: z.number().min(0).max(100).default(0),
       }),
     )
@@ -207,6 +211,8 @@ const CreateBomModal = ({ onClose, onSuccess }: CreateBomModalProps) => {
                         {...register(`bomLines.${index}.qtyPer`, {
                           valueAsNumber: true,
                         })}
+                        type="number"
+                        step="any"
                         className="mt-1 w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
                         placeholder="1.00"
                       />

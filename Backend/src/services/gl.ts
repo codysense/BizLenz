@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
+import { nextDocumentNumber } from "./documentNumbers";
 
 const prisma = new PrismaClient();
 
@@ -31,9 +32,7 @@ export class GeneralLedgerService {
       );
     }
 
-    // Generate journal number
-    const count = await tx.journal.count();
-    const journalNo = `J${String(count + 1).padStart(6, "0")}`;
+    const journalNo = await nextDocumentNumber(tx, "journal", "J");
 
     // Create journal header
     const journal = await tx.journal.create({

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ItemType, CostingMethod, LedgerDirection } from "@prisma/client";
+import { hasAtMostDecimalPlaces } from "./decimalPrecision";
 
 export const createItemSchema = z.object({
   sku: z.string(),
@@ -30,7 +31,13 @@ export const createBomSchema = z.object({
   bomLines: z.array(
     z.object({
       componentItemId: z.string().cuid(),
-      qtyPer: z.number().positive(),
+      qtyPer: z
+        .number()
+        .positive()
+        .finite()
+        .refine((value) => hasAtMostDecimalPlaces(value, 12), {
+          message: "Quantity can have at most 12 decimal places",
+        }),
       scrapPercent: z.number().min(0).max(100).default(0),
     }),
   ),

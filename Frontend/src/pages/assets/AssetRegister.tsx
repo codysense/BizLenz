@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   Search,
@@ -33,6 +33,7 @@ const AssetRegister = () => {
   const [showDepreciationModal, setShowDepreciationModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const canManageAssets =
     user?.roles.includes("Senior Accountant") ||
@@ -43,6 +44,7 @@ const AssetRegister = () => {
       "assets",
       {
         page,
+        search,
         categoryId: categoryFilter,
         status: statusFilter,
         locationId: locationFilter,
@@ -51,6 +53,7 @@ const AssetRegister = () => {
     queryFn: () =>
       assetsApi.getAssets({
         page,
+        ...(search.trim() && { search: search.trim() }),
         ...(categoryFilter && { categoryId: categoryFilter }),
         ...(statusFilter && { status: statusFilter }),
         ...(locationFilter && { locationId: locationFilter }),
@@ -67,6 +70,7 @@ const AssetRegister = () => {
     queryKey: [
       "asset-register-summary",
       page,
+      search,
       categoryFilter,
       statusFilter,
       locationFilter,
@@ -74,6 +78,7 @@ const AssetRegister = () => {
     queryFn: () =>
       assetsApi.getAssetRegister({
         page,
+        ...(search.trim() && { search: search.trim() }),
         ...(categoryFilter && { categoryId: categoryFilter }),
         ...(statusFilter && { status: statusFilter }),
         ...(locationFilter && { locationId: locationFilter }),
@@ -85,7 +90,7 @@ const AssetRegister = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [categoryFilter, statusFilter, locationFilter]);
+  }, [search, categoryFilter, statusFilter, locationFilter]);
 
   const { data: locations } = useQuery({
     queryKey: ["locations-for-assets"],
@@ -166,29 +171,44 @@ const AssetRegister = () => {
 
   const handleCreateAsset = () => {
     refetch();
+    queryClient.invalidateQueries({ queryKey: ["asset-valuation"] });
+    queryClient.invalidateQueries({ queryKey: ["asset-register-summary"] });
     setShowCreateModal(false);
   };
 
   const handleEditAsset = () => {
     refetch();
+    queryClient.invalidateQueries({ queryKey: ["asset-valuation"] });
+    queryClient.invalidateQueries({ queryKey: ["asset-register-summary"] });
     setShowEditModal(false);
     setSelectedAsset(null);
   };
 
   const handleDisposeAsset = () => {
     refetch();
+    queryClient.invalidateQueries({ queryKey: ["asset-valuation"] });
+    queryClient.invalidateQueries({ queryKey: ["asset-register-summary"] });
     setShowDisposeModal(false);
     setSelectedAsset(null);
   };
 
   const handleDeleteAsset = async (asset: Asset) => {
-    if (confirm(`Are you sure you want to delete asset ${asset.assetNo}?`)) {
+    if (
+      confirm(
+        `Delete asset ${asset.assetNo}? Related capitalization, depreciation, recapitalization, and disposal journals will be reversed.`,
+      )
+    ) {
       try {
         await assetsApi.deleteAsset(asset.id);
         toast.success("Asset deleted successfully");
         refetch();
+        queryClient.invalidateQueries({ queryKey: ["asset-valuation"] });
+        queryClient.invalidateQueries({ queryKey: ["asset-register-summary"] });
       } catch (error) {
         console.error("Delete asset error:", error);
+        toast.error(
+          (error as any)?.response?.data?.error || "Failed to delete asset",
+        );
       }
     }
   };
@@ -229,7 +249,7 @@ const AssetRegister = () => {
           <TrendingDown className="h-4 w-4" />
         </button>
       )}
-      {(asset._count?.depreciationEntries || 0) === 0 && canManageAssets && (
+      {canManageAssets && (
         <button
           onClick={() => handleDeleteAsset(asset)}
           className="text-red-600 hover:text-red-900"
@@ -261,6 +281,25 @@ const AssetRegister = () => {
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+          <div>
+            <label htmlFor="asset-search" className="block text-sm font-medium text-gray-700 mb-1">
+              Search assets
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                id="asset-search"
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Asset number or name"
+                className="block w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Category

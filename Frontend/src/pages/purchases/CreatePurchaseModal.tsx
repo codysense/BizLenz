@@ -10,6 +10,7 @@ import { VendorSelect } from "../../components/VendorSelect";
 import { ItemSelect } from "../../components/ItemSelect";
 import { useState } from "react";
 import CreateItemModal from "../inventory/CreateItemModal";
+import { formatCurrency, roundCurrency, roundToPlaces } from "../../utils/decimalPrecision";
 
 const createPurchaseSchema = z.object({
   vendorId: z.string().min(1, "Vendor is required"),
@@ -168,9 +169,9 @@ const CreatePurchaseModal = ({
   // };
 
   const calculateTotal = () => {
-    return watchedLines.reduce((sum, line) => {
-      return sum + (line.qty || 0) * (line.unitPrice || 0);
-    }, 0);
+    return roundCurrency(watchedLines.reduce((sum, line) => {
+      return sum + roundToPlaces((line.qty || 0) * (line.unitPrice || 0), 4);
+    }, 0));
   };
 
   const handleCreateItem = () => {
@@ -373,6 +374,7 @@ const CreatePurchaseModal = ({
                             valueAsNumber: true,
                           })}
                           type="number"
+                          step="0.0001"
                           className="mt-2 w-full rounded-xl border px-3 py-2"
                         />
                       </div>
@@ -387,6 +389,7 @@ const CreatePurchaseModal = ({
                             valueAsNumber: true,
                           })}
                           type="number"
+                          step="0.0001"
                           className="mt-2 w-full rounded-xl border px-3 py-2"
                         />
                       </div>
@@ -397,10 +400,10 @@ const CreatePurchaseModal = ({
                           <p className="text-xs text-gray-500">Line Total</p>
                           <p className="font-bold text-blue-600">
                             ₦
-                            {(
+                            {formatCurrency(
                               (watchedLines[index]?.qty || 0) *
-                              (watchedLines[index]?.unitPrice || 0)
-                            ).toLocaleString()}
+                                (watchedLines[index]?.unitPrice || 0),
+                            )}
                           </p>
                         </div>
 
@@ -425,7 +428,7 @@ const CreatePurchaseModal = ({
                   Total Amount
                 </span>
                 <span className="text-2xl font-bold text-blue-600">
-                  ₦{calculateTotal().toLocaleString()}
+                  ₦{formatCurrency(calculateTotal())}
                 </span>
               </div>
             </div>

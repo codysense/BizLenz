@@ -961,6 +961,7 @@ export const assetsApi = {
     categoryId?: string;
     status?: string;
     locationId?: string;
+    search?: string;
   }) =>
     api.get(
       `/assets${
@@ -968,6 +969,8 @@ export const assetsApi = {
       }`,
     ),
   createAsset: (data: any) => api.post("/assets", data),
+  recapitalizeAsset: (id: string, data: any) =>
+    api.post(`/assets/recapitalize/${id}`, data),
   updateAsset: (id: string, data: any) => api.put(`/assets/${id}`, data),
   deleteAsset: (id: string) => api.delete(`/assets/${id}`),
 
@@ -992,6 +995,7 @@ export const assetsApi = {
     status?: string;
     locationId?: string;
     asOfDate?: string;
+    search?: string;
   }) =>
     api.get(
       `/assets/register${

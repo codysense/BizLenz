@@ -2,6 +2,7 @@ import { Response } from "express";
 import { createJournalSchema } from "../types/journal";
 import { AuthRequest } from "../middleware/auth";
 import { PrismaClient } from "@prisma/client";
+import { nextDocumentNumber } from "../services/documentNumbers";
 
 const prisma = new PrismaClient();
 
@@ -215,8 +216,7 @@ export class JournalController {
           }
 
           // --- Create journal header ---
-          const journalCount = await tx.journal.count();
-          const journalNo = `J${String(journalCount + 1).padStart(6, "0")}`;
+          const journalNo = await nextDocumentNumber(tx, "journal", "J");
 
           const journal = await tx.journal.create({
             data: {
@@ -228,18 +228,12 @@ export class JournalController {
           });
 
           //Get cashAccount from journal lines  accountid if exists and debit or credit the cashAccount
-          let count = 1;
-          const lastTx = await tx.cashTransaction.findFirst({
-            orderBy: { createdAt: "desc" },
-          });
-
-          let baseNumber = lastTx
-            ? parseInt(lastTx.transactionNo.replace(/^CT/, ""), 10)
-            : 0;
           for (const jl of validatedData.journalLines) {
-            const nextNumber = baseNumber + count;
-            const transactionNo = `CT${String(nextNumber).padStart(6, "0")}`;
-            count++;
+            const transactionNo = await nextDocumentNumber(
+              tx,
+              "cash_transaction",
+              "CT",
+            );
             const cashAccount = await tx.cashAccount.findFirst({
               where: {
                 glAccountId: jl.accountId,

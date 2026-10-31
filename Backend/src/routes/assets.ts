@@ -46,6 +46,12 @@ router.post(
   auditLogger("CREATE", "ASSET"),
   assetsController.createAsset,
 );
+router.post(
+  "/recapitalize/:id",
+  requireRole(["General Manager", "Senior Accountant"]),
+  auditLogger("RECAPITALIZE", "ASSET"),
+  assetsController.recapitalizeAsset,
+);
 router.put(
   "/:id",
   requireRole(["General Manager", "Senior Accountant"]),

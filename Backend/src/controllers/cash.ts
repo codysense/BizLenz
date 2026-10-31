@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { AuthRequest } from "../middleware/auth";
 import { Decimal } from "@prisma/client/runtime/library";
+import { nextDocumentNumber } from "../services/documentNumbers";
 import {
   createCashTransactionSchema,
   reconcileCashTransactionSchema,
@@ -192,22 +193,11 @@ export class CashController {
 
       const cashTransaction = await prisma.$transaction(
         async (tx) => {
-          // Fetch the last CashTransaction ordered by creationDate
-          const lastTx = await prisma.cashTransaction.findFirst({
-            orderBy: { createdAt: "desc" },
-          });
-
-          let nextNumber = 1;
-          if (lastTx) {
-            // Extract the numeric part of the transactionNo
-            const lastNumber = parseInt(
-              lastTx.transactionNo.replace(/^CT/, ""),
-              10,
-            );
-            nextNumber = lastNumber + 1;
-          }
-
-          const transactionNo = `CT${String(nextNumber).padStart(6, "0")}`;
+          const transactionNo = await nextDocumentNumber(
+            tx,
+            "cash_transaction",
+            "CT",
+          );
 
           // Calculate total amount from transaction lines
           const totalAmount = validatedData.transactionLines.reduce(
@@ -410,8 +400,7 @@ export class CashController {
           });
 
           // Create journal entries for double-entry bookkeeping
-          const journalCount = await tx.journal.count();
-          const journalNo = `J${String(journalCount + 1).padStart(6, "0")}`;
+          const journalNo = await nextDocumentNumber(tx, "journal", "J");
 
           const journal = await tx.journal.create({
             data: {
@@ -1276,12 +1265,15 @@ export class CashController {
   async createCustomerPayment(req, res) {
     try {
       const data = req.body;
-      console.log("Create Customer Payment Data:", data);
+      // console.log("Create Customer Payment Data:", data);
 
       const payment = await prisma.$transaction(async (tx) => {
         // Generate number
-        const count = await tx.customerPayment.count();
-        const paymentNo = `CP${String(count + 1).padStart(6, "0")}`;
+        const paymentNo = await nextDocumentNumber(
+          tx,
+          "customer_payment",
+          "CP",
+        );
 
         const totalAmount = data.lines.reduce(
           (sum, l) => sum + Number(l.lineAmount),
@@ -1422,8 +1414,7 @@ export class CashController {
         });
 
         // Create journal
-        const journalCount = await tx.journal.count();
-        const journalNo = `J${String(journalCount + 1).padStart(6, "0")}`;
+        const journalNo = await nextDocumentNumber(tx, "journal", "J");
 
         const journal = await tx.journal.create({
           data: {
@@ -1797,8 +1788,7 @@ export class CashController {
       const result = await prisma.$transaction(
         async (tx) => {
           // Generate refund number
-          const refundCount = await tx.salesRefund.count();
-          const refundNo = `RF${String(refundCount + 1).padStart(6, "0")}`;
+          const refundNo = await nextDocumentNumber(tx, "sales_refund", "RF");
 
           // Fetch sale if provided
           let sale: {
@@ -1856,11 +1846,11 @@ export class CashController {
           }
 
           // Generate cash transaction for refund
-          const cashTransactionCount = await tx.cashTransaction.count();
-          const transactionNo = `CT${String(cashTransactionCount + 1).padStart(
-            6,
-            "0",
-          )}`;
+          const transactionNo = await nextDocumentNumber(
+            tx,
+            "cash_transaction",
+            "CT",
+          );
 
           const tradeReceivablesAccount = await tx.chartOfAccount.findFirst({
             where: { accountType: "TRADE_RECEIVABLES" },
@@ -1924,8 +1914,7 @@ export class CashController {
           });
 
           // Create journal entries
-          const journalCount = await tx.journal.count();
-          const journalNo = `J${String(journalCount + 1).padStart(6, "0")}`;
+          const journalNo = await nextDocumentNumber(tx, "journal", "J");
 
           const journal = await tx.journal.create({
             data: {
@@ -2153,8 +2142,7 @@ export class CashController {
       // console.log("data line", data.lines);
 
       const payment = await prisma.$transaction(async (tx) => {
-        const count = await tx.vendorPayment.count();
-        const paymentNo = `VP${String(count + 1).padStart(6, "0")}`;
+        const paymentNo = await nextDocumentNumber(tx, "vendor_payment", "VP");
 
         const totalAmount = data.lines.reduce(
           (s, l) => s + Number(l.lineAmount),
@@ -2271,8 +2259,7 @@ export class CashController {
         });
 
         // Journal
-        const count = await tx.journal.count();
-        const journalNo = `J${String(count + 1).padStart(6, "0")}`;
+        const journalNo = await nextDocumentNumber(tx, "journal", "J");
 
         const journal = await tx.journal.create({
           data: {
@@ -2632,8 +2619,11 @@ export class CashController {
       const result = await prisma.$transaction(
         async (tx) => {
           // Generate refund number
-          const count = await tx.purchaseRefund.count();
-          const refundNo = `PR${String(count + 1).padStart(6, "0")}`;
+          const refundNo = await nextDocumentNumber(
+            tx,
+            "purchase_refund_return",
+            "PR",
+          );
 
           // Fetch related purchase if exists
           let purchase: {
@@ -2686,11 +2676,11 @@ export class CashController {
           }
 
           // Create a corresponding cash transaction
-          const cashTransactionCount = await tx.cashTransaction.count();
-          const transactionNo = `CT${String(cashTransactionCount + 1).padStart(
-            6,
-            "0",
-          )}`;
+          const transactionNo = await nextDocumentNumber(
+            tx,
+            "cash_transaction",
+            "CT",
+          );
 
           // Get Trade Payables GL account
           const tradePayablesAccount = await tx.chartOfAccount.findFirst({
@@ -2738,8 +2728,7 @@ export class CashController {
           });
 
           // Create Journal Entries
-          const journalCount = await tx.journal.count();
-          const journalNo = `J${String(journalCount + 1).padStart(6, "0")}`;
+          const journalNo = await nextDocumentNumber(tx, "journal", "J");
 
           const journal = await tx.journal.create({
             data: {

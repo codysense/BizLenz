@@ -6,10 +6,18 @@ import { X, Package } from "lucide-react";
 import { productionApi } from "../../lib/api";
 import { ProductionOrder } from "../../types/api";
 import toast from "react-hot-toast";
+import { hasAtMostDecimalPlaces } from "../../utils/decimalPrecision";
 
 const receiveFinishedGoodsSchema = z.object({
-  qtyGood: z.number().positive("Good quantity must be positive"),
-  qtyScrap: z.number().min(0, "Scrap quantity cannot be negative").default(0),
+  qtyGood: z
+    .number()
+    .positive("Good quantity must be positive")
+    .refine((value) => hasAtMostDecimalPlaces(value, 12), "Maximum 12 decimal places"),
+  qtyScrap: z
+    .number()
+    .min(0, "Scrap quantity cannot be negative")
+    .refine((value) => hasAtMostDecimalPlaces(value, 12), "Maximum 12 decimal places")
+    .default(0),
 });
 
 type ReceiveFinishedGoodsFormData = z.infer<typeof receiveFinishedGoodsSchema>;
@@ -151,7 +159,7 @@ const ReceiveFinishedGoodsModal = ({
                 <input
                   {...register("qtyGood", { valueAsNumber: true })}
                   type="number"
-                  step="0.001"
+                  step="any"
                   max={remainingQty}
                   className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                   placeholder="100.00"
@@ -170,7 +178,7 @@ const ReceiveFinishedGoodsModal = ({
                 <input
                   {...register("qtyScrap", { valueAsNumber: true })}
                   type="number"
-                  step="0.001"
+                  step="any"
                   min="0"
                   className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"
                   placeholder="0.00"

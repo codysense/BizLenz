@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { GeneralLedgerService } from "./gl";
+import { nextDocumentNumber } from "./documentNumbers";
 
 const prisma = new PrismaClient();
 const glService = new GeneralLedgerService();
@@ -80,7 +81,7 @@ export class AssetsService {
 
   // Assets
   async getAssets(filters: any = {}) {
-    let { page = 1, limit = 10, categoryId, status, locationId } = filters;
+    let { page = 1, limit = 10, categoryId, status, locationId, search } = filters;
 
     page = Number(page) || 1;
     limit = Number(limit) || 10;
@@ -120,6 +121,12 @@ export class AssetsService {
     if (locationId && locationId !== "ALL") {
       where.locationId = locationId;
     }
+    if (typeof search === "string" && search.trim()) {
+      where.OR = [
+        { assetNo: { contains: search.trim(), mode: "insensitive" } },
+        { name: { contains: search.trim(), mode: "insensitive" } },
+      ];
+    }
 
     // console.log("Final WHERE:", where);
 
@@ -135,13 +142,25 @@ export class AssetsService {
           createdByUser: { select: { name: true } },
           purchaseOrder: { select: { orderNo: true } },
           _count: { select: { depreciationEntries: true } },
+          recapitalizations: { select: { amount: true } },
         },
       }),
       prisma.asset.count({ where }),
     ]);
 
     return {
-      assets,
+      assets: assets.map((asset) => {
+        const recapitalizedAmount = asset.recapitalizations.reduce(
+          (sum, recap) => sum + Number(recap.amount),
+          0,
+        );
+        return {
+          ...asset,
+          acquisitionCost: Number(asset.acquisitionCost) + recapitalizedAmount,
+          originalAcquisitionCost: Number(asset.acquisitionCost),
+          recapitalizedAmount,
+        };
+      }),
       pagination: {
         page,
         limit,
@@ -199,20 +218,7 @@ export class AssetsService {
 
   async createAsset(data: any, userId: string) {
     return await prisma.$transaction(async (tx) => {
-      // Generate asset number
-      // const count = await tx.asset.count();
-
-      const lastAsset = await tx.asset.findFirst({
-        orderBy: { createdAt: "desc" },
-      });
-
-      let nextNumber = 1;
-      if (lastAsset) {
-        // Extract the numeric part of the orderNo
-        const lastNumber = parseInt(lastAsset.assetNo.replace(/^AST/, ""), 10);
-        nextNumber = lastNumber + 1;
-      }
-      const assetNo = `AST${String(nextNumber + 1).padStart(6, "0")}`;
+      const assetNo = await nextDocumentNumber(tx, "asset", "AST");
 
       // Get category defaults if not provided
       // const category = await tx.assetCategory.findUnique({
@@ -309,11 +315,28 @@ export class AssetsService {
   }
 
   async updateAsset(assetId: string, data: any) {
+    const existingAsset = await prisma.asset.findUnique({
+      where: { id: assetId },
+      select: { acquisitionDate: true },
+    });
+    if (!existingAsset) throw new Error("Asset not found");
+    const depreciationCount = await prisma.assetDepreciation.count({
+      where: { assetId },
+    });
+    if (
+      depreciationCount > 0 &&
+      new Date(data.acquisitionDate).getTime() !== existingAsset.acquisitionDate.getTime()
+    ) {
+      throw new Error("Acquisition date cannot be changed after depreciation has been recorded");
+    }
+
     return await prisma.asset.update({
       where: { id: assetId },
       data: {
         name: data.name,
         description: data.description,
+        acquisitionDate: new Date(data.acquisitionDate),
+        usefulLife: data.usefulLife,
         categoryId: data.categoryId,
         locationId: data.locationId,
         serialNumber: data.serialNumber,
@@ -326,18 +349,100 @@ export class AssetsService {
     });
   }
 
-  async deleteAsset(assetId: string) {
-    // Check if asset has depreciation entries
-    const depreciationCount = await prisma.assetDepreciation.count({
-      where: { assetId },
-    });
+  async deleteAsset(assetId: string, userId: string) {
+    return await prisma.$transaction(async (tx) => {
+      const asset = await tx.asset.findUnique({
+        where: { id: assetId },
+        include: {
+          depreciationEntries: true,
+          recapitalizations: true,
+          disposals: true,
+        },
+      });
+      if (!asset) throw new Error("Asset not found");
 
-    if (depreciationCount > 0) {
-      throw new Error("Cannot delete asset with depreciation entries");
-    }
+      if (
+        asset.depreciationEntries.some((entry) => entry.isPosted && !entry.journalId)
+      ) {
+        throw new Error(
+          "Cannot delete this asset because an earlier posted depreciation entry has no linked journal. Reconcile the journal before deleting the asset.",
+        );
+      }
 
-    return await prisma.asset.delete({
-      where: { id: assetId },
+      const referencedLines = await tx.journalLine.findMany({
+        where: {
+          OR: [
+            { refType: "ASSET_CAPITALIZATION", refId: asset.id },
+            { refType: "DEPRECIATION", refId: asset.id },
+            { refType: "ASSET_RECAPITALIZATION", refId: asset.id },
+            ...(asset.disposals.length
+              ? [{
+                  refType: "ASSET_DISPOSAL",
+                  refId: { in: asset.disposals.map((disposal) => disposal.id) },
+                }]
+              : []),
+          ],
+        },
+        include: { account: true, journal: true },
+      });
+
+      const linesByJournal = new Map<string, typeof referencedLines>();
+      for (const line of referencedLines) {
+        const lines = linesByJournal.get(line.journalId) || [];
+        lines.push(line);
+        linesByJournal.set(line.journalId, lines);
+      }
+
+      for (const [journalId, lines] of linesByJournal) {
+        const journal = lines[0].journal;
+        await glService.postJournal(
+          tx,
+          lines.map((line) => ({
+            accountCode: line.account.code,
+            debit: Number(line.credit),
+            credit: Number(line.debit),
+            refType: "ASSET_REVERSAL",
+            refId: asset.id,
+          })),
+          `Reverse asset journal ${journal?.journalNo || journalId}: ${asset.assetNo} - ${asset.name}`,
+          userId,
+        );
+      }
+
+      // Recapitalization payments reduce cash-account balances separately from GL posting.
+      for (const recap of asset.recapitalizations) {
+        if (
+          recap.transactionType !== "CAPITAL_IMPROVEMENT" ||
+          !recap.sourceAccountId
+        ) continue;
+        const cashAccount = await tx.cashAccount.findFirst({
+          where: { glAccountId: recap.sourceAccountId },
+        });
+        if (cashAccount) {
+          await tx.cashAccount.update({
+            where: { id: cashAccount.id },
+            data: { balance: { increment: recap.amount } },
+          });
+        }
+      }
+
+      await tx.assetDepreciation.deleteMany({ where: { assetId: asset.id } });
+      await tx.assetRecapitalization.deleteMany({ where: { assetId: asset.id } });
+      await tx.assetDisposal.deleteMany({ where: { assetId: asset.id } });
+
+      if (asset.purchaseOrderId) {
+        const otherAssets = await tx.asset.count({
+          where: { purchaseOrderId: asset.purchaseOrderId, id: { not: asset.id } },
+        });
+        if (otherAssets === 0) {
+          await tx.purchase.update({
+            where: { id: asset.purchaseOrderId },
+            data: { status: "ORDERED" },
+          });
+        }
+      }
+
+      return tx.asset.delete({ where: { id: asset.id } });
     });
   }
 
@@ -352,24 +457,21 @@ export class AssetsService {
       if (!purchase) {
         throw new Error("Purchase order not found");
       }
+      if (purchase.orderType !== "ASSET" || purchase.status !== "ORDERED") {
+        throw new Error("Only ordered asset purchase orders can be capitalized");
+      }
+      const allocatedCost = data.assets.reduce(
+        (sum: number, asset: any) => sum + Number(asset.acquisitionCost),
+        0,
+      );
+      if (Math.abs(allocatedCost - Number(purchase.totalAmount)) > 0.01) {
+        throw new Error("Asset costs must match the purchase order total");
+      }
 
       const createdAssets = [];
 
       for (const assetData of data.assets) {
-        const lastAsset = await tx.asset.findFirst({
-          orderBy: { createdAt: "desc" },
-        });
-
-        let nextNumber = 1;
-        if (lastAsset) {
-          // Extract the numeric part of the orderNo
-          const lastNumber = parseInt(
-            lastAsset.assetNo.replace(/^AST/, ""),
-            10,
-          );
-          nextNumber = lastNumber + 1;
-        }
-        const assetNo = `AST${String(nextNumber + 1).padStart(6, "0")}`;
+        const assetNo = await nextDocumentNumber(tx, "asset", "AST");
 
         const category = await tx.assetCategory.findUnique({
           where: { id: assetData.categoryId },
@@ -463,9 +565,13 @@ export class AssetsService {
       where: { id: assetId },
       include: {
         depreciationEntries: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
+          orderBy: [
+            { periodYear: "desc" },
+            { periodMonth: "desc" },
+            { createdAt: "desc" },
+          ],
         },
+        recapitalizations: { orderBy: { transactionDate: "asc" } },
       },
     });
 
@@ -474,49 +580,70 @@ export class AssetsService {
     }
 
     const acquisitionDate = new Date(asset.acquisitionDate);
-    const currentDate = new Date(periodYear, periodMonth - 1, 1);
+    const periodEndDate = new Date(periodYear, periodMonth, 0, 23, 59, 59, 999);
+    const eligibleRecapitalizations = asset.recapitalizations.filter(
+      (recap) => new Date(recap.transactionDate) <= periodEndDate,
+    );
+    const recapitalizedAmount = eligibleRecapitalizations.reduce(
+      (sum, recap) => sum + Number(recap.amount),
+      0,
+    );
+    const acquisitionCost = Number(asset.acquisitionCost) + recapitalizedAmount;
 
-    // Check if asset was acquired before the depreciation period
-    if (acquisitionDate > currentDate) {
+    if (acquisitionDate > periodEndDate) {
       return {
         depreciationAmount: 0,
         accumulatedDepreciation: 0,
-        netBookValue: Number(asset.acquisitionCost),
+        netBookValue: acquisitionCost,
       };
     }
 
-    const acquisitionCost = Number(asset.acquisitionCost);
     const residualValue = Number(asset.residualValue);
-    const depreciableAmount = acquisitionCost - residualValue;
+    const priorEntries = asset.depreciationEntries.filter(
+      (entry) =>
+        entry.periodYear < periodYear ||
+        (entry.periodYear === periodYear && entry.periodMonth < periodMonth),
+    );
+    const accumulatedDepreciation = priorEntries.length
+      ? Number(priorEntries[0].accumulatedDepreciation)
+      : 0;
+    const usefulLifeExtensionMonths = eligibleRecapitalizations.reduce(
+      (sum, recap) => sum + recap.usefulLifeExtension,
+      0,
+    );
+    const totalUsefulLifeMonths = Math.max(
+      1,
+      asset.usefulLife * 12 + usefulLifeExtensionMonths,
+    );
+    const remainingUsefulLifeMonths = Math.max(
+      1,
+      totalUsefulLifeMonths - priorEntries.length,
+    );
+    const currentBookValue = Math.max(
+      residualValue,
+      acquisitionCost - accumulatedDepreciation,
+    );
+    const remainingDepreciableAmount = Math.max(
+      0,
+      currentBookValue - residualValue,
+    );
 
     let depreciationAmount = 0;
-    let accumulatedDepreciation = 0;
-
-    // Get previous accumulated depreciation
-    if (asset.depreciationEntries.length > 0) {
-      accumulatedDepreciation = Number(
-        asset.depreciationEntries[0].accumulatedDepreciation,
+    if (remainingDepreciableAmount > 0) {
+      if (asset.depreciationMethod === "STRAIGHT_LINE") {
+        depreciationAmount =
+          remainingDepreciableAmount / remainingUsefulLifeMonths;
+      } else {
+        const effectiveResidual =
+          residualValue > 0 ? residualValue : acquisitionCost * 0.01;
+        const monthlyRate =
+          1 - Math.pow(effectiveResidual / acquisitionCost, 1 / totalUsefulLifeMonths);
+        depreciationAmount = currentBookValue * monthlyRate;
+      }
+      depreciationAmount = Math.min(
+        depreciationAmount,
+        remainingDepreciableAmount,
       );
-    }
-
-    if (asset.depreciationMethod === "STRAIGHT_LINE") {
-      // Straight-line: (Cost - Residual) / Useful Life / 12 months
-      const monthlyDepreciation = depreciableAmount / asset.usefulLife / 12;
-      depreciationAmount = monthlyDepreciation;
-    } else {
-      // Reducing balance: Rate = (1 - (Residual/Cost)^(1/Life)) * 100
-      const rate =
-        (1 - Math.pow(residualValue / acquisitionCost, 1 / asset.usefulLife)) *
-        100;
-      const currentBookValue = acquisitionCost - accumulatedDepreciation;
-      depreciationAmount = (currentBookValue * rate) / 100 / 12;
-    }
-
-    // Ensure we don't depreciate below residual value
-    const newAccumulatedDepreciation =
-      accumulatedDepreciation + depreciationAmount;
-    if (newAccumulatedDepreciation > depreciableAmount) {
-      depreciationAmount = depreciableAmount - accumulatedDepreciation;
     }
 
     const finalAccumulatedDepreciation =
@@ -532,6 +659,7 @@ export class AssetsService {
 
   async runDepreciation(data: any, userId: string) {
     const { periodYear, periodMonth, assetIds } = data;
+    const transactionDate = new Date(periodYear, periodMonth, 0);
 
     return await prisma.$transaction(
       async (tx) => {
@@ -590,6 +718,29 @@ export class AssetsService {
           );
 
           if (calculation.depreciationAmount > 0) {
+            const journalId = await glService.postJournal(
+              tx,
+              [
+                {
+                  accountCode: glDepreciationAccount,
+                  debit: calculation.depreciationAmount,
+                  credit: 0,
+                  refType: "DEPRECIATION",
+                  refId: asset.id,
+                },
+                {
+                  accountCode: glAccumulatedDepreciationAccount,
+                  debit: 0,
+                  credit: calculation.depreciationAmount,
+                  refType: "DEPRECIATION",
+                  refId: asset.id,
+                },
+              ],
+              `Depreciation for ${periodYear}-${String(periodMonth).padStart(2, "0")}: ${asset.assetNo} - ${asset.name}`,
+              userId,
+              transactionDate,
+            );
+
             const entry = await tx.assetDepreciation.create({
               data: {
                 assetId: asset.id,
@@ -600,48 +751,15 @@ export class AssetsService {
                   calculation.accumulatedDepreciation,
                 ),
                 netBookValue: new Decimal(calculation.netBookValue),
+                journalId,
+                isPosted: true,
+                postedAt: transactionDate,
               },
             });
 
             depreciationEntries.push(entry);
             totalDepreciation += calculation.depreciationAmount;
-
-            const journalId = await glService.postJournal(
-              tx,
-              [
-                {
-                  accountCode: glDepreciationAccount, // Depreciation Expense (will be updated per category)
-                  debit: calculation.depreciationAmount,
-                  credit: 0,
-                  refType: "DEPRECIATION",
-                  refId: `${periodYear}-${periodMonth}`,
-                },
-                {
-                  accountCode: glAccumulatedDepreciationAccount, // Accumulated Depreciation (will be updated per category)
-                  debit: 0,
-                  credit: calculation.depreciationAmount,
-                  refType: "DEPRECIATION",
-                  refId: `${periodYear}-${periodMonth}`,
-                },
-              ],
-              `Depreciation for ${periodYear}-${String(periodMonth).padStart(2, "0")}`,
-              userId,
-            );
           }
-        }
-
-        // Post consolidated depreciation journal entry
-        if (totalDepreciation > 0) {
-          // Mark entries as posted
-          await tx.assetDepreciation.updateMany({
-            where: {
-              id: { in: depreciationEntries.map((e) => e.id) },
-            },
-            data: {
-              isPosted: true,
-              postedAt: new Date(),
-            },
-          });
         }
 
         return {
@@ -793,6 +911,86 @@ export class AssetsService {
     );
   }
 
+  async recapitalizeAsset(assetId: string, data: any, userId: string) {
+    return await prisma.$transaction(async (tx) => {
+      const asset = await tx.asset.findUnique({
+        where: { id: assetId },
+        include: { category: { include: { glAssetAccount: true } } },
+      });
+      if (!asset) throw new Error("Asset not found");
+      if (asset.status !== "ACTIVE") {
+        throw new Error("Only active assets can be recapitalized");
+      }
+
+      const transactionDate = new Date(data.transactionDate);
+      if (transactionDate < asset.acquisitionDate) {
+        throw new Error("Recapitalization date cannot be before acquisition");
+      }
+
+      const sourceAccount = await tx.chartOfAccount.findUnique({
+        where: { id: data.sourceAccountId },
+      });
+      if (!sourceAccount) throw new Error("Source account not found");
+
+      const amount = new Decimal(data.amount);
+      if (data.transactionType === "CAPITAL_IMPROVEMENT") {
+        const cashAccount = await tx.cashAccount.findFirst({
+          where: { glAccountId: sourceAccount.id },
+        });
+        if (cashAccount) {
+          await tx.cashAccount.update({
+            where: { id: cashAccount.id },
+            data: { balance: { decrement: amount } },
+          });
+        }
+      }
+
+      const journalId = await glService.postJournal(
+        tx,
+        [
+          {
+            accountCode: asset.category.glAssetAccount.code,
+            debit: Number(amount),
+            credit: 0,
+            refType: "ASSET_RECAPITALIZATION",
+            refId: asset.id,
+          },
+          {
+            accountCode: sourceAccount.code,
+            debit: 0,
+            credit: Number(amount),
+            refType: "ASSET_RECAPITALIZATION",
+            refId: asset.id,
+          },
+        ],
+        `Asset recapitalization: ${asset.assetNo} - ${data.description}`,
+        userId,
+        transactionDate,
+      );
+
+      const usefulLifeExtension = Number(data.usefulLifeExtension || 0);
+      return tx.assetRecapitalization.create({
+        data: {
+          assetId: asset.id,
+          transactionDate,
+          description: data.description,
+          amount,
+          transactionType: data.transactionType,
+          usefulLifeExtension,
+          previousAcquisitionCost: asset.acquisitionCost,
+          // Keep original cost immutable; improvements are tracked separately.
+          newAcquisitionCost: asset.acquisitionCost,
+          previousUsefulLife: asset.usefulLife,
+          // Useful life remains stored in years; the extension is stored in months.
+          newUsefulLife: asset.usefulLife,
+          sourceAccountId: sourceAccount.id,
+          journalId,
+          createdBy: userId,
+        },
+      });
+    });
+  }
+
   // Asset Register Report
   async getAssetRegister(filters: any = {}) {
     let {
@@ -801,6 +999,7 @@ export class AssetsService {
       categoryId,
       status,
       locationId,
+      search,
       asOfDate,
     } = filters;
 
@@ -823,6 +1022,15 @@ export class AssetsService {
     if (locationId && locationId !== "ALL") {
       where.locationId = locationId;
     }
+    if (asOfDate) {
+      where.acquisitionDate = { lte: new Date(asOfDate) };
+    }
+    if (typeof search === "string" && search.trim()) {
+      where.OR = [
+        { assetNo: { contains: search.trim(), mode: "insensitive" } },
+        { name: { contains: search.trim(), mode: "insensitive" } },
+      ];
+    }
 
     const [assets, total] = await Promise.all([
       prisma.asset.findMany({
@@ -842,6 +1050,11 @@ export class AssetsService {
               code: true,
               name: true,
             },
+          },
+          recapitalizations: {
+            where: asOfDate
+              ? { transactionDate: { lte: new Date(asOfDate) } }
+              : undefined,
           },
           depreciationEntries: {
             where: asOfDate
@@ -867,9 +1080,11 @@ export class AssetsService {
                   ],
                 }
               : undefined,
-            orderBy: {
-              createdAt: "desc",
-            },
+            orderBy: [
+              { periodYear: "desc" },
+              { periodMonth: "desc" },
+              { createdAt: "desc" },
+            ],
             take: 1,
           },
         },
@@ -896,10 +1111,18 @@ export class AssetsService {
           ? Number(asset.depreciationEntries[0].accumulatedDepreciation)
           : 0;
 
+      const recapitalizedAmount = asset.recapitalizations.reduce(
+        (sum, recap) => sum + Number(recap.amount),
+        0,
+      );
+      const grossCost = Number(asset.acquisitionCost) + recapitalizedAmount;
       return {
         ...asset,
+        acquisitionCost: grossCost,
+        originalAcquisitionCost: Number(asset.acquisitionCost),
+        recapitalizedAmount,
         accumulatedDepreciation,
-        netBookValue: Number(asset.acquisitionCost) - accumulatedDepreciation,
+        netBookValue: grossCost - accumulatedDepreciation,
       };
     });
 
@@ -970,6 +1193,7 @@ export class AssetsService {
     const asset = await prisma.asset.findUnique({
       where: { id: assetId },
       include: {
+        recapitalizations: { orderBy: { transactionDate: "asc" } },
         depreciationEntries: {
           orderBy: [{ periodYear: "asc" }, { periodMonth: "asc" }],
         },
@@ -980,8 +1204,17 @@ export class AssetsService {
       throw new Error("Asset not found");
     }
 
+    const recapitalizedAmount = asset.recapitalizations.reduce(
+      (sum, recap) => sum + Number(recap.amount),
+      0,
+    );
     return {
-      asset,
+      asset: {
+        ...asset,
+        acquisitionCost: Number(asset.acquisitionCost) + recapitalizedAmount,
+        originalAcquisitionCost: Number(asset.acquisitionCost),
+        recapitalizedAmount,
+      },
       schedule: asset.depreciationEntries,
     };
   }
@@ -999,6 +1232,9 @@ export class AssetsService {
       },
       include: {
         category: { select: { code: true, name: true } },
+        recapitalizations: {
+          where: { transactionDate: { lte: cutoffDate } },
+        },
         depreciationEntries: {
           where: {
             OR: [
@@ -1011,7 +1247,11 @@ export class AssetsService {
               },
             ],
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: [
+            { periodYear: "desc" },
+            { periodMonth: "desc" },
+            { createdAt: "desc" },
+          ],
           take: 1,
         },
       },
@@ -1022,7 +1262,11 @@ export class AssetsService {
     let totalNetBookValue = 0;
 
     const valuation = assets.map((asset) => {
-      const cost = Number(asset.acquisitionCost);
+      const recapitalizedAmount = asset.recapitalizations.reduce(
+        (sum, recap) => sum + Number(recap.amount),
+        0,
+      );
+      const cost = Number(asset.acquisitionCost) + recapitalizedAmount;
       const accumulated =
         asset.depreciationEntries.length > 0
           ? Number(asset.depreciationEntries[0].accumulatedDepreciation)
@@ -1038,6 +1282,8 @@ export class AssetsService {
         name: asset.name,
         category: asset.category,
         acquisitionCost: cost,
+        originalAcquisitionCost: Number(asset.acquisitionCost),
+        recapitalizedAmount,
         accumulatedDepreciation: accumulated,
         netBookValue: netBook,
       };

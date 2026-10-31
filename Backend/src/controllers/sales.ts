@@ -10,7 +10,13 @@ import {
 import { AuthRequest } from "../middleware/auth";
 import { CostingService } from "../services/costing";
 import { GeneralLedgerService } from "../services/gl";
+import { nextDocumentNumber } from "../services/documentNumbers";
 import { z } from "zod";
+import {
+  calculateCurrencyLineAmount,
+  calculateDocumentAmount,
+  calculateLineAmount,
+} from "../services/decimalMath";
 
 const prisma = new PrismaClient();
 const costingService = new CostingService();
@@ -224,28 +230,10 @@ export class SalesController {
 
       const sale = await prisma.$transaction(
         async (tx) => {
-          // Generate order number
-
-          const lastSale = await prisma.sale.findFirst({
-            orderBy: { createdAt: "desc" },
-          });
-
-          let nextNumber = 1;
-          if (lastSale) {
-            // Extract the numeric part of the orderNo
-            const lastNumber = parseInt(
-              lastSale.orderNo.replace(/^SO/, ""),
-              10,
-            );
-            nextNumber = lastNumber + 1;
-          }
-
-          const orderNo = `SO${String(nextNumber).padStart(6, "0")}`;
+          const orderNo = await nextDocumentNumber(tx, "sale", "SO");
 
           // Calculate total amount
-          const totalAmount = validatedData.saleLines.reduce((sum, line) => {
-            return sum + line.qty * line.unitPrice;
-          }, 0);
+          const totalAmount = calculateDocumentAmount(validatedData.saleLines);
 
           // Create sale
           const newSale = await tx.sale.create({
@@ -268,7 +256,7 @@ export class SalesController {
                 itemId: line.itemId,
                 qty: line.qty,
                 unitPrice: line.unitPrice,
-                lineTotal: line.qty * line.unitPrice,
+                lineTotal: calculateLineAmount(line.qty, line.unitPrice),
               },
             });
           }
@@ -489,13 +477,13 @@ export class SalesController {
             returnable.map((r) => [r.saleLineId, r]),
           );
 
-          let subtotal = 0;
+          let subtotal = new Prisma.Decimal(0);
           const lineData: {
             saleLineId: string;
             itemId: string;
             qty: number;
             unitPrice: number;
-            lineTotal: number;
+            lineTotal: Prisma.Decimal;
           }[] = [];
 
           for (const line of validatedData.returnLines) {
@@ -511,8 +499,8 @@ export class SalesController {
               );
             }
 
-            const lineTotal = line.qty * info.unitPrice;
-            subtotal += lineTotal;
+            const lineTotal = calculateCurrencyLineAmount(line.qty, info.unitPrice);
+            subtotal = subtotal.plus(lineTotal);
 
             lineData.push({
               saleLineId: line.saleLineId,
@@ -523,15 +511,7 @@ export class SalesController {
             });
           }
 
-          const lastReturn = await tx.salesReturn.findFirst({
-            orderBy: { createdAt: "desc" },
-          });
-          let nextNumber = 1;
-          if (lastReturn) {
-            nextNumber =
-              parseInt(lastReturn.returnNo.replace(/^SR/, ""), 10) + 1;
-          }
-          const returnNo = `SR${String(nextNumber).padStart(6, "0")}`;
+          const returnNo = await nextDocumentNumber(tx, "sales_return", "SR");
 
           const newReturn = await tx.salesReturn.create({
             data: {
@@ -1102,9 +1082,7 @@ export class SalesController {
       const sale = await prisma.$transaction(
         async (tx) => {
           // Calculate new total
-          const totalAmount = saleLines.reduce((sum: number, line: any) => {
-            return sum + line.qty * line.unitPrice;
-          }, 0);
+          const totalAmount = calculateDocumentAmount(saleLines);
 
           // Update sale
           const updatedSale = await tx.sale.update({
@@ -1130,7 +1108,7 @@ export class SalesController {
                 itemId: line.itemId,
                 qty: line.qty,
                 unitPrice: line.unitPrice,
-                lineTotal: line.qty * line.unitPrice,
+                lineTotal: calculateLineAmount(line.qty, line.unitPrice),
               },
             });
           }

@@ -38,10 +38,26 @@ export const createAssetSchema = z.object({
 export const updateAssetSchema = z.object({
   name: z.string().min(1, "Asset name is required"),
   description: z.string().optional(),
+  acquisitionDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    message: "Invalid acquisition date",
+  }),
+  usefulLife: z.number().int().positive("Useful life must be positive").optional(),
   categoryId: z.string().cuid("Category is required"),
   locationId: z.string().cuid().optional(),
   serialNumber: z.string().optional(),
   supplier: z.string().optional(),
+});
+
+export const recapitaliseSchema = z.object({
+  assetId: z.string().cuid("Asset is required"),
+  transactionDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    message: "Invalid transaction date",
+  }),
+  description: z.string().min(1, "Description is required"),
+  amount: z.number().positive("Amount must be positive"),
+  transactionType: z.enum(["CAPITAL_IMPROVEMENT", "RECLASSIFY_EXPENSE"]),
+  usefulLifeExtension: z.number().int().min(0).optional(),
+  sourceAccountId: z.string().cuid("Source account is required"),
 });
 
 export const capitalizeFromPurchaseSchema = z.object({

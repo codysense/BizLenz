@@ -15,13 +15,20 @@ import { useQuery } from "@tanstack/react-query";
 import { productionApi, inventoryApi } from "../../lib/api";
 import { ProductionOrder } from "../../types/api";
 import toast from "react-hot-toast";
+import {
+  hasAtMostDecimalPlaces,
+  multiplyAndDivideToPlaces,
+} from "../../utils/decimalPrecision";
 
 const issueMaterialsSchema = z.object({
   materials: z
     .array(
       z.object({
         itemId: z.string().min(1, "Item is required"),
-        qty: z.number().positive("Quantity must be positive"),
+        qty: z
+          .number()
+          .positive("Quantity must be positive")
+          .refine((value) => hasAtMostDecimalPlaces(value, 12), "Maximum 12 decimal places"),
       }),
     )
     .min(1, "At least one material is required"),
@@ -60,7 +67,7 @@ const IssueMaterialsModal = ({
     name: "materials",
   });
 
-  const { data: rawMaterials } = useQuery({
+  const { data: rawMaterials, isSuccess: rawMaterialsLoaded } = useQuery({
     queryKey: ["raw-materials-for-issue"],
     queryFn: () => inventoryApi.getItems({ type: "RAW_MATERIAL", limit: 100 }),
   });
@@ -196,13 +203,13 @@ const IssueMaterialsModal = ({
     }
 
     const calculatedMaterials = order.bom.bomLines.map((line) => {
-      const baseQty = Number(line.qtyPer) * Number(order.qtyTarget);
-      const scrapMultiplier = 1 + Number(line.scrapPercent) / 100;
-      const totalQty = baseQty * scrapMultiplier;
-
       return {
         itemId: line.componentItemId,
-        qty: Math.round(totalQty * 1000) / 1000, // Round to 3 decimal places
+        qty: multiplyAndDivideToPlaces(
+          [Number(line.qtyPer), Number(order.qtyTarget), 100 + Number(line.scrapPercent)],
+          100,
+          12,
+        ),
       };
     });
 
@@ -212,14 +219,15 @@ const IssueMaterialsModal = ({
   // Initialize with BOM data if available
   useEffect(() => {
     if (
-      rawMaterials?.items?.length &&
+      rawMaterialsLoaded &&
+      (missingBomIds.length === 0 || missingBomItems) &&
       order.bom?.bomLines &&
       fields.length === 1 &&
       !fields[0].itemId
     ) {
       calculateFromBOM();
     }
-  }, [rawMaterials, order.bom]);
+  }, [rawMaterialsLoaded, missingBomItems, missingBomIds.length, order.bom]);
 
   const watchedMaterials = watch("materials");
 
@@ -423,7 +431,7 @@ const IssueMaterialsModal = ({
 
                       <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
                         {(() => {
-                          const selectedItem = rawMaterials?.items?.find(
+                          const selectedItem = allMaterials.find(
                             (item: any) =>
                               item.id === watchedMaterials[index]?.itemId,
                           );
@@ -465,7 +473,7 @@ const IssueMaterialsModal = ({
                             valueAsNumber: true,
                           })}
                           type="number"
-                          step="0.001"
+                          step="any"
                           className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none"
                         />
                       </div>

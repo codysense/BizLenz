@@ -87,6 +87,11 @@ const CapitalizeFromPurchaseModal = ({
   const selectedPurchase = purchaseOrders?.purchases?.find(
     (po: any) => po.id === selectedPurchaseId,
   );
+  const allocationDifference = selectedPurchase
+    ? acquisitionCostSum - Number(selectedPurchase.totalAmount)
+    : 0;
+  const allocationMatches =
+    !!selectedPurchase && Math.abs(allocationDifference) <= 0.01;
   //console.log("Selected Purchase:", selectedPurchase);
 
   const onSubmit = async (data: CapitalizeFromPurchaseFormData) => {
@@ -183,6 +188,13 @@ const CapitalizeFromPurchaseModal = ({
                   </div>
                 </div>
               </div>
+            )}
+
+            {selectedPurchase && !allocationMatches && (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Asset costs must equal the purchase order total. Current difference: ₦
+                {Math.abs(allocationDifference).toLocaleString()}.
+              </p>
             )}
 
             {/* Assets Section */}
@@ -316,7 +328,7 @@ const CapitalizeFromPurchaseModal = ({
                 disabled={
                   isSubmitting ||
                   !selectedPurchaseId ||
-                  acquisitionCostSum !== Number(selectedPurchase?.totalAmount)
+                  !allocationMatches
                 }
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
               >

@@ -778,6 +778,7 @@ SELECT
     COALESCE(s.total_sales, 0) AS total_sales,
     COALESCE(p.total_receipts, 0) AS total_receipts,
     COALESCE(r.total_refunds, 0) AS total_refunds,
+    COALESCE(sr.total_returns, 0) AS total_returns,
     COALESCE(dm.total_debit_memos, 0) AS total_debit_memos,
     COALESCE(cm.total_credit_memos, 0) AS total_credit_memos,
 
@@ -785,6 +786,7 @@ SELECT
     COALESCE(s.total_sales, 0)
       - COALESCE(p.total_receipts, 0)
       + COALESCE(r.total_refunds, 0)
+      - COALESCE(sr.total_returns, 0)
       + COALESCE(dm.total_debit_memos, 0)
       - COALESCE(cm.total_credit_memos, 0)
       AS outstanding_balance
@@ -829,6 +831,18 @@ LEFT JOIN (
     WHERE "refundDate" <= $1
     GROUP BY "customerId"
 ) r ON r."customerId" = c.id
+
+/* ---------------- SALES RETURNS (AR CREDIT) ---------------- */
+LEFT JOIN (
+    SELECT
+        "customerId",
+        SUM("totalAmount") AS total_returns
+    FROM sales_returns
+    WHERE "returnDate" <= $1
+      AND status = 'CONFIRMED'
+      AND "settlementMethod" IN ('CUSTOMER_CREDIT', 'APPLY_TO_INVOICE')
+    GROUP BY "customerId"
+) sr ON sr."customerId" = c.id
 
 
 /* ---------------- DEBIT MEMOS ---------------- */

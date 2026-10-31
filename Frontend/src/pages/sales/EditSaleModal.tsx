@@ -12,6 +12,7 @@ import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
 import { useState } from "react";
 import { CustomerSelect } from "../../components/CustomerSelect";
 import { ItemSelect } from "../../components/ItemSelect";
+import { formatCurrency, roundCurrency, roundToPlaces } from "../../utils/decimalPrecision";
 
 const editSaleSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
@@ -93,9 +94,9 @@ const EditSaleModal = ({ sale, onClose, onSuccess }: EditSaleModalProps) => {
   }, [sale, reset]);
 
   const calculateTotal = () => {
-    return watchedLines.reduce((sum, line) => {
-      return sum + (line.qty || 0) * (line.unitPrice || 0);
-    }, 0);
+    return roundCurrency(watchedLines.reduce((sum, line) => {
+      return sum + roundToPlaces((line.qty || 0) * (line.unitPrice || 0), 4);
+    }, 0));
   };
 
   const onSubmit = async (data: EditSaleFormData) => {
@@ -268,6 +269,7 @@ const EditSaleModal = ({ sale, onClose, onSuccess }: EditSaleModalProps) => {
                         valueAsNumber: true,
                       })}
                       type="number"
+                      step="0.0001"
                       className="w-full rounded-xl border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -283,6 +285,7 @@ const EditSaleModal = ({ sale, onClose, onSuccess }: EditSaleModalProps) => {
                         valueAsNumber: true,
                       })}
                       type="number"
+                      step="0.0001"
                       className="w-full rounded-xl border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -293,10 +296,10 @@ const EditSaleModal = ({ sale, onClose, onSuccess }: EditSaleModalProps) => {
                       <p className="text-xs text-gray-500">Line Total</p>
                       <div className="font-semibold text-gray-900">
                         ₦
-                        {(
+                        {formatCurrency(
                           (watchedLines[index]?.qty || 0) *
-                          (watchedLines[index]?.unitPrice || 0)
-                        ).toLocaleString()}
+                            (watchedLines[index]?.unitPrice || 0),
+                        )}
                       </div>
                     </div>
 
@@ -319,7 +322,7 @@ const EditSaleModal = ({ sale, onClose, onSuccess }: EditSaleModalProps) => {
           <div className="bg-blue-50 p-4 rounded-xl flex justify-between items-center">
             <span className="font-medium">Total Amount</span>
             <span className="text-xl font-bold text-blue-600">
-              ₦{calculateTotal().toLocaleString()}
+              ₦{formatCurrency(calculateTotal())}
             </span>
           </div>
 

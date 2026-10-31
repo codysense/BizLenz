@@ -10,6 +10,7 @@ import {
 import { AuthRequest } from "../middleware/auth";
 import { CostingService } from "../services/costing";
 import { GeneralLedgerService } from "../services/gl";
+import { nextDocumentNumber } from "../services/documentNumbers";
 
 const prisma = new PrismaClient();
 const costingService = new CostingService();
@@ -74,23 +75,11 @@ export class ProductionController {
 
       const order = await prisma.$transaction(
         async (tx) => {
-          // // Generate order number
-          // const count = await tx.productionOrder.count();
-          // const orderNo = `MO${String(count + 1).padStart(6, "0")}`;
-
-          // Fetch the last productionOrder ordered by creationDate
-          const lastPr = await prisma.productionOrder.findFirst({
-            orderBy: { createdAt: "desc" },
-          });
-
-          let nextNumber = 1;
-          if (lastPr) {
-            // Extract the numeric part of the orderNo
-            const lastNumber = parseInt(lastPr.orderNo.replace(/^PO/, ""), 10);
-            nextNumber = lastNumber + 1;
-          }
-
-          const orderNo = `PO${String(nextNumber).padStart(6, "0")}`;
+          const orderNo = await nextDocumentNumber(
+            tx,
+            "purchase_production_order",
+            "PO",
+          );
 
           // Create production order
           const newOrder = await tx.productionOrder.create({

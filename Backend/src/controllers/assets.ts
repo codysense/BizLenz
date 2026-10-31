@@ -7,6 +7,7 @@ import {
   capitalizeFromPurchaseSchema,
   disposeAssetSchema,
   runDepreciationSchema,
+  recapitaliseSchema,
 } from "../types/assets";
 import { AuthRequest } from "../middleware/auth";
 import { AssetsService } from "../services/assets";
@@ -103,11 +104,13 @@ export class AssetsController {
   async deleteAsset(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-      await assetsService.deleteAsset(id);
+      await assetsService.deleteAsset(id, req.user!.id);
       res.json({ message: "Asset deleted successfully" });
     } catch (error) {
       console.error("Delete asset error:", error);
-      res.status(400).json({ error: "Failed to delete asset" });
+      res.status(400).json({
+        error: error instanceof Error ? error.message : "Failed to delete asset",
+      });
     }
   }
 
@@ -143,6 +146,24 @@ export class AssetsController {
     } catch (error) {
       console.error("Run depreciation error:", error);
       res.status(400).json({ error: "Failed to run depreciation" });
+    }
+  }
+
+  async recapitalizeAsset(req: AuthRequest, res: Response) {
+    try {
+      const validatedData = recapitaliseSchema.parse(req.body);
+      if (validatedData.assetId !== req.params.id) {
+        return res.status(400).json({ error: "Asset id does not match request" });
+      }
+      const recapitalization = await assetsService.recapitalizeAsset(
+        req.params.id,
+        validatedData,
+        req.user!.id,
+      );
+      res.status(201).json(recapitalization);
+    } catch (error) {
+      console.error("Recapitalize asset error:", error);
+      res.status(400).json({ error: "Failed to recapitalize asset" });
     }
   }
 

@@ -5,6 +5,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 // import { Prisma } from '../../prisma/generated/client';
 import { GeneralLedgerService } from "../services/gl";
 import { CostingService } from "../services/costing";
+import { nextDocumentNumber } from "../services/documentNumbers";
 import { ca } from "zod/v4/locales";
 
 const prisma = new PrismaClient();
@@ -150,8 +151,7 @@ export class MemoController {
       const result = await prisma.$transaction(
         async (tx) => {
           // Generate journal
-          const journalCount = await tx.journal.count();
-          const journalNo = `J${String(journalCount + 1).padStart(6, "0")}`;
+          const journalNo = await nextDocumentNumber(tx, "journal", "J");
 
           const journal = await tx.journal.create({
             data: {
@@ -289,23 +289,8 @@ export class MemoController {
       // }
 
       const result = await prisma.$transaction(async (tx) => {
-        // const memoCount = await tx.memo.count();
-        // const memoNo = `M${String(memoCount + 1).padStart(6, "0")}`;
-        // Fetch the last memo ordered by creationDate
-        const lastTx = await prisma.memo.findFirst({
-          orderBy: { createdAt: "desc" },
-        });
-
         let journalId: string | undefined;
-
-        let nextNumber = 1;
-        if (lastTx) {
-          // Extract the numeric part of the transactionNo
-          const lastNumber = parseInt(lastTx.memoNo.replace(/^M/, ""), 10);
-          nextNumber = lastNumber + 1;
-        }
-
-        const memoNo = `M${String(nextNumber).padStart(6, "0")}`;
+        const memoNo = await nextDocumentNumber(tx, "memo", "M");
 
         let finalAmount = 0;
         let category: "SALES_RETURN" | "PURCHASE_RETURN" | "FINANCIAL" =
@@ -667,17 +652,7 @@ export class MemoController {
         }
 
         //  2. Generate new memo number
-        const lastTx = await tx.memo.findFirst({
-          orderBy: { createdAt: "desc" },
-        });
-
-        let nextNumber = 1;
-        if (lastTx) {
-          const lastNumber = parseInt(lastTx.memoNo.replace(/^M/, ""), 10);
-          nextNumber = lastNumber + 1;
-        }
-
-        const memoNo = `M${String(nextNumber).padStart(6, "0")}`;
+        const memoNo = await nextDocumentNumber(tx, "memo", "M");
 
         // 3. Reverse GL Journal
         const reversedJournalId = await glService.postJournal(

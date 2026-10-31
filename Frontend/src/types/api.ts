@@ -768,6 +768,8 @@ export interface Asset {
   categoryId: string;
   acquisitionDate: string;
   acquisitionCost: number;
+  originalAcquisitionCost?: number;
+  recapitalizedAmount?: number;
   residualValue: number;
   usefulLife: number;
   depreciationMethod: "STRAIGHT_LINE" | "REDUCING_BALANCE";
@@ -803,6 +805,25 @@ export interface Asset {
   _count?: {
     depreciationEntries: number;
   };
+  recapitalizations?: AssetRecapitalization[];
+}
+
+export interface AssetRecapitalization {
+  id: string;
+  assetId: string;
+  transactionDate: string;
+  description: string;
+  amount: number;
+  transactionType: "CAPITAL_IMPROVEMENT" | "RECLASSIFY_EXPENSE";
+  usefulLifeExtension: number;
+  previousAcquisitionCost: number;
+  newAcquisitionCost: number;
+  previousUsefulLife: number;
+  newUsefulLife: number;
+  sourceAccountId?: string;
+  journalId?: string;
+  createdBy: string;
+  createdAt: string;
 }
 
 export interface AssetDepreciation {

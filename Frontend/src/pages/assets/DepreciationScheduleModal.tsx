@@ -151,6 +151,28 @@ const DepreciationScheduleModal = ({
               </div>
             </div>
 
+            {scheduleData?.asset?.recapitalizations?.length ? (
+              <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
+                <h4 className="mb-3 text-sm font-semibold text-gray-900">
+                  Capital Improvements and Reclassifications
+                </h4>
+                <div className="space-y-2">
+                  {scheduleData.asset.recapitalizations.map((recap) => (
+                    <div key={recap.id} className="flex flex-wrap justify-between gap-2 border-b border-blue-100 pb-2 text-sm last:border-0 last:pb-0">
+                      <div>
+                        <p className="font-medium text-gray-800">{recap.description}</p>
+                        <p className="text-xs text-gray-600">
+                          {new Date(recap.transactionDate).toLocaleDateString()} · {recap.transactionType.replace(/_/g, " ")}
+                          {recap.usefulLifeExtension > 0 && ` · +${recap.usefulLifeExtension} months useful life`}
+                        </p>
+                      </div>
+                      <span className="font-semibold text-blue-700">₦{Number(recap.amount).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {/* Schedule Section */}
             <div>
               <div className="flex items-center gap-2 mb-4">

@@ -5,6 +5,7 @@ import { AuthRequest } from "../middleware/auth";
 
 import { CostingService } from "../services/costing";
 import { GeneralLedgerService } from "../services/gl";
+import { nextDocumentNumber } from "../services/documentNumbers";
 import { ItemType, CostingMethod } from "@prisma/client"; // Adjust path as necessary
 import { z } from "zod";
 
@@ -51,30 +52,11 @@ export class ItemImportController {
       // We wrap the entire import logic in a transaction to guarantee data integrity
       const result = await prisma.$transaction(
         async (tx) => {
-          // 1. Resolve starting SKU number for FINISHED_GOODS
-          const lastItem = await tx.item.findFirst({
-            where: { type: "FINISHED_GOODS" },
-            orderBy: { createdAt: "desc" },
-          });
-          let nextItemNumber = 1;
-          if (lastItem) {
-            const lastNumber = parseInt(lastItem.sku.replace(/^ITM-/, ""), 10);
-            if (!isNaN(lastNumber)) {
-              nextItemNumber = lastNumber + 1;
-            }
-          }
-          // 2. Resolve starting Opening Stock Reference Number
-          const lastOpeningStock = await tx.openingStock.findFirst({
-            orderBy: { createdAt: "desc" },
-          });
-          let nextOSNumber = 1;
-          if (lastOpeningStock) {
-            const match = lastOpeningStock.referenceNo.match(/\d+$/);
-            if (match) {
-              nextOSNumber = parseInt(match[0], 10) + 1;
-            }
-          }
-          const referenceNo = `OS${String(nextOSNumber).padStart(6, "0")}`;
+          const referenceNo = await nextDocumentNumber(
+            tx,
+            "opening_stock",
+            "OS",
+          );
           const createdItems: any[] = [];
           const openingLinesData: Array<{
             itemId: string;
@@ -83,8 +65,7 @@ export class ItemImportController {
           }> = [];
           // 3. Create items one by one to properly assign sequential SKUs
           for (const itemRow of items) {
-            const sku = `ITM-${String(nextItemNumber).padStart(8, "0")}`;
-            nextItemNumber++;
+            const sku = await nextDocumentNumber(tx, "item_sku", "ITM-", 8);
             // Extract Excel-specific fields
             const {
               salesPrice,

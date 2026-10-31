@@ -2,6 +2,7 @@ import React from "react";
 import { X, Truck, Building, Calendar, User } from "lucide-react";
 import { Sale } from "../../types/api";
 import StatusBadge from "../../components/StatusBadge";
+import { formatStoredAmount } from "../../utils/decimalPrecision";
 
 interface SaleDetailsModalProps {
   sale: Sale;
@@ -119,11 +120,11 @@ const SaleDetailsModal = ({ sale, onClose }: SaleDetailsModalProps) => {
                       </td>
 
                       <td className="p-3">
-                        ₦{line.unitPrice.toLocaleString()}
+                        ₦{formatStoredAmount(Number(line.unitPrice))}
                       </td>
 
                       <td className="p-3 font-medium">
-                        ₦{line.lineTotal.toLocaleString()}
+                        ₦{formatStoredAmount(Number(line.lineTotal))}
                       </td>
                     </tr>
                   ))}

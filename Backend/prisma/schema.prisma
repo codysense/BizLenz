@@ -18,6 +18,14 @@ model UserSession {
   user User @relation(fields: [userId], references: [id])
 }
 
+model DocumentNumberSequence {
+  sequenceKey String   @id
+  lastValue   BigInt   @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@map("document_number_sequences")
+}
+
 model User {
   id                          String                   @id @default(cuid())
   email                       String                   @unique
@@ -32,6 +40,7 @@ model User {
   ApprovalAction              ApprovalAction[]
   ApprovalRequest             ApprovalRequest[]
   assetDisposals              AssetDisposal[]
+  assetRecapitalizations      AssetRecapitalization[]
   assetsCreated               Asset[]                  @relation("AssetCreatedBy")
   auditLogs                   AuditLog[]
   cashTransactionPostings     CashTransactionPosting[]
@@ -302,7 +311,7 @@ model BomLine {
   id              String  @id @default(cuid())
   bomId           String
   componentItemId String
-  qtyPer          Decimal @db.Decimal(15, 4)
+  qtyPer          Decimal @db.Decimal(30, 12)
   scrapPercent    Decimal @default(0) @db.Decimal(5, 2)
   bom             Bom     @relation(fields: [bomId], references: [id], onDelete: Cascade)
   componentItem   Item    @relation(fields: [componentItemId], references: [id])
@@ -315,7 +324,7 @@ model InventoryBatch {
   itemId          String
   warehouseId     String
   binId           String?
-  qtyOnHand       Decimal           @db.Decimal(15, 4)
+  qtyOnHand       Decimal           @db.Decimal(30, 12)
   unitCost        Decimal           @db.Decimal(15, 4)
   receivedAt      DateTime
   bin             Bin?              @relation(fields: [binId], references: [id])
@@ -333,10 +342,10 @@ model InventoryLedger {
   refType        String
   refId          String
   direction      LedgerDirection
-  qty            Decimal         @db.Decimal(15, 4)
+  qty            Decimal         @db.Decimal(30, 12)
   unitCost       Decimal         @db.Decimal(15, 4)
   value          Decimal         @db.Decimal(15, 4)
-  runningQty     Decimal         @db.Decimal(15, 4)
+  runningQty     Decimal         @db.Decimal(30, 12)
   runningValue   Decimal         @db.Decimal(15, 4)
   runningAvgCost Decimal         @db.Decimal(15, 4)
   batchId        String?
@@ -377,8 +386,8 @@ model ProductionOrder {
   id                String                @id @default(cuid())
   orderNo           String                @unique
   itemId            String
-  qtyTarget         Decimal               @db.Decimal(15, 4)
-  qtyProduced       Decimal               @default(0) @db.Decimal(15, 4)
+  qtyTarget         Decimal               @db.Decimal(30, 12)
+  qtyProduced       Decimal               @default(0) @db.Decimal(30, 12)
   status            ProductionOrderStatus @default(PLANNED)
   warehouseId       String
   bomId             String?
@@ -419,7 +428,7 @@ model WipLedger {
   type              WipLedgerType
   //  Core values
   amount            Decimal         @db.Decimal(15, 4)
-  qty               Decimal?        @db.Decimal(15, 4)
+  qty               Decimal?        @db.Decimal(30, 12)
   unitCost          Decimal?        @db.Decimal(15, 4)
   //  Item tracking (important for material + FG)
   itemId            String?
@@ -691,6 +700,7 @@ model ChartOfAccount {
   assetCategoriesAccumulated  AssetCategory[]       @relation("AssetCategoryAccumulatedDepreciationAccount")
   assetCategoriesAsset        AssetCategory[]       @relation("AssetCategoryAssetAccount")
   assetCategoriesDepreciation AssetCategory[]       @relation("AssetCategoryDepreciationAccount")
+  assetRecapitalizationSources AssetRecapitalization[]
   cashAccounts                CashAccount[]         @relation("CashAccountGLAccount")
   cashTransactionLinesContra  CashTransactionLine[] @relation("CashTransactionLineContraAccount")
   cashTransactionLinesGL      CashTransactionLine[] @relation("CashTransactionLineGLAccount")
@@ -714,6 +724,7 @@ model Journal {
   postedAt                DateTime                 @default(now())
   assetDepreciation       AssetDepreciation[]
   assetDisposals          AssetDisposal[]
+  assetRecapitalizations   AssetRecapitalization[]
   cashTransactionPostings CashTransactionPosting[]
   customerPaymentPostings CustomerPaymentPosting[]
   journalLines            JournalLine[]
@@ -1347,6 +1358,7 @@ model Asset {
   location            Location?           @relation(fields: [locationId], references: [id])
   purchaseOrder       Purchase?           @relation(fields: [purchaseOrderId], references: [id])
   Vendor              Vendor?             @relation(fields: [vendorId], references: [id])
+  recapitalizations   AssetRecapitalization[]
 
   @@map("assets")
 }
@@ -1374,7 +1386,7 @@ model AssetDisposal {
   id             String   @id @default(cuid())
   assetId        String
   disposalDate   DateTime
-  disposalAmount Decimal  @db.Decimal(15, 2)
+  disposalAmount Decimal  @db.Decimal(15, 4)
   disposalMethod String
   buyerDetails   String?
   gainLoss       Decimal  @db.Decimal(15, 2)
@@ -1387,6 +1399,31 @@ model AssetDisposal {
   journal        Journal? @relation(fields: [journalId], references: [id])
 
   @@map("asset_disposals")
+}
+
+model AssetRecapitalization {
+  id                      String   @id @default(cuid())
+  assetId                 String
+  transactionDate         DateTime
+  description             String
+  amount                  Decimal  @db.Decimal(15, 2)
+  transactionType         String
+  usefulLifeExtension     Int      @default(0)
+  previousAcquisitionCost Decimal  @db.Decimal(15, 2)
+  newAcquisitionCost      Decimal  @db.Decimal(15, 2)
+  previousUsefulLife      Int
+  newUsefulLife           Int
+  sourceAccountId         String?
+  journalId               String?
+  createdBy                String
+  createdAt                DateTime @default(now())
+
+  asset         Asset           @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  sourceAccount ChartOfAccount? @relation(fields: [sourceAccountId], references: [id], onDelete: SetNull)
+  createdByUser User            @relation(fields: [createdBy], references: [id])
+  journal       Journal?        @relation(fields: [journalId], references: [id], onDelete: SetNull)
+
+  @@map("asset_recapitalizations")
 }
 
 model PosSession {

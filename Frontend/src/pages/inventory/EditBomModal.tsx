@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { inventoryApi } from "../../lib/api";
 import { Bom } from "../../types/api";
 import toast from "react-hot-toast";
+import { hasAtMostDecimalPlaces } from "../../utils/decimalPrecision";
 
 const editBomSchema = z.object({
   version: z.string().min(1, "Version is required"),
@@ -14,7 +15,10 @@ const editBomSchema = z.object({
     .array(
       z.object({
         componentItemId: z.string().min(1, "Component is required"),
-        qtyPer: z.number().positive("Quantity must be positive"),
+        qtyPer: z
+          .number()
+          .positive("Quantity must be positive")
+          .refine((value) => hasAtMostDecimalPlaces(value, 12), "Maximum 12 decimal places"),
         scrapPercent: z.number().min(0).max(100).default(0),
       }),
     )
@@ -57,6 +61,22 @@ const EditBomModal = ({ bom, onClose, onSuccess }: EditBomModalProps) => {
     queryKey: ["raw-materials-for-edit"],
     queryFn: () => inventoryApi.getItems({ type: "RAW_MATERIAL", limit: 100 }),
   });
+
+  const missingComponentIds = bom.bomLines
+    .map((line) => line.componentItemId)
+    .filter((id) => !rawMaterials?.items?.some((item: any) => item.id === id));
+  const { data: missingComponents } = useQuery({
+    queryKey: ["missing-bom-components", missingComponentIds],
+    queryFn: () =>
+      Promise.all(missingComponentIds.map((id) => inventoryApi.getItemById(id))),
+    enabled: missingComponentIds.length > 0,
+  });
+  const componentItems = [
+    ...(rawMaterials?.items ?? []),
+    ...(missingComponents ?? []).filter(
+      (item: any) => !rawMaterials?.items?.some((existing: any) => existing.id === item.id),
+    ),
+  ];
 
   // Reset form when bom changes
   useEffect(() => {
@@ -207,7 +227,7 @@ const EditBomModal = ({ bom, onClose, onSuccess }: EditBomModalProps) => {
                           className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
                         >
                           <option value="">Select component</option>
-                          {rawMaterials?.items?.map((item: any) => (
+                          {componentItems.map((item: any) => (
                             <option key={item.id} value={item.id}>
                               {item.sku} - {item.name} ({item.uom})
                             </option>
@@ -231,6 +251,8 @@ const EditBomModal = ({ bom, onClose, onSuccess }: EditBomModalProps) => {
                           {...register(`bomLines.${index}.qtyPer`, {
                             valueAsNumber: true,
                           })}
+                          type="number"
+                          step="any"
                           className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                       </div>

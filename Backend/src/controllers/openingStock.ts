@@ -5,6 +5,7 @@ import { AuthRequest } from "../middleware/auth";
 
 import { CostingService } from "../services/costing";
 import { GeneralLedgerService } from "../services/gl";
+import { nextDocumentNumber } from "../services/documentNumbers";
 
 import { createOpeningStockSchema } from "../types/openingStock";
 
@@ -16,24 +17,6 @@ export class OpeningStockController {
   async createOpeningStock(req: AuthRequest, res: Response) {
     try {
       const validatedData = createOpeningStockSchema.parse(req.body);
-
-      const lastOpeningStock = await prisma.openingStock.findFirst({
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-
-      let nextNumber = 1;
-
-      if (lastOpeningStock) {
-        const match = lastOpeningStock.referenceNo.match(/\d+$/);
-
-        if (match) {
-          nextNumber = parseInt(match[0], 10) + 1;
-        }
-      }
-
-      const referenceNo = `OS${String(nextNumber).padStart(6, "0")}`;
 
       const totalQty = validatedData.openingLines.reduce(
         (sum, line) => sum + line.qty,
@@ -47,6 +30,11 @@ export class OpeningStockController {
 
       const openingStock = await prisma.$transaction(
         async (tx) => {
+          const referenceNo = await nextDocumentNumber(
+            tx,
+            "opening_stock",
+            "OS",
+          );
           const opening = await tx.openingStock.create({
             data: {
               referenceNo,

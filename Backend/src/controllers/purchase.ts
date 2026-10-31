@@ -10,6 +10,12 @@ import {
 import { AuthRequest } from "../middleware/auth";
 import { CostingService } from "../services/costing";
 import { GeneralLedgerService } from "../services/gl";
+import { nextDocumentNumber } from "../services/documentNumbers";
+import {
+  calculateCurrencyLineAmount,
+  calculateDocumentAmount,
+  calculateLineAmount,
+} from "../services/decimalMath";
 
 const prisma = new PrismaClient();
 const costingService = new CostingService();
@@ -109,31 +115,16 @@ export class PurchaseController {
     try {
       const validatedData = createPurchaseSchema.parse(req.body);
 
-      // Calculate orderNo outside transaction
-
-      const lastPurchase = await prisma.purchase.findFirst({
-        orderBy: { createdAt: "desc" },
-      });
-
-      let nextNumber = 1;
-      if (lastPurchase) {
-        const match = lastPurchase.orderNo.match(/\d+$/);
-        if (match) nextNumber = parseInt(match[0], 10) + 1;
-      }
-
-      const orderNo = `PO${String(nextNumber).padStart(6, "0")}`;
-
-      // const count = await prisma.purchase.count();
-      // const orderNo = `PO${String(count + 1).padStart(6, "0")}`;
-
       // Calculate total
-      const totalAmount = validatedData.purchaseLines.reduce(
-        (sum, line) => sum + line.qty * line.unitPrice,
-        0,
-      );
+      const totalAmount = calculateDocumentAmount(validatedData.purchaseLines);
 
       const purchase = await prisma.$transaction(
         async (tx) => {
+          const orderNo = await nextDocumentNumber(
+            tx,
+            "purchase_production_order",
+            "PO",
+          );
           // Create purchase
           const newPurchase = await tx.purchase.create({
             data: {
@@ -178,7 +169,7 @@ export class PurchaseController {
                     : null,
                 qty: Number(line.qty),
                 unitPrice: Number(line.unitPrice),
-                lineTotal: Number(line.qty) * Number(line.unitPrice),
+                lineTotal: calculateLineAmount(line.qty, line.unitPrice),
               };
             }),
           });
@@ -257,9 +248,12 @@ export class PurchaseController {
         }
 
         // 5️ Calculate total value
-        const totalValue = validatedData.receiptLines.reduce((sum, line) => {
-          return sum + line.qtyReceived * line.unitCost;
-        }, 0);
+        const totalValue = calculateDocumentAmount(
+          validatedData.receiptLines.map((line) => ({
+            qty: line.qtyReceived,
+            unitPrice: line.unitCost,
+          })),
+        ).toNumber();
 
         const purchase = await tx.purchase.findUnique({ where: { id } });
 
@@ -401,13 +395,13 @@ export class PurchaseController {
             returnable.map((r) => [r.purchaseLineId, r]),
           );
 
-          let subtotal = 0;
+          let subtotal = new Prisma.Decimal(0);
           const lineData: {
             purchaseLineId: string;
             itemId: string;
             qty: number;
             unitPrice: number;
-            lineTotal: number;
+            lineTotal: Prisma.Decimal;
           }[] = [];
 
           for (const line of validatedData.returnLines) {
@@ -423,8 +417,8 @@ export class PurchaseController {
               );
             }
 
-            const lineTotal = line.qty * info.unitPrice;
-            subtotal += lineTotal;
+            const lineTotal = calculateCurrencyLineAmount(line.qty, info.unitPrice);
+            subtotal = subtotal.plus(lineTotal);
 
             lineData.push({
               purchaseLineId: line.purchaseLineId,
@@ -435,15 +429,11 @@ export class PurchaseController {
             });
           }
 
-          const lastReturn = await tx.purchaseReturn.findFirst({
-            orderBy: { createdAt: "desc" },
-          });
-          let nextNumber = 1;
-          if (lastReturn) {
-            const match = lastReturn.returnNo.match(/\d+$/);
-            if (match) nextNumber = parseInt(match[0], 10) + 1;
-          }
-          const returnNo = `PR${String(nextNumber).padStart(6, "0")}`;
+          const returnNo = await nextDocumentNumber(
+            tx,
+            "purchase_refund_return",
+            "PR",
+          );
 
           const newReturn = await tx.purchaseReturn.create({
             data: {
@@ -508,7 +498,7 @@ export class PurchaseController {
             returnable.map((r) => [r.purchaseLineId, r]),
           );
 
-          let totalApAmount = 0;
+          let totalApAmount = new Prisma.Decimal(0);
           let totalInventoryValue = 0;
 
           for (const line of purchaseReturn.purchaseReturnLines) {
@@ -529,7 +519,9 @@ export class PurchaseController {
               req.user!.id,
             );
 
-            totalApAmount += Number(line.qty) * Number(line.unitPrice);
+            totalApAmount = totalApAmount.plus(
+              calculateCurrencyLineAmount(line.qty, line.unitPrice),
+            );
             totalInventoryValue += value;
 
             await tx.purchaseReturnLine.update({
@@ -538,7 +530,8 @@ export class PurchaseController {
             });
           }
 
-          const costVariance = totalApAmount - totalInventoryValue;
+          const costVariance = totalApAmount.toNumber() - totalInventoryValue;
+          const totalApAmountNumber = totalApAmount.toNumber();
 
           const itemType = await getItemTypeById(
             purchaseReturn.purchaseReturnLines[0].itemId,
@@ -549,7 +542,7 @@ export class PurchaseController {
           const journalLines = [
             {
               accountCode: "2000",
-              debit: totalApAmount,
+              debit: totalApAmountNumber,
               credit: 0,
               refType: "PURCHASE_RETURN",
               refId: id,
@@ -624,13 +617,13 @@ export class PurchaseController {
                   {
                     accountCode: "2000",
                     debit: 0,
-                    credit: totalApAmount,
+                    credit: totalApAmountNumber,
                     refType: "PURCHASE_RETURN_REFUND",
                     refId: id,
                   },
                   {
                     accountCode: glAccount.code,
-                    debit: totalApAmount,
+                    debit: totalApAmountNumber,
                     credit: 0,
                     refType: "PURCHASE_RETURN_REFUND",
                     refId: id,
@@ -856,9 +849,7 @@ export class PurchaseController {
       }
 
       // Calculate new total
-      const totalAmount = purchaseLines.reduce((sum: number, line: any) => {
-        return sum + line.qty * line.unitPrice;
-      }, 0);
+      const totalAmount = calculateDocumentAmount(purchaseLines);
 
       // Update purchase main record
       const updatedPurchase = await prisma.purchase.update({
@@ -879,7 +870,7 @@ export class PurchaseController {
         itemId: line.itemId,
         qty: line.qty,
         unitPrice: line.unitPrice,
-        lineTotal: line.qty * line.unitPrice,
+        lineTotal: calculateLineAmount(line.qty, line.unitPrice),
       }));
 
       await prisma.purchaseLine.createMany({ data: lineData });

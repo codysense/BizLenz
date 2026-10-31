@@ -1,9 +1,18 @@
 import { z } from 'zod';
 import { ProductionOrderStatus, WipLedgerType } from '@prisma/client';
+import { hasAtMostDecimalPlaces } from './decimalPrecision';
+
+const quantitySchema = z
+  .number()
+  .positive()
+  .finite()
+  .refine((value) => hasAtMostDecimalPlaces(value, 12), {
+    message: 'Quantity can have at most 12 decimal places',
+  });
 
 export const createProductionOrderSchema = z.object({
   itemId: z.string().cuid(),
-  qtyTarget: z.number().positive(),
+  qtyTarget: quantitySchema,
   warehouseId: z.string().cuid(),
   bomId: z.string().cuid().optional().or(z.literal('')),
 });
@@ -11,7 +20,7 @@ export const createProductionOrderSchema = z.object({
 export const issueMaterialsSchema = z.object({
   materials: z.array(z.object({
     itemId: z.string().cuid(),
-    qty: z.number().positive(),
+    qty: quantitySchema,
     unitCost: z.number().positive().optional(),
   })),
 });
@@ -28,8 +37,10 @@ export const addOverheadSchema = z.object({
 });
 
 export const receiveFinishedGoodsSchema = z.object({
-  qtyGood: z.number().positive(),
-  qtyScrap: z.number().min(0).default(0),
+  qtyGood: quantitySchema,
+  qtyScrap: z.number().min(0).refine((value) => hasAtMostDecimalPlaces(value, 12), {
+    message: 'Quantity can have at most 12 decimal places',
+  }).default(0),
 });
 
 export type CreateProductionOrderRequest = z.infer<typeof createProductionOrderSchema>;

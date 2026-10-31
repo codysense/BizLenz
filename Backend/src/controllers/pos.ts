@@ -9,6 +9,7 @@ import {
 import { AuthRequest } from "../middleware/auth";
 import { CostingService } from "../services/costing";
 import { GeneralLedgerService } from "../services/gl";
+import { nextDocumentNumber } from "../services/documentNumbers";
 import { Decimal } from "@prisma/client/runtime/library";
 
 const prisma = new PrismaClient();
@@ -63,8 +64,7 @@ export class PosController {
 
       const session = await prisma.$transaction(
         async (tx) => {
-          const count = await tx.posSession.count();
-          const sessionNo = `POS${String(count + 1).padStart(6, "0")}`;
+          const sessionNo = await nextDocumentNumber(tx, "pos_document", "POS");
           return await tx.posSession.create({
             data: {
               sessionNo,
@@ -506,8 +506,7 @@ export class PosController {
 
           // 3. GENERATE SALE NUMBER (SAFE ENOUGH FOR NOW)
 
-          const saleCount = await tx.posSale.count();
-          const saleNo = `POS${String(saleCount + 1).padStart(8, "0")}`;
+          const saleNo = await nextDocumentNumber(tx, "pos_document", "POS", 8);
 
           // 4. RE-CALCULATE TOTALS (BACKEND AUTHORITY)
 
@@ -632,20 +631,12 @@ export class PosController {
 
           const glEntries: any[] = [];
 
-          let count = 1;
-
-          const lastTx = await tx.cashTransaction.findFirst({
-            orderBy: { createdAt: "desc" },
-          });
-
-          let baseNumber = lastTx
-            ? parseInt(lastTx.transactionNo.replace(/^CT/, ""), 10)
-            : 0;
-
           for (const payment of input.payments) {
-            const nextNumber = baseNumber + count;
-            const transactionNo = `CT${String(nextNumber).padStart(6, "0")}`;
-            count++;
+            const transactionNo = await nextDocumentNumber(
+              tx,
+              "cash_transaction",
+              "CT",
+            );
             const amount = Number(payment.amount);
 
             if (Number.isNaN(amount) || amount <= 0) {
@@ -679,26 +670,6 @@ export class PosController {
             const cashAccountGL = await tx.chartOfAccount.findUnique({
               where: { id: updatedCashAccount.glAccountId },
             });
-
-            // Fetch the last CashTransaction ordered by creationDate
-            const lastTx = await tx.cashTransaction.findFirst({
-              orderBy: { createdAt: "desc" },
-            });
-
-            // let nextNumber = count;
-            // if (lastTx) {
-            //   // Extract the numeric part of the transactionNo
-            //   const lastNumber = parseInt(
-            //     lastTx.transactionNo.replace(/^CT/, ""),
-            //     10,
-            //   );
-            //   nextNumber = lastNumber + count;
-            // }
-
-            // const transactionNo = `CT${String(nextNumber).padStart(6, "0")}`;
-
-            // console.log("TransactionNo ", transactionNo);
-            // console.log("Payment count ", count);
 
             await tx.cashTransaction.create({
               data: {
@@ -1362,8 +1333,7 @@ export class PosController {
         }
 
         // Generate temporary sale number: P-000001 format
-        const count = await tx.pendingPOSSale.count();
-        const saleNo = `P-${String(count + 1).padStart(6, "0")}`;
+        const saleNo = await nextDocumentNumber(tx, "pending_pos_sale", "P-");
 
         // Create the pending sale header
         const pendingSale = await tx.pendingPOSSale.create({
@@ -1484,8 +1454,7 @@ export class PosController {
 
       const returnRecord = await prisma.$transaction(async (tx) => {
         // Generate return number
-        const count = await tx.posReturn.count();
-        const returnNo = `RTN${String(count + 1).padStart(6, "0")}`;
+        const returnNo = await nextDocumentNumber(tx, "pos_return", "RTN");
 
         // Fetch original sale with lines
         const originalSale = await tx.posSale.findUnique({
@@ -1632,21 +1601,12 @@ export class PosController {
 
         // Cash transaction
 
-        let paymentCount = 1;
-
-        const lastTx = await tx.cashTransaction.findFirst({
-          orderBy: { createdAt: "desc" },
-        });
-
-        let baseNumber = lastTx
-          ? parseInt(lastTx.transactionNo.replace(/^CT/, ""), 10)
-          : 0;
-
         for (const payment of originalSale.payments) {
-          const nextNumber = baseNumber + paymentCount;
-
-          const transactionNo = `CT${String(nextNumber).padStart(6, "0")}`;
-          paymentCount++;
+          const transactionNo = await nextDocumentNumber(
+            tx,
+            "cash_transaction",
+            "CT",
+          );
 
           await tx.cashTransaction.create({
             data: {

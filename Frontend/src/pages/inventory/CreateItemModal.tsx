@@ -224,7 +224,7 @@ const CreateItemModal = ({ onClose, onSuccess }: CreateItemModalProps) => {
                   <input
                     {...register("standardCost", { valueAsNumber: true })}
                     type="number"
-                    step="0.01"
+                    step="0.0001"
                     className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
                 </div>
@@ -308,6 +308,7 @@ const CreateItemModal = ({ onClose, onSuccess }: CreateItemModalProps) => {
                           valueAsNumber: true,
                         })}
                         type="number"
+                        step="0.0001"
                         className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200"
                       />
                     </div>
