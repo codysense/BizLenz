@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   FileText,
@@ -18,8 +18,6 @@ import {
 import {
   reportsApi,
   inventoryApi,
-  salesApi,
-  purchaseApi,
   productionApi,
   managementApi,
 } from "../lib/api";
@@ -32,6 +30,132 @@ import { VendorSelect } from "../components/VendorSelect";
 import { ChartAccountSelect } from "../components/ChartAccountSelect";
 import { GenericSearchSelect } from "../components/GenericSearchCombo";
 
+const ARRAY_REPORT_IDS = new Set([
+  "trial-balance",
+  "cashAccount-balances",
+  "pos-sales",
+  "vendor-balances",
+  "customer-balances",
+  "inventory-aging",
+  "stock-card",
+  "wip-summary",
+  "production-variance",
+  "production-summary",
+  "production-report",
+  "material-usage",
+  "out-of-stock-items",
+  "sales-by-customer",
+  "purchases-by-vendor",
+  "ar-aging",
+  "ap-aging",
+  "sales-by-warehouse",
+  "all-sales-by-warehouse",
+]);
+
+const REPORT_ARRAY_FIELDS: Record<string, string[]> = {
+  "balance-sheet": ["assets", "liabilities", "equity"],
+  "profit-loss": ["revenues", "costOfSales", "otherIncomes", "expenses"],
+  "general-ledger": ["lines"],
+  "cash-flow": ["operatingActivities", "investingActivities", "financingActivities"],
+  "inventory-valuation": ["valuation"],
+  "sales-by-item": ["rows"],
+  "customer-ledger": ["entries"],
+  "vendor-ledger": ["entries"],
+  "sales-report": ["data"],
+  "purchase-report": ["data"],
+};
+
+function normalizeReportPayload(reportId: string, payload: unknown): unknown {
+  let value = payload;
+
+  // Support a standard { data: ... } transport envelope without confusing a
+  // report's own data field with that envelope.
+  if (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    "data" in value &&
+    Object.keys(value).every((key) => ["data", "success", "message"].includes(key))
+  ) {
+    value = (value as { data: unknown }).data;
+  }
+
+  if (ARRAY_REPORT_IDS.has(reportId)) {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object") {
+      const wrappedRows = ["rows", "items", "entries", "data"].find((key) =>
+        Array.isArray((value as Record<string, unknown>)[key]),
+      );
+      if (wrappedRows) return (value as Record<string, unknown[]>)[wrappedRows];
+    }
+    throw new Error(`The ${reportId} endpoint returned an unexpected response shape.`);
+  }
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`The ${reportId} endpoint returned an unexpected response shape.`);
+  }
+
+  const reportObject = value as Record<string, unknown>;
+  const missingArray = (REPORT_ARRAY_FIELDS[reportId] ?? []).find(
+    (field) => !Array.isArray(reportObject[field]),
+  );
+  if (missingArray) {
+    throw new Error(
+      `The ${reportId} response is missing its expected "${missingArray}" list.`,
+    );
+  }
+
+  if (["sales-report", "purchase-report"].includes(reportId) && (!reportObject.totals || typeof reportObject.totals !== "object")) {
+    throw new Error(`The ${reportId} response is missing its "totals" object.`);
+  }
+
+  if (
+    reportId === "sales-by-item" &&
+    (!reportObject.summary || typeof reportObject.summary !== "object")
+  ) {
+    throw new Error('The sales-by-item response is missing its "summary" object.');
+  }
+
+  if (
+    (reportId === "customer-ledger" || reportId === "vendor-ledger") &&
+    (!reportObject.totals || typeof reportObject.totals !== "object")
+  ) {
+    throw new Error(`The ${reportId} response is missing its "totals" object.`);
+  }
+
+  return value;
+}
+
+class ReportRenderErrorBoundary extends React.Component<
+  { children: React.ReactNode; reportName: string },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error(`Failed to render ${this.props.reportName}:`, error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-5 text-red-800">
+          <h4 className="font-semibold">This report could not be displayed</h4>
+          <p className="mt-1 text-sm">
+            The report data did not match what this view expects. Try generating it again. If the problem continues, share the report name with support.
+          </p>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -41,22 +165,38 @@ const Reports = () => {
   );
   const [warehouseFilter, setWarehouseFilter] = useState("");
   const [itemFilter, setItemFilter] = useState("");
-  const [customerFilter, setCustomerFilter] = useState("");
   const [usersFilter, setUsersFilter] = useState("");
   const [vendorFilter, setVendorFilter] = useState("");
   const [reportData, setReportData] = useState<any>(null);
+  const [reportDataReportId, setReportDataReportId] = useState("");
+  const [reportDataCriteriaKey, setReportDataCriteriaKey] = useState("");
+  const [reportDataVersion, setReportDataVersion] = useState(0);
+  const [reportError, setReportError] = useState("");
   const [loading, setLoading] = useState(false);
+  const requestSequence = useRef(0);
   const [accountFilter, setAccountFilter] = useState("");
   const [customerId, setCustomerId] = useState("");
-  const [remoteItem, setRemoteItem] = useState<T | null>(null);
+
+  const currentReportCriteriaKey = JSON.stringify({
+    selectedReport,
+    dateFrom,
+    dateTo,
+    asOfDate,
+    warehouseFilter,
+    itemFilter,
+    usersFilter,
+    vendorFilter,
+    accountFilter,
+    customerId,
+  });
 
   // Get filter options
-  const { data: warehouses } = useQuery({
+  const { data: warehouses } = useQuery<any>({
     queryKey: ["warehouses-for-reports"],
     queryFn: () => inventoryApi.getWarehouses(),
   });
 
-  const { data: items } = useQuery({
+  const { data: items } = useQuery<any>({
     queryKey: ["items-for-reports"],
     queryFn: () => inventoryApi.getItems({ limit: 100 }),
   });
@@ -71,14 +211,14 @@ const Reports = () => {
   //   queryFn: () => purchaseApi.getVendors({ limit: 100 })
   // });
 
-  const { data: accounts } = useQuery({
+  const { data: accounts } = useQuery<any>({
     queryKey: ["accounts-forreports"],
     queryFn: () => managementApi.getChartOfAccounts(),
   });
 
   // console.log(accounts)
 
-  const { data: allUsers = [] } = useQuery({
+  const { data: allUsers = [] } = useQuery<any>({
     queryKey: ["users"],
     queryFn: () => managementApi.getUsersWithDetails({ limit: 100 }),
   });
@@ -285,6 +425,42 @@ const Reports = () => {
       requiresDateRange: true,
     },
     {
+      id: "sales-report",
+      name: "Sales Report",
+      description: "Sales order and POS line details for a date range",
+      icon: DollarSign,
+      category: "Operational",
+      requiresDateRange: true,
+      supportCustomers: true,
+    },
+    {
+      id: "purchase-report",
+      name: "Purchase Report",
+      description: "Purchase line details for a date range",
+      icon: Building,
+      category: "Operational",
+      requiresDateRange: true,
+      supportVendors: true,
+    },
+    {
+      id: "sales-by-warehouse",
+      name: "Sales by Warehouse",
+      description: "Sales orders allocated to warehouses by issued quantities",
+      icon: Building,
+      category: "Operational",
+      requiresDateRange: true,
+      supportsWarehouse: true,
+    },
+    {
+      id: "all-sales-by-warehouse",
+      name: "All Sales by Warehouse",
+      description: "Sales orders and POS sales grouped by warehouse",
+      icon: Building,
+      category: "Operational",
+      requiresDateRange: true,
+      supportsWarehouse: true,
+    },
+    {
       id: "purchases-by-vendor",
       name: "Purchases by Vendor Report",
       description: "Vendor purchase analysis and performance",
@@ -345,11 +521,18 @@ const Reports = () => {
     const report = reports.find((r) => r.id === selectedReport);
     if (!report) return;
 
+    const requestId = ++requestSequence.current;
+    const requestedReportId = selectedReport;
+    const requestedCriteriaKey = currentReportCriteriaKey;
     setLoading(true);
+    setReportData(null);
+    setReportDataReportId("");
+    setReportDataCriteriaKey("");
+    setReportError("");
     try {
       let data;
 
-      switch (selectedReport) {
+      switch (requestedReportId) {
         case "balance-sheet":
           data = await reportsApi.getBalanceSheet({ dateFrom, dateTo });
           break;
@@ -501,6 +684,22 @@ const Reports = () => {
           }
           data = await reportsApi.getSalesByCustomer({ dateFrom, dateTo });
           break;
+        case "sales-report":
+          if (!dateFrom || !dateTo) { alert("Please select date range"); return; }
+          data = await reportsApi.getSalesReport({ dateFrom, dateTo, ...(customerId && { customerId }) });
+          break;
+        case "purchase-report":
+          if (!dateFrom || !dateTo) { alert("Please select date range"); return; }
+          data = await reportsApi.getPurchaseReport({ dateFrom, dateTo, ...(vendorFilter && { vendorId: vendorFilter }) });
+          break;
+        case "sales-by-warehouse":
+          if (!dateFrom || !dateTo) { alert("Please select date range"); return; }
+          data = await reportsApi.getSalesByWarehouse({ dateFrom, dateTo, ...(warehouseFilter && { warehouseId: warehouseFilter }) });
+          break;
+        case "all-sales-by-warehouse":
+          if (!dateFrom || !dateTo) { alert("Please select date range"); return; }
+          data = await reportsApi.getAllSalesByWarehouse({ dateFrom, dateTo, ...(warehouseFilter && { warehouseId: warehouseFilter }) });
+          break;
         case "purchases-by-vendor":
           if (!dateFrom || !dateTo) {
             alert("Please select date range");
@@ -534,16 +733,42 @@ const Reports = () => {
           return;
       }
 
-      setReportData(data);
+      if (requestId !== requestSequence.current) return;
+
+      const normalizedData = normalizeReportPayload(requestedReportId, data);
+      setReportData(normalizedData);
+      setReportDataReportId(requestedReportId);
+      setReportDataCriteriaKey(requestedCriteriaKey);
+      setReportDataVersion((version) => version + 1);
     } catch (error) {
       console.error("Generate report error:", error);
+      if (requestId === requestSequence.current) {
+        setReportError(
+          error instanceof Error ? error.message : "Failed to generate report.",
+        );
+      }
     } finally {
-      setLoading(false);
+      if (requestId === requestSequence.current) setLoading(false);
     }
   };
 
+  const handleSelectReport = (reportId: string) => {
+    requestSequence.current += 1;
+    setSelectedReport(reportId);
+    setReportData(null);
+    setReportDataReportId("");
+    setReportDataCriteriaKey("");
+    setReportError("");
+    setLoading(false);
+  };
+
+  const hasCurrentReportData =
+    reportData !== null && reportDataReportId === selectedReport;
+  const reportDataMatchesCurrentFilters =
+    hasCurrentReportData && reportDataCriteriaKey === currentReportCriteriaKey;
+
   const handleExportReport = (format: "pdf" | "xlsx" | "csv") => {
-    if (!reportData) {
+    if (!reportDataMatchesCurrentFilters) {
       toast.error("Please generate a report first");
       return;
     }
@@ -961,6 +1186,31 @@ const Reports = () => {
           );
           break;
         }
+        case "sales-report":
+        case "purchase-report": {
+          const isSales = selectedReport === "sales-report";
+          const columns = [
+            { key: "date", header: "Date" },
+            { key: "orderNo", header: isSales ? "Sale No" : "Purchase No" },
+            { key: isSales ? "customerName" : "vendorName", header: isSales ? "Customer" : "Vendor" },
+            { key: "itemName", header: "Item" },
+            { key: "qty", header: "Quantity" },
+            { key: "unitPrice", header: "Unit Price" },
+            { key: "total", header: "Line Total" },
+            ...(isSales ? [{ key: "source", header: "Source" }] : []),
+            { key: "status", header: "Status" },
+          ];
+          ReportExporter.exportGenericReport(reportData.data || [], columns, isSales ? "Sales Report" : "Purchase Report", format);
+          break;
+        }
+        case "sales-by-warehouse":
+        case "all-sales-by-warehouse": {
+          const columns = selectedReport === "sales-by-warehouse"
+            ? ["RowType", "WarehouseName", "OrderNo", "OrderDate", "CustomerName", "NoOfItems", "Amount"].map((key) => ({ key, header: key }))
+            : ["RowType", "TransactionDate", "SalesType", "DocumentNo", "CustomerName", "WarehouseName", "NoOfItems", "Amount"].map((key) => ({ key, header: key }));
+          ReportExporter.exportGenericReport(reportData, columns, selectedReport === "sales-by-warehouse" ? "Sales by Warehouse" : "All Sales by Warehouse", format);
+          break;
+        }
         case "purchases-by-vendor": {
           const purchaseVendorColumns = [
             { key: "vendor.code", header: "Vendor Code" },
@@ -1016,7 +1266,7 @@ const Reports = () => {
   };
 
   const renderReportContent = () => {
-    if (!reportData) return null;
+    if (!reportDataMatchesCurrentFilters) return null;
 
     const report = reports.find((r) => r.id === selectedReport);
     if (!report) return null;
@@ -1027,7 +1277,7 @@ const Reports = () => {
       case "profit-loss":
         return <ProfitLossReport data={reportData} />;
       case "trial-balance":
-        return <TrialBalanceReport data={reportData} />;
+        return <TrialBalanceReport data={reportData} asOfDate={dateTo || asOfDate} />;
       case "general-ledger":
         return <GeneralLedgerReport data={reportData} />;
       case "cash-flow":
@@ -1052,6 +1302,14 @@ const Reports = () => {
         return <OutOfStockItemsReport data={reportData} />;
       case "sales-by-customer":
         return <SalesByCustomerReport data={reportData} />;
+      case "sales-report":
+        return <DetailedSalesReport data={reportData} />;
+      case "purchase-report":
+        return <DetailedPurchaseReport data={reportData} />;
+      case "sales-by-warehouse":
+        return <WarehouseSalesReport data={reportData} allSales={false} />;
+      case "all-sales-by-warehouse":
+        return <WarehouseSalesReport data={reportData} allSales />;
       case "pos-sales":
         return <POSSalesReport data={reportData} />;
       case "purchases-by-vendor":
@@ -1125,7 +1383,7 @@ const Reports = () => {
                               ? "border-emerald-500 bg-emerald-50"
                               : "border-gray-200 hover:border-gray-300"
                           }`}
-                          onClick={() => setSelectedReport(report.id)}
+                          onClick={() => handleSelectReport(report.id)}
                         >
                           <div className="flex items-start">
                             <report.icon
@@ -1262,7 +1520,7 @@ const Reports = () => {
               {selectedReportConfig?.supportCustomers && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customers *
+                    {selectedReport === "sales-report" ? "Customer (optional)" : "Customers *"}
                   </label>
 
                   <CustomerSelect
@@ -1333,7 +1591,7 @@ const Reports = () => {
               {selectedReportConfig?.supportVendors && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Vendors *
+                    {selectedReport === "purchase-report" ? "Vendor (optional)" : "Vendors *"}
                   </label>
 
                   <VendorSelect
@@ -1377,7 +1635,7 @@ const Reports = () => {
             <div className="p-6 space-y-3">
               <button
                 onClick={() => handleExportReport("pdf")}
-                disabled={!reportData}
+                disabled={!reportDataMatchesCurrentFilters}
                 className="w-full inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -1386,7 +1644,7 @@ const Reports = () => {
 
               <button
                 onClick={() => handleExportReport("xlsx")}
-                disabled={!reportData}
+                disabled={!reportDataMatchesCurrentFilters}
                 className="w-full inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -1395,7 +1653,7 @@ const Reports = () => {
 
               <button
                 onClick={() => handleExportReport("csv")}
-                disabled={!reportData}
+                disabled={!reportDataMatchesCurrentFilters}
                 className="w-full inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -1407,14 +1665,27 @@ const Reports = () => {
       </div>
 
       {/* Report Content */}
-      {reportData && (
+      {reportError && (
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <span className="font-semibold">Report generation failed:</span> {reportError}
+        </div>
+      )}
+
+      {reportDataMatchesCurrentFilters && (
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
             <h3 className="text-lg leading-6 font-medium text-gray-900">
               {selectedReportConfig?.name}
             </h3>
           </div>
-          <div className="p-6">{renderReportContent()}</div>
+          <div className="p-6">
+            <ReportRenderErrorBoundary
+              key={`${selectedReport}-${reportDataVersion}`}
+              reportName={selectedReportConfig?.name ?? selectedReport}
+            >
+              {renderReportContent()}
+            </ReportRenderErrorBoundary>
+          </div>
         </div>
       )}
     </div>
@@ -1671,7 +1942,14 @@ const ProfitLossReport = ({ data }: { data: any }) => (
 //   );
 // };
 
-const TrialBalanceReport = ({ data }: { data: any }) => {
+const TrialBalanceReport = ({
+  data,
+  asOfDate,
+}: {
+  data: unknown;
+  asOfDate: string;
+}) => {
+  const rows = Array.isArray(data) ? data : [];
   const columns = [
     { key: "accountCode", header: "Account Code", width: "w-32" },
     { key: "accountName", header: "Account Name", width: "w-48" },
@@ -1699,12 +1977,12 @@ const TrialBalanceReport = ({ data }: { data: any }) => {
   ];
 
   const totalDebits =
-    data?.reduce((sum: number, item: any) => {
+    rows.reduce((sum: number, item: any) => {
       return sum + (item.balance >= 0 ? item.balance : 0);
     }, 0) ?? 0;
 
   const totalCredits =
-    data?.reduce((sum: number, item: any) => {
+    rows.reduce((sum: number, item: any) => {
       return sum + (item.balance < 0 ? Math.abs(item.balance) : 0);
     }, 0) ?? 0;
 
@@ -1713,11 +1991,11 @@ const TrialBalanceReport = ({ data }: { data: any }) => {
       <div className="text-center">
         <h2 className="text-xl font-bold">Trial Balance</h2>
         <p className="text-gray-600">
-          As of {new Date(data.asOfDate).toLocaleDateString()}
+          As of {new Date(`${asOfDate}T00:00:00`).toLocaleDateString()}
         </p>
       </div>
 
-      <DataTable data={data || []} columns={columns} />
+      <DataTable data={rows} columns={columns} />
 
       <div className="bg-gray-50 p-4 rounded-lg">
         <div className="grid grid-cols-2 gap-4 text-center">
@@ -1888,16 +2166,19 @@ const CustomerBalances = ({ data }: { data: any }) => {
   );
 };
 
-const GeneralLedgerReport = ({ data }: { data: any[] }) => {
+const GeneralLedgerReport = ({ data }: { data: any }) => {
   // 1. Compute running balance
-  const dataWithBalance = data.lines.reduce((acc: any[], curr, idx) => {
+  const dataWithBalance = data.lines.reduce(
+    (acc: any[], curr: any, idx: number) => {
     const prevBalance =
       idx > 0 ? acc[idx - 1].runningBalance : data.openingBalance;
     const runningBalance = prevBalance + (curr.debit || 0) - (curr.credit || 0);
 
     acc.push({ ...curr, runningBalance });
     return acc;
-  }, []);
+    },
+    [],
+  );
 
   // 2. Define columns including the new one
   const columns = [
@@ -2281,7 +2562,7 @@ const CustomerLedger = ({ data }: { data: any }) => {
   const entries = Array.isArray(data?.entries) ? data.entries : [];
 
   // 1. Compute running balances
-  const entriesWithBalance = entries.reduce((acc: any[], curr, idx) => {
+  const entriesWithBalance = entries.reduce((acc: any[], curr: any, idx: number) => {
     const prevBalance =
       idx > 0
         ? Number(acc[idx - 1].runningBalance)
@@ -2361,7 +2642,7 @@ const CustomerLedger = ({ data }: { data: any }) => {
 const VendorLedger = ({ data }: { data: any }) => {
   const entries = Array.isArray(data?.entries) ? data.entries : [];
 
-  const entriesWithBalance = entries.reduce((acc: any[], curr, idx) => {
+  const entriesWithBalance = entries.reduce((acc: any[], curr: any, idx: number) => {
     const prevBalance =
       idx > 0
         ? Number(acc[idx - 1].runningBalance)
@@ -2774,6 +3055,53 @@ const OutOfStockItemsReport = ({ data }: { data: any }) => {
       </div>
     </div>
   );
+};
+
+const DetailedSalesReport = ({ data }: { data: any }) => {
+  const rows = Array.isArray(data?.data) ? data.data : [];
+  const columns = [
+    { key: "date", header: "Date", cell: (row: any) => new Date(row.date).toLocaleDateString() },
+    { key: "orderNo", header: "Sale No" },
+    { key: "customerName", header: "Customer" },
+    { key: "itemName", header: "Item" },
+    { key: "qty", header: "Quantity" },
+    { key: "unitPrice", header: "Unit Price", cell: (row: any) => `₦${Number(row.unitPrice).toLocaleString()}` },
+    { key: "total", header: "Line Total", cell: (row: any) => `₦${Number(row.total).toLocaleString()}` },
+    { key: "source", header: "Source" },
+    { key: "status", header: "Status" },
+  ];
+  return <div className="space-y-4"><div className="text-center"><h2 className="text-xl font-bold">Sales Report</h2><p className="text-gray-600">{rows.length.toLocaleString()} lines · {Number(data?.totals?.totalQty || 0).toLocaleString()} units · ₦{Number(data?.totals?.totalAmount || 0).toLocaleString()}</p></div><DataTable data={rows} columns={columns} /></div>;
+};
+
+const DetailedPurchaseReport = ({ data }: { data: any }) => {
+  const rows = Array.isArray(data?.data) ? data.data : [];
+  const columns = [
+    { key: "date", header: "Date", cell: (row: any) => new Date(row.date).toLocaleDateString() },
+    { key: "orderNo", header: "Purchase No" },
+    { key: "vendorName", header: "Vendor" },
+    { key: "itemName", header: "Item / Asset" },
+    { key: "qty", header: "Quantity" },
+    { key: "unitPrice", header: "Unit Price", cell: (row: any) => `₦${Number(row.unitPrice).toLocaleString()}` },
+    { key: "total", header: "Line Total", cell: (row: any) => `₦${Number(row.total).toLocaleString()}` },
+    { key: "status", header: "Status" },
+  ];
+  return <div className="space-y-4"><div className="text-center"><h2 className="text-xl font-bold">Purchase Report</h2><p className="text-gray-600">{rows.length.toLocaleString()} lines · {Number(data?.totals?.totalQty || 0).toLocaleString()} units · ₦{Number(data?.totals?.totalAmount || 0).toLocaleString()}</p></div><DataTable data={rows} columns={columns} /></div>;
+};
+
+const WarehouseSalesReport = ({ data, allSales }: { data: any; allSales: boolean }) => {
+  const rows = Array.isArray(data) ? data : [];
+  const columns = allSales ? [
+    { key: "TransactionDate", header: "Date" }, { key: "SalesType", header: "Channel" },
+    { key: "DocumentNo", header: "Document No" }, { key: "CustomerName", header: "Customer" },
+    { key: "WarehouseName", header: "Warehouse" }, { key: "NoOfItems", header: "Quantity" },
+    { key: "Amount", header: "Amount", cell: (row: any) => `₦${Number(row.Amount || 0).toLocaleString()}` },
+  ] : [
+    { key: "RowType", header: "Row Type" }, { key: "WarehouseName", header: "Warehouse" },
+    { key: "OrderNo", header: "Sale No" }, { key: "OrderDate", header: "Date" },
+    { key: "CustomerName", header: "Customer" }, { key: "NoOfItems", header: "Quantity" },
+    { key: "Amount", header: "Amount", cell: (row: any) => `₦${Number(row.Amount || 0).toLocaleString()}` },
+  ];
+  return <div className="space-y-4"><div className="text-center"><h2 className="text-xl font-bold">{allSales ? "All Sales by Warehouse" : "Sales by Warehouse"}</h2><p className="text-gray-600">Sales values are allocated by quantities issued from each warehouse.</p></div><DataTable data={rows} columns={columns} /></div>;
 };
 
 const SalesByCustomerReport = ({ data }: { data: any }) => {

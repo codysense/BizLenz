@@ -11,6 +11,7 @@ import {
   updateUOMSchema,
 } from "../types/inventory";
 import { AuthRequest } from "../middleware/auth";
+import { writeAuditLog } from "../middleware/audit";
 import { CostingService } from "../services/costing";
 import { GeneralLedgerService } from "../services/gl";
 import { nextDocumentNumber } from "../services/documentNumbers";
@@ -287,6 +288,11 @@ export class InventoryController {
       const validatedData = createItemSchema.parse(req.body);
       const { priceList, ...itemData } = validatedData;
 
+      const itemBefore = await prisma.item.findUnique({
+        where: { sku: itemData.sku },
+        include: { priceList: true },
+      });
+
       const item = await prisma.item.update({
         where: { sku: itemData.sku },
         data: { ...itemData },
@@ -304,6 +310,19 @@ export class InventoryController {
           })),
         });
       }
+
+      const itemAfter = await prisma.item.findUnique({
+        where: { id: item.id },
+        include: { priceList: true },
+      });
+      await writeAuditLog({
+        req,
+        action: "UPDATE",
+        entity: "ITEM",
+        entityId: item.id,
+        before: itemBefore,
+        after: itemAfter,
+      });
 
       res.status(201).json(item);
     } catch (error) {

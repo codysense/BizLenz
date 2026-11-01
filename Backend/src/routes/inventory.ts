@@ -57,7 +57,6 @@ router.put(
     "Senior Accountant, Production Manager",
     "Manager",
   ]),
-  auditLogger("UPDATE", "ITEM"),
   inventoryController.updateItem,
 );
 router.delete(

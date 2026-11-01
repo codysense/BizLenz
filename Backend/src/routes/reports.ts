@@ -66,6 +66,10 @@ router.get(
 );
 
 // Operational Reports Accountant
+router.get("/sales-report", requireRole(["Senior Accountant", "Auditor", "Manager", "POS User"]), reportsController.getSalesReport);
+router.get("/purchase-report", requireRole(["Senior Accountant", "Auditor", "Manager", "Inventory Manager"]), reportsController.getPurchaseReport);
+router.get("/sales-by-warehouse", requireRole(["Senior Accountant", "Auditor", "Manager", "Inventory Manager"]), reportsController.getSalesByWarehouse);
+router.get("/all-sales-by-warehouse", requireRole(["Senior Accountant", "Auditor", "Manager", "Inventory Manager"]), reportsController.getAllSalesByWarehouse);
 router.get(
   "/inventory-aging",
   requireRole([

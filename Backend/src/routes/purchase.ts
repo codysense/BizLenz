@@ -29,7 +29,6 @@ router.post(
 router.put(
   "/orders/:id",
   requireRole(["Inventory Manager", "Senior Accountant"]),
-  auditLogger("UPDATE", "PURCHASE_ORDER"),
   purchaseController.updatePurchase,
 );
 router.delete(

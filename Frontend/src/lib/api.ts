@@ -820,6 +820,14 @@ export const reportsApi = {
     api.get(
       `/reports/purchases-by-vendor?${new URLSearchParams(params).toString()}`,
     ),
+  getSalesReport: (params: { dateFrom: string; dateTo: string; customerId?: string }) =>
+    api.get(`/reports/sales-report?${new URLSearchParams(params as any).toString()}`),
+  getPurchaseReport: (params: { dateFrom: string; dateTo: string; vendorId?: string }) =>
+    api.get(`/reports/purchase-report?${new URLSearchParams(params as any).toString()}`),
+  getSalesByWarehouse: (params: { dateFrom: string; dateTo: string; warehouseId?: string }) =>
+    api.get(`/reports/sales-by-warehouse?${new URLSearchParams(params as any).toString()}`),
+  getAllSalesByWarehouse: (params: { dateFrom: string; dateTo: string; warehouseId?: string }) =>
+    api.get(`/reports/all-sales-by-warehouse?${new URLSearchParams(params as any).toString()}`),
   getArApAging: (params: { asOfDate: string; type: "AR" | "AP" }) =>
     api.get(`/reports/ar-ap-aging?${new URLSearchParams(params).toString()}`),
   getProductionSummary: (params: { dateFrom: string; dateTo: string }) =>

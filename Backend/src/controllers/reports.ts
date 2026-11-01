@@ -17,6 +17,50 @@ const prisma = new PrismaClient();
 const reportsService = new ReportsService();
 
 export class ReportsController {
+  async getSalesReport(req: AuthRequest, res: Response) {
+    try {
+      const { dateFrom, dateTo, customerId } = req.query;
+      if (!dateFrom || !dateTo) return res.status(400).json({ error: "Date range is required" });
+      res.json(await reportsService.getSalesReport(new Date(String(dateFrom)), new Date(String(dateTo)), customerId ? String(customerId) : undefined));
+    } catch (error) {
+      console.error("Sales report error:", error);
+      res.status(400).json({ error: "Failed to generate sales report" });
+    }
+  }
+
+  async getPurchaseReport(req: AuthRequest, res: Response) {
+    try {
+      const { dateFrom, dateTo, vendorId } = req.query;
+      if (!dateFrom || !dateTo) return res.status(400).json({ error: "Date range is required" });
+      res.json(await reportsService.getPurchaseReport(new Date(String(dateFrom)), new Date(String(dateTo)), vendorId ? String(vendorId) : undefined));
+    } catch (error) {
+      console.error("Purchase report error:", error);
+      res.status(400).json({ error: "Failed to generate purchase report" });
+    }
+  }
+
+  async getSalesByWarehouse(req: AuthRequest, res: Response) {
+    try {
+      const { dateFrom, dateTo, warehouseId } = req.query;
+      if (!dateFrom || !dateTo) return res.status(400).json({ error: "Date range is required" });
+      res.json(await reportsService.getSalesByWarehouse({ dateFrom: new Date(String(dateFrom)), dateTo: new Date(String(dateTo)), warehouseId: warehouseId ? String(warehouseId) : null }));
+    } catch (error) {
+      console.error("Sales by warehouse report error:", error);
+      res.status(400).json({ error: "Failed to generate sales by warehouse report" });
+    }
+  }
+
+  async getAllSalesByWarehouse(req: AuthRequest, res: Response) {
+    try {
+      const { dateFrom, dateTo, warehouseId } = req.query;
+      if (!dateFrom || !dateTo) return res.status(400).json({ error: "Date range is required" });
+      res.json(await reportsService.getAllSalesByWarehouse({ dateFrom: new Date(String(dateFrom)), dateTo: new Date(String(dateTo)), warehouseId: warehouseId ? String(warehouseId) : null }));
+    } catch (error) {
+      console.error("All sales by warehouse report error:", error);
+      res.status(400).json({ error: "Failed to generate all sales by warehouse report" });
+    }
+  }
+
   //Metabase Dashboard Embed
   getDashboardEmbed(req: Request, res: Response) {
     const payload = {

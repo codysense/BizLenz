@@ -26,12 +26,83 @@ interface AuditLogEntry {
   entityId: string;
   beforeJson?: any;
   afterJson?: any;
+  requestJson?: any;
+  metadataJson?: {
+    method?: string;
+    path?: string;
+    statusCode?: number;
+    durationMs?: number;
+    userAgent?: string | null;
+    relatedRecords?: Record<string, Record<string, { id: string; code?: string | null; sku?: string | null; orderNo?: string | null; name?: string | null; email?: string | null }>>;
+  };
   ipAddress?: string;
   createdAt: string;
   user: {
     name: string;
     email: string;
   };
+}
+
+const formatAuditValue = (value: unknown) => {
+  if (value == null || value === "") return "cleared";
+  if (typeof value === "object") return "updated";
+  return String(value);
+};
+
+function summarizeAuditEntry(entry: AuditLogEntry): string {
+  const payload = entry.requestJson ?? entry.beforeJson;
+  const record = entry.afterJson?.data ?? entry.afterJson;
+  const identifier = record?.orderNo ?? record?.sku ?? record?.name ?? entry.entityId;
+  const submittedVendorId = payload?.vendorId;
+  const vendorReference = submittedVendorId
+    ? entry.metadataJson?.relatedRecords?.vendorId?.[submittedVendorId]
+    : null;
+  const vendor = record?.vendor ?? vendorReference;
+  const vendorLabel = vendor
+    ? ` for ${vendor.code ? `${vendor.code} — ` : ""}${vendor.name ?? "Vendor"}`
+    : "";
+  const prefix = `${entry.action.toLowerCase().replaceAll("_", " ")} ${entry.entity.toLowerCase().replaceAll("_", " ")} ${identifier}${vendorLabel}`;
+  if (!payload || typeof payload !== "object") return prefix;
+
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(payload)) {
+    if (key === "priceList" && Array.isArray(value)) {
+      const prices = value.map((item: any) => `${item.customerGroup ?? "Group"}: ${formatAuditValue(item.price)}`);
+      parts.push(`prices ${prices.join(", ") || "cleared"}`);
+    } else if (key === "purchaseLines" && Array.isArray(value)) {
+      const lines = value.map((item: any) => `${item.itemName ?? item.itemId ?? "Item"} × ${item.qty ?? "?"} @ ${item.unitPrice ?? "?"}`);
+      parts.push(`${value.length} line${value.length === 1 ? "" : "s"}${lines.length ? ` (${lines.join("; ")})` : ""}`);
+    } else if (key !== "sku" && key !== "id" && !/(Id|By)$/.test(key)) {
+      parts.push(`${key.replaceAll(/([A-Z])/g, " $1").toLowerCase()}: ${formatAuditValue(value)}`);
+    }
+  }
+  const references = entry.metadataJson?.relatedRecords ?? {};
+  const readableReferences = Object.entries(references).flatMap(([field, records]) =>
+    Object.values(records).map((reference) => {
+      const label = reference.code ?? reference.sku ?? reference.orderNo ?? reference.name ?? reference.email ?? reference.id;
+      const name = reference.name && reference.name !== label ? ` — ${reference.name}` : "";
+      return `${field.replace(/Id$/, "").replaceAll(/([A-Z])/g, " $1").toLowerCase()}: ${label}${name}`;
+    }),
+  );
+  parts.push(...readableReferences.slice(0, 4));
+  return parts.length ? `${prefix} — ${parts.join("; ")}` : prefix;
+}
+
+function auditDisplayValue(value: any, parent: any = null): any {
+  if (Array.isArray(value)) return value.map((item) => auditDisplayValue(item, parent));
+  if (!value || typeof value !== "object") return value;
+
+  return Object.fromEntries(Object.entries(value).map(([key, child]) => {
+    if (key === "vendorId" && typeof child === "string" && parent?.vendor) {
+      const vendor = parent.vendor;
+      return [key, `${vendor.code ? `${vendor.code} — ` : ""}${vendor.name} (ID: ${child})`];
+    }
+    if (key === "itemId" && typeof child === "string" && parent?.item) {
+      const item = parent.item;
+      return [key, `${item.sku ? `${item.sku} — ` : ""}${item.name ?? "Item"} (ID: ${child})`];
+    }
+    return [key, auditDisplayValue(child, value)];
+  }));
 }
 
 const AuditLog = () => {
@@ -75,8 +146,6 @@ const AuditLog = () => {
         ...(dateToFilter && { dateTo: dateToFilter }),
       };
 
-      console.log("Params sent to backend:", params);
-
       return managementApi.getAuditLogs(params);
     },
     // api.get('/management/audit-logs?page=1&limit=20&action=UPDATE&entity=COMPANY_SETTINGS')
@@ -92,7 +161,7 @@ const AuditLog = () => {
     //   ...(dateFromFilter && { dateFrom: dateFromFilter }),
     //   ...(dateToFilter && { dateTo: dateToFilter })
     // }),
-    // enabled: canViewAuditLogs
+    enabled: !!canViewAuditLogs,
   });
 
   const { data: users } = useQuery({
@@ -144,6 +213,16 @@ const AuditLog = () => {
         </div>
       ),
       width: "w-48",
+    },
+    {
+      key: "summary",
+      header: "Operation Summary",
+      cell: (entry: AuditLogEntry) => (
+        <span className="block max-w-[32rem] whitespace-normal text-xs text-gray-700" title={summarizeAuditEntry(entry)}>
+          {summarizeAuditEntry(entry)}
+        </span>
+      ),
+      width: "w-96",
     },
     {
       key: "action",
@@ -730,14 +809,22 @@ const AuditLog = () => {
 
                 {/* Before/After Data */}
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  {selectedEntry.requestJson && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 mb-3">Submitted Request</h4>
+                      <div className="bg-blue-50 p-4 rounded-lg max-h-64 overflow-y-auto">
+                        <pre className="text-xs text-blue-800 whitespace-pre-wrap">{JSON.stringify(selectedEntry.requestJson, null, 2)}</pre>
+                      </div>
+                    </div>
+                  )}
                   {selectedEntry.beforeJson && (
                     <div>
                       <h4 className="text-sm font-medium text-gray-900 mb-3 ">
-                        Before (Previous State)
+                        Previous State (legacy audit entries)
                       </h4>
                       <div className="bg-red-50 p-4 rounded-lg max-h-64 overflow-y-auto">
                         <pre className="text-xs text-red-800 whitespace-pre-wrap">
-                          {JSON.stringify(selectedEntry.beforeJson, null, 2)}
+                          {JSON.stringify(auditDisplayValue(selectedEntry.beforeJson), null, 2)}
                         </pre>
                       </div>
                     </div>
@@ -750,18 +837,48 @@ const AuditLog = () => {
                       </h4>
                       <div className="bg-green-50 p-4 rounded-lg max-h-64 overflow-y-auto">
                         <pre className="text-xs text-green-800 whitespace-pre-wrap">
-                          {JSON.stringify(selectedEntry.afterJson, null, 2)}
+                          {JSON.stringify(auditDisplayValue(selectedEntry.afterJson), null, 2)}
                         </pre>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {!selectedEntry.beforeJson && !selectedEntry.afterJson && (
+                {!selectedEntry.beforeJson && !selectedEntry.afterJson && !selectedEntry.requestJson && (
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <p className="text-sm text-gray-600 text-center">
                       No detailed change data available for this audit entry.
                     </p>
+                  </div>
+                )}
+
+                {selectedEntry.metadataJson && (
+                  <div className="mt-5 rounded-lg bg-gray-50 p-4">
+                    <h4 className="mb-2 text-sm font-medium text-gray-900">Request Context</h4>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                      <span>Route: <span className="font-mono">{selectedEntry.metadataJson.method} {selectedEntry.metadataJson.path}</span></span>
+                      <span>Response: {selectedEntry.metadataJson.statusCode}</span>
+                      <span>Duration: {selectedEntry.metadataJson.durationMs} ms</span>
+                      <span className="col-span-2 break-all">Browser: {selectedEntry.metadataJson.userAgent || "Not recorded"}</span>
+                    </div>
+                  </div>
+                )}
+
+                {!!Object.keys(selectedEntry.metadataJson?.relatedRecords ?? {}).length && (
+                  <div className="mt-5 rounded-lg border border-blue-100 bg-blue-50 p-4">
+                    <h4 className="mb-3 text-sm font-medium text-gray-900">Linked Records</h4>
+                    <div className="space-y-2">
+                      {Object.entries(selectedEntry.metadataJson!.relatedRecords!).map(([field, records]) => (
+                        <div key={field} className="text-sm">
+                          <span className="mr-2 text-gray-500">{field.replace(/Id$/, "").replaceAll(/([A-Z])/g, " $1")}:</span>
+                          {Object.values(records).map((record) => {
+                            const label = record.code ?? record.sku ?? record.orderNo ?? record.name ?? record.email ?? record.id;
+                            const description = record.name && record.name !== label ? ` — ${record.name}` : "";
+                            return <span key={record.id} className="mr-2 inline-block rounded bg-white px-2 py-1 font-medium text-blue-900">{label}{description} <span className="font-mono text-xs text-gray-500">ID: {record.id}</span></span>;
+                          })}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

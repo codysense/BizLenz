@@ -8,6 +8,7 @@ import {
   createPurchaseReturnSchema,
 } from "../types/purchase";
 import { AuthRequest } from "../middleware/auth";
+import { writeAuditLog } from "../middleware/audit";
 import { CostingService } from "../services/costing";
 import { GeneralLedgerService } from "../services/gl";
 import { nextDocumentNumber } from "../services/documentNumbers";
@@ -836,7 +837,10 @@ export class PurchaseController {
       // Check if purchase can be edited
       const existingPurchase = await prisma.purchase.findUnique({
         where: { id },
-        select: { status: true },
+        include: {
+          vendor: { select: { id: true, code: true, name: true } },
+          purchaseLines: { include: { item: { select: { id: true, sku: true, name: true } } } },
+        },
       });
 
       if (
@@ -874,6 +878,22 @@ export class PurchaseController {
       }));
 
       await prisma.purchaseLine.createMany({ data: lineData });
+
+      const purchaseAfter = await prisma.purchase.findUnique({
+        where: { id },
+        include: {
+          vendor: { select: { id: true, code: true, name: true } },
+          purchaseLines: { include: { item: { select: { id: true, sku: true, name: true } } } },
+        },
+      });
+      await writeAuditLog({
+        req,
+        action: "UPDATE",
+        entity: "PURCHASE_ORDER",
+        entityId: id,
+        before: existingPurchase,
+        after: purchaseAfter,
+      });
 
       res.json(updatedPurchase);
     } catch (error) {

@@ -2181,6 +2181,91 @@ ORDER BY v.name;
       lastMovementRef: row.last_ref_id,
     }));
   }
+  async getSalesReport(fromDate: Date, toDate: Date, customerId?: string) {
+    const from = startOfDayUTC(fromDate);
+    const to = endOfDayUTC(toDate);
+    const [salesLines, posLines] = await Promise.all([
+      prisma.saleLine.findMany({
+        where: { sale: { orderDate: { gte: from, lte: to }, status: { in: ["CONFIRMED", "DELIVERED", "INVOICED", "PAID", "RETURNED"] }, ...(customerId ? { customerId } : {}) } },
+        include: { sale: { include: { customer: true } }, item: true },
+      }),
+      prisma.posSaleLine.findMany({
+        where: { posSale: { createdAt: { gte: from, lte: to }, status: { in: ["COMPLETED", "PARTIALLY_RETURNED"] }, ...(customerId ? { customerId } : {}) } },
+        include: { posSale: { include: { customer: true } }, item: true },
+      }),
+    ]);
+    const data = [
+      ...salesLines.map((line) => ({ date: line.sale.orderDate, orderNo: line.sale.orderNo, customerName: line.sale.customer.name, itemName: line.item.name, qty: line.qty.toNumber(), unitPrice: line.unitPrice.toNumber(), total: line.lineTotal.toNumber(), status: line.sale.status, source: "Sales Order" })),
+      ...posLines.map((line) => ({ date: line.posSale.createdAt, orderNo: line.posSale.saleNo, customerName: line.posSale.customer?.name || "Walk-in Customer", itemName: line.item.name, qty: line.qty.toNumber(), unitPrice: line.unitPrice.toNumber(), total: line.lineTotal.toNumber(), status: line.posSale.status, source: "POS" })),
+    ].sort((a, b) => a.date.getTime() - b.date.getTime());
+    return { data, totals: { totalQty: data.reduce((sum, row) => sum + row.qty, 0), totalAmount: data.reduce((sum, row) => sum + row.total, 0) } };
+  }
+
+  async getPurchaseReport(fromDate: Date, toDate: Date, vendorId?: string) {
+    const lines = await prisma.purchaseLine.findMany({
+      where: { purchase: { orderDate: { gte: startOfDayUTC(fromDate), lte: endOfDayUTC(toDate) }, status: { not: "DRAFT" }, ...(vendorId ? { vendorId } : {}) } },
+      include: { purchase: { include: { vendor: true } }, item: true },
+      orderBy: { purchase: { orderDate: "asc" } },
+    });
+    const data = lines.map((line) => ({ date: line.purchase.orderDate, orderNo: line.purchase.orderNo, vendorName: line.purchase.vendor.name, itemName: line.item?.name || line.assetName || "N/A", qty: line.qty.toNumber(), unitPrice: line.unitPrice.toNumber(), total: line.lineTotal.toNumber(), status: line.purchase.status }));
+    return { data, totals: { totalQty: data.reduce((sum, row) => sum + row.qty, 0), totalAmount: data.reduce((sum, row) => sum + row.total, 0) } };
+  }
+
+  async getSalesByWarehouse(params: { dateFrom: Date; dateTo: Date; warehouseId?: string | null }) {
+    const from = startOfDayUTC(params.dateFrom);
+    const to = endOfDayUTC(params.dateTo);
+    const values: any[] = [from, to];
+    let filter = "";
+    if (params.warehouseId) { values.push(params.warehouseId); filter = ` AND i.\"warehouseId\" = $${values.length}`; }
+    const query = `WITH line_totals AS (
+      SELECT \"saleId\", \"itemId\", SUM(qty) AS qty, SUM(\"lineTotal\") AS amount FROM sale_lines GROUP BY \"saleId\", \"itemId\"
+    ), issued AS (
+      SELECT \"refId\" AS sale_id, \"warehouseId\", \"itemId\", SUM(qty) AS qty FROM inventory_ledger
+      WHERE \"refType\"='SALE' AND direction='OUT' GROUP BY \"refId\", \"warehouseId\", \"itemId\"
+    ), report AS (
+      SELECT w.name AS \"WarehouseName\", s.id AS \"SaleId\", s.\"orderNo\" AS \"OrderNo\", s.\"orderDate\"::date AS \"OrderDate\",
+        c.name AS \"CustomerName\", SUM(i.qty) AS \"NoOfItems\",
+        SUM(CASE WHEN lt.qty > 0 THEN lt.amount * i.qty / lt.qty ELSE 0 END) AS \"Amount\"
+      FROM issued i
+      JOIN sales s ON s.id=i.sale_id JOIN line_totals lt ON lt.\"saleId\"=i.sale_id AND lt.\"itemId\"=i.\"itemId\"
+      JOIN warehouses w ON w.id=i.\"warehouseId\" JOIN customers c ON c.id=s.\"customerId\"
+      WHERE s.\"orderDate\" >= $1 AND s.\"orderDate\" <= $2 AND s.status IN ('DELIVERED','INVOICED','PAID') ${filter}
+      GROUP BY w.name,s.id,s.\"orderNo\",s.\"orderDate\",c.name
+    )
+    SELECT 'DETAIL' AS \"RowType\", \"WarehouseName\", \"OrderNo\", \"OrderDate\", \"CustomerName\", \"NoOfItems\", \"Amount\" FROM report
+    UNION ALL SELECT 'SUMMARY', \"WarehouseName\", 'Warehouse Total', NULL, '', SUM(\"NoOfItems\"), SUM(\"Amount\") FROM report GROUP BY \"WarehouseName\"
+    UNION ALL SELECT 'GRANDTOTAL', '', 'Grand Total', NULL, '', SUM(\"NoOfItems\"), SUM(\"Amount\") FROM report
+    ORDER BY 2,1,4`;
+    const rows = await prisma.$queryRawUnsafe<any[]>(query, ...values);
+    return rows.map((row) => ({ ...row, OrderDate: row.OrderDate instanceof Date ? row.OrderDate.toISOString().slice(0, 10) : row.OrderDate, NoOfItems: Number(row.NoOfItems || 0), Amount: Number(row.Amount || 0) }));
+  }
+
+  async getAllSalesByWarehouse(params: { dateFrom: Date; dateTo: Date; warehouseId?: string | null }) {
+    const from = startOfDayUTC(params.dateFrom);
+    const to = endOfDayUTC(params.dateTo);
+    const values: any[] = [from, to];
+    let posFilter = "";
+    let saleFilter = "";
+    if (params.warehouseId) { values.push(params.warehouseId); posFilter = ` AND ps.\"warehouseId\"=$3`; saleFilter = ` AND i.\"warehouseId\"=$3`; }
+    const query = `WITH line_totals AS (
+      SELECT \"saleId\", \"itemId\", SUM(qty) AS qty, SUM(\"lineTotal\") AS amount FROM sale_lines GROUP BY \"saleId\", \"itemId\"
+    ), issued AS (
+      SELECT \"refId\" AS sale_id, \"warehouseId\", \"itemId\", SUM(qty) AS qty FROM inventory_ledger WHERE \"refType\"='SALE' AND direction='OUT' GROUP BY \"refId\",\"warehouseId\",\"itemId\"
+    ), all_sales AS (
+      SELECT ps.\"createdAt\"::date AS \"TransactionDate\", 'POS' AS \"SalesType\", ps.\"saleNo\" AS \"DocumentNo\", COALESCE(c.name,'Walk-in Customer') AS \"CustomerName\", w.name AS \"WarehouseName\", SUM(pl.qty) AS \"NoOfItems\", ps.\"totalAmount\" AS \"Amount\"
+      FROM pos_sales ps JOIN warehouses w ON w.id=ps.\"warehouseId\" LEFT JOIN customers c ON c.id=ps.\"customerId\" JOIN pos_sale_lines pl ON pl.\"posSaleId\"=ps.id
+      WHERE ps.status='COMPLETED' AND ps.\"createdAt\">=$1 AND ps.\"createdAt\"<=$2 ${posFilter} GROUP BY ps.id,ps.\"createdAt\",ps.\"saleNo\",c.name,w.name,ps.\"totalAmount\"
+      UNION ALL
+      SELECT s.\"orderDate\"::date, 'SALE', s.\"orderNo\", c.name, w.name, SUM(i.qty), SUM(CASE WHEN lt.qty>0 THEN lt.amount*i.qty/lt.qty ELSE 0 END)
+      FROM issued i JOIN sales s ON s.id=i.sale_id JOIN line_totals lt ON lt.\"saleId\"=i.sale_id AND lt.\"itemId\"=i.\"itemId\" JOIN customers c ON c.id=s.\"customerId\" JOIN warehouses w ON w.id=i.\"warehouseId\"
+      WHERE s.status IN ('DELIVERED','INVOICED','PAID') AND s.\"orderDate\">=$1 AND s.\"orderDate\"<=$2 ${saleFilter} GROUP BY s.id,s.\"orderDate\",s.\"orderNo\",c.name,w.name
+    )
+    SELECT 'DETAIL' AS \"RowType\", \"TransactionDate\", \"SalesType\", \"DocumentNo\", \"CustomerName\", \"WarehouseName\", \"NoOfItems\", \"Amount\" FROM all_sales
+    UNION ALL SELECT 'GRANDTOTAL', NULL, '', 'Grand Total', '', '', SUM(\"NoOfItems\"), SUM(\"Amount\") FROM all_sales ORDER BY 2 NULLS LAST,4`;
+    const rows = await prisma.$queryRawUnsafe<any[]>(query, ...values);
+    return rows.map((row) => ({ ...row, TransactionDate: row.TransactionDate instanceof Date ? row.TransactionDate.toISOString().slice(0, 10) : row.TransactionDate || "-", NoOfItems: Number(row.NoOfItems || 0), Amount: Number(row.Amount || 0) }));
+  }
+
   async getSalesByCustomer(fromDate: Date, toDate: Date) {
     const newToDate = endOfDayUTC(toDate);
     const newFromDate = startOfDayUTC(fromDate);

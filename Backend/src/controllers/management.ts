@@ -186,12 +186,6 @@ if (dateFrom || dateTo) {
     where.createdAt.lte = endDate;
   }
 }
- {
-      where.createdAt = {};
-      if (dateFrom) where.createdAt.gte = new Date(dateFrom as string);
-      if (dateTo) where.createdAt.lte = new Date(dateTo as string);
-    }
-   console.log("Final Prisma where:", JSON.stringify(where, null, 2));
 
 
     const [entries, total] = await Promise.all([
