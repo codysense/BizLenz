@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BizLens ERP — Official Commercial Advertisement (Synced Nigerian Voice)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@600;700;800&display=swap');
+
+  :root {
+    --primary: #059669;
+    --primary-glow: #10b981;
+    --primary-light: #34d399;
+    --primary-dark: #064e3b;
+    --accent-gold: #f59e0b;
+    --accent-danger: #ef4444;
+    --dark-bg: #030712;
+    --card-bg: rgba(15, 23, 42, 0.85);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+  }
+
+  body {
+    background: #020617;
+    color: var(--text-main);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px 16px;
+    overflow-x: hidden;
+  }
+
+  .main-wrapper {
+    width: 100%;
+    max-width: 1280px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Stage Viewport */
+  .video-stage-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--dark-bg);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 30px 90px -20px rgba(0, 0, 0, 0.9), 0 0 60px rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  #videoCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* HTML Overlay Elements */
+  .scene-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 44px 54px;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Top Header */
+  .top-brand-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .brand-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(16px);
+    padding: 8px 20px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  }
+
+  .brand-logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #059669, #10b981);
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-weight: 900;
+    color: white;
+    font-size: 18px;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+  }
+
+  .brand-name {
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+
+  .brand-tag {
+    font-size: 11px;
+    color: #34d399;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .nigerian-voice-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34d399;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #10b981;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* Lower Third Banner */
+  .lower-third {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .caption-box {
+    background: rgba(10, 15, 29, 0.94);
+    backdrop-filter: blur(20px);
+    padding: 18px 30px;
+    border-radius: 16px;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    max-width: 70%;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+    transition: all 0.25s ease;
+  }
+
+  .caption-category {
+    color: var(--accent-gold);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .caption-text {
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.42;
+    color: #ffffff;
+  }
+
+  .call-to-action-chip {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    padding: 16px 26px;
+    border-radius: 14px;
+    font-weight: 800;
+    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.4);
+    text-align: right;
+  }
+
+  .cta-phone {
+    font-size: 17px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+  }
+
+  .cta-sub {
+    font-size: 12px;
+    opacity: 0.95;
+    font-weight: 600;
+  }
+
+  /* Player Controls */
+  .player-controls-bar {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 14px 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+  }
+
+  .ctrl-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: white;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+  }
+
+  .ctrl-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary-glow);
+    transform: translateY(-2px);
+  }
+
+  .ctrl-btn.active {
+    background: var(--primary);
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+  }
+
+  .timeline-bar {
+    flex: 1;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .timeline-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #059669, #34d399);
+    border-radius: 999px;
+    box-shadow: 0 0 14px #10b981;
+    transition: width 0.05s linear;
+  }
+
+  .time-display {
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--text-muted);
+    min-width: 100px;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  /* Scene Pills */
+  .scenes-nav {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+
+  .scene-pill {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .scene-pill:hover, .scene-pill.active {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+  }
+
+  .download-badge {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    text-decoration: none;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+  }
+
+  .download-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+  }
+</style>
+</head>
+<body>
+
+<div class="main-wrapper">
+  <!-- Hidden Master Audio Track for 100% Locked Synchronization -->
+  <audio id="masterAudio" src="audio/master_voiceover.mp3" preload="auto"></audio>
+
+  <!-- Video Stage Container -->
+  <div class="video-stage-container" id="videoStage">
+    <canvas id="videoCanvas" width="1920" height="1080"></canvas>
+
+    <!-- Overlay Layer -->
+    <div class="scene-overlay">
+      <div class="top-brand-bar">
+        <div class="brand-badge">
+          <div class="brand-logo-icon">B</div>
+          <div>
+            <div class="brand-name">BizLens Enterprise ERP</div>
+            <div class="brand-tag">Control Everything, Miss Nothing</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div class="nigerian-voice-pill">
+            <span class="live-dot"></span>
+            100% Synced Nigerian Voiceover
+          </div>
+          <div class="brand-badge" style="background: rgba(5, 150, 105, 0.25); border-color: rgba(16, 185, 129, 0.4);">
+            <span style="font-size: 12px; font-weight: 800; color: #a7f3d0;">CodySense IT Solutions</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lower Third Caption -->
+      <div class="lower-third">
+        <div class="caption-box" id="captionBox">
+          <div class="caption-category" id="captionCat">OPERATIONAL BOTTLENECK</div>
+          <div class="caption-text" id="captionText">Loading BizLens Commercial Showcase...</div>
+        </div>
+
+        <div class="call-to-action-chip">
+          <div class="cta-phone">📞 +234 803 312 4491</div>
+          <div class="cta-sub">✉️ kolly4weall@gmail.com</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Controls Bar -->
+  <div class="player-controls-bar">
+    <button class="ctrl-btn" id="playBtn" title="Play / Pause">▶</button>
+    <button class="ctrl-btn" id="restartBtn" title="Restart Video">↺</button>
+    
+    <div class="timeline-bar" id="timelineBar">
+      <div class="timeline-progress" id="timelineProgress"></div>
+    </div>
+
+    <div class="time-display" id="timeDisplay">00:00 / 01:50</div>
+
+    <button class="ctrl-btn active" id="audioToggleBtn" title="Mute / Unmute Voiceover">🔊</button>
+
+    <a href="BizLens_Enterprise_Commercial_Ad_1080p.mp4" download="BizLens_Enterprise_Commercial_Ad_1080p.mp4" class="download-badge">
+      <span>📥</span> Download Synced MP4 Video
+    </a>
+  </div>
+
+  <!-- Scene Navigator Pills -->
+  <div class="scenes-nav" id="sceneNav"></div>
+</div>
+
+<script>
+// EXACT AUDIO TIMINGS (Extracted directly from the master audio stream)
+// Total Duration: 109.64s
+const SCENES = [
+  {
+    id: "hook",
+    title: "1. The Challenge",
+    startTime: 0.00,
+    duration: 9.94,
+    category: "OPERATIONAL BOTTLENECK",
+    caption: "Are you still running your factory and distribution operations on fragile spreadsheets? Stop inventory leakage, untracked batch costs, and delayed debtor collections today!",
+    headline: "Stop Revenue Leakage & Manufacturing Blindspots",
+    subhead: "Traditional spreadsheets can't track multi-stage batch formulations or 30/60/90-day debtor aging.",
+    badges: ["❌ Bulk Raw Material Waste", "❌ Uncalculated Generator Diesel", "❌ Trapped Working Capital"],
+    callout: { text: "CRITICAL REVENUE LEAK", x: 400, y: 350 },
+    shot: null
+  },
+  {
+    id: "intro",
+    title: "2. Introducing BizLens",
+    startTime: 9.94,
+    duration: 12.50,
+    category: "ENTERPRISE SOLUTION",
+    caption: "Welcome to BizLens Enterprise ERP, built by CodySense IT Solutions. The all-in-one software purposefully engineered to give you complete operational control. Control Everything, Miss Nothing!",
+    headline: "Control Everything. Miss Nothing.",
+    subhead: "Unified Accounting, Factory Manufacturing, Multi-Warehouse Stock & Anti-Fraud Governance.",
+    badges: ["₦2.4B+ Transactions Managed", "98% Faster Financial Reporting", "5,000+ Growing Businesses"],
+    callout: { text: "PROVEN TRACK RECORD", x: 1300, y: 700 },
+    shot: "framed_shots/login_framed.png"
+  },
+  {
+    id: "dashboard",
+    title: "3. Executive Intelligence",
+    startTime: 22.44,
+    duration: 10.27,
+    category: "EXECUTIVE CLARITY",
+    caption: "Take command with the real-time Executive Dashboard. Monitor your gross sales, net profit margins, customer receivables, and cash flow in one unified view.",
+    headline: "Real-Time Financial Intelligence",
+    subhead: "Instant executive visibility across your factory floor, sales distribution channels, and operating cash.",
+    badges: ["Live Cash Flow Tracking", "Automated Expense Breakdown", "Real-Time Net Profit Margins"],
+    callout: { text: "LIVE REVENUE: ₦148M+", x: 1250, y: 300 },
+    shot: "framed_shots/dashboard_framed.png"
+  },
+  {
+    id: "boms",
+    title: "4. Precision BOM Recipes",
+    startTime: 32.71,
+    duration: 10.66,
+    category: "MANUFACTURING FORMULATION",
+    caption: "Eliminate formulation guesswork. Build multi-stage Bills of Materials, track active Work-In-Progress, and automatically capture direct labor and generator diesel per batch.",
+    headline: "Multi-Stage Bill of Materials (BOM)",
+    subhead: "Capture standard recipe formulations, raw material consumption, and factory overhead per unit.",
+    badges: ["Multi-Stage Batch Formulation", "Direct Labor Allocation", "Generator Diesel Overhead"],
+    callout: { text: "EXACT RECIPE COSTING", x: 1320, y: 340 },
+    shot: "framed_shots/boms_framed.png"
+  },
+  {
+    id: "production",
+    title: "5. Shop Floor & WIP",
+    startTime: 43.37,
+    duration: 7.34,
+    category: "PRODUCTION WORK ORDERS",
+    caption: "Track production work orders on the factory floor from raw material issuance to finished goods warehousing, with zero recipe variance.",
+    headline: "Complete Work-In-Progress (WIP) Control",
+    subhead: "Pinpoint yield variances between planned recipe standards and actual factory output in real time.",
+    badges: ["Work Order Issuance", "Active WIP Monitoring", "Batch Yield Variance"],
+    callout: { text: "PLANNED VS ACTUAL YIELD", x: 1300, y: 360 },
+    shot: "framed_shots/production_framed.png"
+  },
+  {
+    id: "pos",
+    title: "6. Retail POS Terminal",
+    startTime: 50.71,
+    duration: 10.39,
+    category: "POINT OF SALE COMMAND CENTER",
+    caption: "Accelerate retail checkouts with our high-speed Point of Sale terminal. Barcode scanning, split payments, and seamless cashier shift balancing keep your queues moving fast.",
+    headline: "High-Speed Retail Command Center",
+    subhead: "Split tenders (Cash, POS Transfer, Card), thermal printing, and cashier float balancing.",
+    badges: ["Fast Barcode Scanner", "Split Tender (Cash/Card/Transfer)", "Cashier Float & Shift Reconciliation"],
+    callout: { text: "SPLIT TENDER & SHIFTS", x: 1350, y: 340 },
+    shot: "framed_shots/pos_framed.png"
+  },
+  {
+    id: "cashbook",
+    title: "7. Anti-Fraud Governance",
+    startTime: 61.10,
+    duration: 10.06,
+    category: "TREASURY & FRAUD PREVENTION",
+    caption: "Protect your business with multi-tier anti-fraud governance. Every payment strictly follows a four-eye approval workflow: Prepared, Approved, Authorized, and Paid.",
+    headline: "Strict 4-Eye Anti-Fraud Governance",
+    subhead: "Prepared → Approved → Authorized → Paid. Zero unauthorized outflows. 100% immutable audit log.",
+    badges: ["Strict 4-Eye Approval Flow", "Multi-Account Cashbook", "100% Immutable Audit Trail"],
+    callout: { text: "4-EYE DUAL AUTHORIZATION", x: 1350, y: 350 },
+    shot: "framed_shots/cashbook_framed.png"
+  },
+  {
+    id: "assets",
+    title: "8. Fixed Asset Register",
+    startTime: 71.16,
+    duration: 7.97,
+    category: "ASSET CAPITALIZATION",
+    caption: "Track company assets seamlessly with automated asset tagging and monthly straight-line depreciation calculations directly in your Fixed Asset Register.",
+    headline: "Automated Asset Depreciation",
+    subhead: "Direct capitalization from Purchase Orders, monthly depreciation runs, and live Net Book Value.",
+    badges: ["Direct PO Capitalization", "Monthly Depreciation Schedule", "Live Net Book Value (NBV)"],
+    callout: { text: "AUTOMATED DEPRECIATION", x: 1320, y: 330 },
+    shot: "framed_shots/fixed_assets_framed.png"
+  },
+  {
+    id: "reports",
+    title: "9. IFRS Financial Reports",
+    startTime: 79.13,
+    duration: 11.21,
+    category: "INSTANT FINANCIAL STATEMENTS",
+    caption: "Make confident executive decisions. Generate instant IFRS Balance Sheets, Profit and Loss statements, and thirty-sixty-ninety day debtor aging reports at the click of a button.",
+    headline: "One-Click IFRS Financial Statements",
+    subhead: "Balance Sheet, Profit & Loss, Trial Balance, General Ledger, and Customer Ledgers in PDF or Excel.",
+    badges: ["Instant Real-Time P&L", "Balance Sheet & Trial Balance", "Export to PDF / Excel / CSV"],
+    callout: { text: "INSTANT IFRS EXPORTS", x: 1340, y: 340 },
+    shot: "framed_shots/reports_framed.png"
+  },
+  {
+    id: "cta",
+    title: "10. Deploy Today",
+    startTime: 90.34,
+    duration: 19.30,
+    category: "CONTACT CODYSENSE IT SOLUTIONS",
+    caption: "Ready to transform your enterprise? BizLens is available in Cloud, Standalone Desktop, and 100% offline Local Intranet. Contact CodySense IT Solutions on zero-eight-zero, three-three-one-two, four-four-nine-one, or email kolly-four-we-all at gmail dot com. Visit bizlens dot netlify dot app today!",
+    headline: "Empower Your Business With BizLens Today",
+    subhead: "Deploy on Cloud, Standalone Desktop, or 100% Offline Local Intranet.",
+    badges: ["Cloud Hosting (₦165,000/yr)", "Desktop Perpetual (₦1,740,000)", "Plant LAN Intranet (₦580,000)"],
+    callout: { text: "CALL CODYSENSE NOW", x: 960, y: 350 },
+    shot: "framed_shots/login_framed.png"
+  }
+];
+
+const TOTAL_DURATION = 109.64;
+
+// Audio & Canvas Elements
+const masterAudio = document.getElementById("masterAudio");
+const canvas = document.getElementById("videoCanvas");
+const ctx = canvas.getContext("2d");
+const captionCat = document.getElementById("captionCat");
+const captionText = document.getElementById("captionText");
+const timelineProgress = document.getElementById("timelineProgress");
+const timeDisplay = document.getElementById("timeDisplay");
+const playBtn = document.getElementById("playBtn");
+const audioToggleBtn = document.getElementById("audioToggleBtn");
+const sceneNav = document.getElementById("sceneNav");
+
+let isPlaying = false;
+let currentTime = 0.0;
+let mediaRecorder = null;
+let recordedChunks = [];
+
+// Preload Images
+const imageCache = {};
+SCENES.forEach(s => {
+  if (s.shot) {
+    const img = new Image();
+    img.src = s.shot;
+    imageCache[s.shot] = img;
+  }
+});
+
+// Scene Nav Pills
+SCENES.forEach((scene, index) => {
+  const pill = document.createElement("button");
+  pill.className = `scene-pill ${index === 0 ? 'active' : ''}`;
+  pill.innerText = scene.title;
+  pill.onclick = () => seekToScene(index);
+  sceneNav.appendChild(pill);
+});
+
+function getSceneAtTime(t) {
+  for (let i = 0; i < SCENES.length; i++) {
+    const s = SCENES[i];
+    if (t >= s.startTime && t < s.startTime + s.duration) {
+      return { scene: s, index: i, progress: (t - s.startTime) / s.duration };
+    }
+  }
+  return { scene: SCENES[SCENES.length - 1], index: SCENES.length - 1, progress: 1.0 };
+}
+
+function seekToScene(idx) {
+  const target = SCENES[idx].startTime;
+  currentTime = target;
+  masterAudio.currentTime = target;
+  updateUI();
+  renderFrameAtTime(currentTime);
+}
+
+// Background Drawing
+function drawDynamicBackground(scene) {
+  const grad = ctx.createRadialGradient(960, 540, 100, 960, 540, 1200);
+  
+  if (scene.id === "hook") {
+    grad.addColorStop(0, "#1f1424");
+    grad.addColorStop(0.5, "#130a17");
+    grad.addColorStop(1, "#07020a");
+  } else if (scene.id === "boms" || scene.id === "production") {
+    grad.addColorStop(0, "#062b1e");
+    grad.addColorStop(0.5, "#041b13");
+    grad.addColorStop(1, "#010d09");
+  } else {
+    grad.addColorStop(0, "#083726");
+    grad.addColorStop(0.5, "#042017");
+    grad.addColorStop(1, "#020f0a");
+  }
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 1920, 1080);
+
+  // Digital Grid
+  ctx.strokeStyle = "rgba(16, 185, 129, 0.05)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < 1920; x += 80) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1080); ctx.stroke();
+  }
+  for (let y = 0; y < 1080; y += 80) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1920, y); ctx.stroke();
+  }
+
+  // Glowing Ambient Halo
+  const haloX = 960 + Math.sin(currentTime * 0.6) * 200;
+  const haloY = 540 + Math.cos(currentTime * 0.5) * 120;
+  const hGrad = ctx.createRadialGradient(haloX, haloY, 20, haloX, haloY, 700);
+  hGrad.addColorStop(0, scene.id === "hook" ? "rgba(239, 68, 68, 0.12)" : "rgba(16, 185, 129, 0.18)");
+  hGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = hGrad;
+  ctx.fillRect(0, 0, 1920, 1080);
+}
+
+function renderHook(scene, progress) {
+  const alpha = Math.min(progress * 4, 1);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  ctx.fillStyle = "rgba(239, 68, 68, 0.18)";
+  ctx.strokeStyle = "rgba(239, 68, 68, 0.6)";
+  ctx.lineWidth = 2;
+  roundRect(ctx, 160, 190, 420, 48, 24, true, true);
+
+  ctx.fillStyle = "#f87171";
+  ctx.font = "bold 20px 'Plus Jakarta Sans'";
+  ctx.fillText("⚠️ FACTORY & DISTRIBUTION BOTTLENECK", 185, 222);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 68px 'Space Grotesk', 'Plus Jakarta Sans'";
+  ctx.fillText("Is Your Business Still Run on", 160, 325);
+
+  const grad = ctx.createLinearGradient(160, 0, 900, 0);
+  grad.addColorStop(0, "#ef4444");
+  grad.addColorStop(1, "#f59e0b");
+  ctx.fillStyle = grad;
+  ctx.fillText("Fragmented Spreadsheets?", 160, 410);
+
+  ctx.fillStyle = "#cbd5e1";
+  ctx.font = "500 28px 'Plus Jakarta Sans'";
+  ctx.fillText("Untracked raw material waste, hidden batch costs, and delayed debtor aging", 160, 475);
+  ctx.fillText("silently drain millions of Naira in preventable losses every single month.", 160, 515);
+
+  const cards = [
+    { title: "Stock & WIP Shrinkage", desc: "No real-time tracking of bulk raw materials, premixes & finished cartons.", color: "#ef4444" },
+    { title: "Zero Batch Cost Visibility", desc: "Generator diesel, factory power & direct plant labor are never calculated.", color: "#f59e0b" },
+    { title: "Trapped Working Capital", desc: "Unchecked 30/60/90-day overdue receivables freeze operating cash.", color: "#ec4899" }
+  ];
+
+  cards.forEach((card, idx) => {
+    const cx = 160 + idx * 530;
+    const cy = 600;
+
+    ctx.fillStyle = "rgba(30, 41, 59, 0.85)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, cx, cy, 490, 190, 20, true, true);
+
+    ctx.fillStyle = card.color;
+    roundRect(ctx, cx + 30, cy + 28, 44, 6, 3, true, false);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 26px 'Plus Jakarta Sans'";
+    ctx.fillText(card.title, cx + 30, cy + 75);
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "400 20px 'Plus Jakarta Sans'";
+    wrapText(ctx, card.desc, cx + 30, cy + 115, 430, 28);
+  });
+
+  ctx.restore();
+}
+
+function renderFeatureScene(scene, progress) {
+  ctx.save();
+  const easeIn = Math.min(progress * 3, 1);
+  const slideX = (1 - easeIn) * 45;
+  ctx.translate(slideX, 0);
+
+  ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
+  ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, 120, 160, 420, 44, 22, true, true);
+
+  ctx.fillStyle = "#34d399";
+  ctx.font = "800 17px 'Plus Jakarta Sans'";
+  ctx.fillText("★ " + scene.category, 145, 188);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 52px 'Space Grotesk', 'Plus Jakarta Sans'";
+  wrapText(ctx, scene.headline, 120, 270, 720, 64);
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "500 24px 'Plus Jakarta Sans'";
+  wrapText(ctx, scene.subhead, 120, 440, 720, 36);
+
+  if (scene.badges) {
+    scene.badges.forEach((b, i) => {
+      const by = 550 + i * 65;
+      ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.3)";
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, 120, by, 680, 52, 12, true, true);
+
+      ctx.fillStyle = "#10b981";
+      ctx.font = "bold 20px 'Plus Jakarta Sans'";
+      ctx.fillText("✔", 145, by + 34);
+
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = "700 20px 'Plus Jakarta Sans'";
+      ctx.fillText(b, 180, by + 34);
+    });
+  }
+  ctx.restore();
+
+  if (scene.shot && imageCache[scene.shot] && imageCache[scene.shot].complete) {
+    const img = imageCache[scene.shot];
+    ctx.save();
+
+    const zoom = 1.0 + Math.sin(progress * Math.PI) * 0.03;
+    const targetW = 980 * zoom;
+    const targetH = 680 * zoom;
+    const posX = 860 - (targetW - 980) / 2;
+    const posY = 180 - (targetH - 680) / 2;
+
+    ctx.shadowColor = "rgba(16, 185, 129, 0.35)";
+    ctx.shadowBlur = 45;
+    ctx.shadowOffsetX = 10;
+    ctx.shadowOffsetY = 20;
+
+    ctx.drawImage(img, posX, posY, targetW, targetH);
+
+    if (scene.callout) {
+      const calloutPulse = 1.0 + Math.sin(currentTime * 3) * 0.05;
+      ctx.save();
+      ctx.translate(scene.callout.x, scene.callout.y);
+      ctx.scale(calloutPulse, calloutPulse);
+
+      ctx.fillStyle = "rgba(5, 150, 105, 0.95)";
+      ctx.strokeStyle = "#6ee7b7";
+      ctx.lineWidth = 2;
+      ctx.shadowColor = "#10b981";
+      ctx.shadowBlur = 15;
+      roundRect(ctx, -140, -22, 280, 44, 22, true, true);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "800 15px 'Space Grotesk'";
+      ctx.textAlign = "center";
+      ctx.fillText("✦ " + scene.callout.text, 0, 6);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+}
+
+function renderCta(scene, progress) {
+  ctx.save();
+  const alpha = Math.min(progress * 3, 1);
+  ctx.globalAlpha = alpha;
+
+  ctx.fillStyle = "#34d399";
+  ctx.font = "800 24px 'Plus Jakarta Sans'";
+  ctx.textAlign = "center";
+  ctx.fillText("READY TO TRANSFORM YOUR OPERATIONAL CONTROL?", 960, 175);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 68px 'Space Grotesk', 'Plus Jakarta Sans'";
+  ctx.fillText("Deploy BizLens Enterprise ERP", 960, 255);
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "500 26px 'Plus Jakarta Sans'";
+  ctx.fillText("Flexible deployment options purposefully built for your infrastructure and budget", 960, 315);
+
+  const plans = [
+    { title: "Cloud Deployment", sub: "Annual Subscription", price: "From ₦165,000 / yr", tag: "45% OFF", desc: "99.5% uptime SLA, SSL, daily automated cloud backups, multi-branch access." },
+    { title: "Desktop Standalone", sub: "Perpetual License", price: "₦1,740,000 One-Time", tag: "42% OFF", desc: "100% offline workstation, zero recurring fees, perpetual license ownership." },
+    { title: "Plant Intranet LAN", sub: "Multi-User Campus", price: "From ₦580,000", tag: "42% OFF", desc: "On-premise plant server, zero internet dependency, complete data sovereignty." }
+  ];
+
+  plans.forEach((p, idx) => {
+    const px = 200 + idx * 520;
+    const py = 385;
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+    ctx.strokeStyle = idx === 0 ? "rgba(16, 185, 129, 0.7)" : "rgba(255, 255, 255, 0.15)";
+    ctx.lineWidth = 2;
+    roundRect(ctx, px, py, 480, 240, 20, true, true);
+
+    ctx.fillStyle = "#059669";
+    roundRect(ctx, px + 340, py + 20, 110, 32, 16, true, false);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 14px 'Plus Jakarta Sans'";
+    ctx.textAlign = "center";
+    ctx.fillText(p.tag, px + 395, py + 42);
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 24px 'Plus Jakarta Sans'";
+    ctx.fillText(p.title, px + 28, py + 50);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "600 16px 'Plus Jakarta Sans'";
+    ctx.fillText(p.sub, px + 28, py + 80);
+
+    ctx.fillStyle = "#34d399";
+    ctx.font = "800 28px 'Space Grotesk'";
+    ctx.fillText(p.price, px + 28, py + 125);
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "400 18px 'Plus Jakarta Sans'";
+    wrapText(ctx, p.desc, px + 28, py + 165, 420, 26);
+  });
+
+  const by = 695;
+  ctx.fillStyle = "rgba(5, 150, 105, 0.2)";
+  ctx.strokeStyle = "rgba(16, 185, 129, 0.5)";
+  ctx.lineWidth = 2;
+  roundRect(ctx, 200, by, 1520, 175, 20, true, true);
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#34d399";
+  ctx.font = "800 16px 'Plus Jakarta Sans'";
+  ctx.fillText("ENGINEERING & SYSTEMS ARCHITECTURE:", 240, by + 45);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 36px 'Space Grotesk'";
+  ctx.fillText("CodySense IT Solutions", 240, by + 90);
+
+  ctx.fillStyle = "#cbd5e1";
+  ctx.font = "500 20px 'Plus Jakarta Sans'";
+  ctx.fillText("Enterprise Software & Cloud Systems Engineering", 240, by + 128);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 24px 'Plus Jakarta Sans'";
+  ctx.fillText("📞 Phone: +234 803 312 4491", 960, by + 55);
+  ctx.fillText("✉️ Email: kolly4weall@gmail.com", 960, by + 98);
+  ctx.fillStyle = "#6ee7b7";
+  ctx.fillText("🌐 Web App: https://bizlens.netlify.app/", 960, by + 140);
+
+  ctx.restore();
+}
+
+function renderFrameAtTime(t) {
+  const { scene, index, progress } = getSceneAtTime(t);
+  drawDynamicBackground(scene);
+
+  if (scene.id === "hook") renderHook(scene, progress);
+  else if (scene.id === "cta") renderCta(scene, progress);
+  else renderFeatureScene(scene, progress);
+}
+
+function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  if (fill) ctx.fill();
+  if (stroke) ctx.stroke();
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
+    if (testWidth > maxWidth && n > 0) {
+      ctx.fillText(line, x, y);
+      line = words[n] + ' ';
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line, x, y);
+}
+
+function updateUI() {
+  const { scene, index } = getSceneAtTime(currentTime);
+
+  captionCat.innerText = scene.category;
+  captionText.innerText = scene.caption;
+
+  const pct = (currentTime / TOTAL_DURATION) * 100;
+  timelineProgress.style.width = `${pct}%`;
+
+  const curM = Math.floor(currentTime / 60);
+  const curS = Math.floor(currentTime % 60);
+  const totM = Math.floor(TOTAL_DURATION / 60);
+  const totS = Math.floor(TOTAL_DURATION % 60);
+  timeDisplay.innerText = `${pad(curM)}:${pad(curS)} / ${pad(totM)}:${pad(totS)}`;
+
+  const pills = document.querySelectorAll(".scene-pill");
+  pills.forEach((p, idx) => {
+    p.classList.toggle("active", idx === index);
+  });
+}
+
+function pad(n) { return n < 10 ? "0" + n : n; }
+
+// Animation Loop: STRICTLY DRIVEN BY AUDIO PLAYHEAD
+function loop() {
+  if (isPlaying) {
+    currentTime = masterAudio.currentTime;
+
+    if (masterAudio.ended || currentTime >= TOTAL_DURATION) {
+      isPlaying = false;
+      playBtn.innerText = "▶";
+      currentTime = 0;
+      masterAudio.currentTime = 0;
+    }
+    updateUI();
+  }
+
+  renderFrameAtTime(currentTime);
+  requestAnimationFrame(loop);
+}
+
+playBtn.onclick = () => {
+  isPlaying = !isPlaying;
+  playBtn.innerText = isPlaying ? "⏸" : "▶";
+  if (isPlaying) {
+    masterAudio.play().catch(e => console.log(e));
+  } else {
+    masterAudio.pause();
+  }
+};
+
+document.getElementById("restartBtn").onclick = () => {
+  currentTime = 0;
+  masterAudio.currentTime = 0;
+  updateUI();
+  if (isPlaying) masterAudio.play();
+};
+
+audioToggleBtn.onclick = () => {
+  masterAudio.muted = !masterAudio.muted;
+  audioToggleBtn.classList.toggle("active", !masterAudio.muted);
+  audioToggleBtn.innerText = masterAudio.muted ? "🔇" : "🔊";
+};
+
+document.getElementById("timelineBar").onclick = (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const ratio = clickX / rect.width;
+  currentTime = ratio * TOTAL_DURATION;
+  masterAudio.currentTime = currentTime;
+  updateUI();
+};
+
+// Global API for Automated Synchronized Video Export
+window.startSyncedPlayback = () => {
+  currentTime = 0.0;
+  masterAudio.currentTime = 0.0;
+  isPlaying = true;
+  playBtn.innerText = "⏸";
+  masterAudio.play().catch(e => console.log(e));
+};
+
+// Initial Render
+updateUI();
+renderFrameAtTime(0);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

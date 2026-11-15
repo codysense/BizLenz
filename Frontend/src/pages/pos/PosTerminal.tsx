@@ -398,16 +398,16 @@ const PosTerminal = ({
           </div>
           ${printData.customer ? `<div style="margin-bottom: 10px; font-size: 12px;"><strong>Customer:</strong> ${printData.customer.name}<br><strong>Code:</strong> ${printData.customer.code}</div>` : ""}
           <table>
-            <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+            <thead><tr><th>Item</th><th>Sold</th><th>Returned</th><th>Left</th><th>Net</th></tr></thead>
             <tbody>
-              ${printData.items.map((item: any) => `<tr><td>${item.name}</td><td>${item.qty}</td><td>₦${item.unitPrice.toLocaleString()}</td><td>₦${item.lineTotal.toLocaleString()}</td></tr>`).join("")}
+              ${printData.items.map((item: any) => `<tr><td>${item.name}<br><small>₦${Number(item.unitPrice).toLocaleString()} each</small></td><td>${Number(item.originalQty ?? item.qty).toLocaleString()}</td><td>${Number(item.returnedQty ?? 0).toLocaleString()}</td><td>${Number(item.remainingQty ?? item.qty).toLocaleString()}</td><td>₦${Number(item.netLineTotal ?? item.lineTotal).toLocaleString()}</td></tr>`).join("")}
             </tbody>
           </table>
           <div class="totals">
-            <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span> <span>₦${printData.totals.subtotal.toLocaleString()}</span></div>
-            ${printData.totals.discountAmount > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Discount:</span> <span>-₦${printData.totals.discountAmount.toLocaleString()}</span></div>` : ""}
-            <div style="display: flex; justify-content: space-between; font-weight: bold;"><span>Total:</span> <span>₦${printData.totals.totalAmount.toLocaleString()}</span></div>
+            ${printData.totals.returnedAmount > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Original Total:</span> <span>₦${Number(printData.totals.originalTotalAmount).toLocaleString()}</span></div><div style="display: flex; justify-content: space-between; color: #b91c1c;"><span>Returned / Refunded:</span> <span>-₦${Number(printData.totals.returnedAmount).toLocaleString()}</span></div>` : `<div style="display: flex; justify-content: space-between;"><span>Subtotal:</span> <span>₦${Number(printData.totals.subtotal).toLocaleString()}</span></div>${printData.totals.discountAmount > 0 ? `<div style="display: flex; justify-content: space-between;"><span>Discount:</span> <span>-₦${Number(printData.totals.discountAmount).toLocaleString()}</span></div>` : ""}`}
+            <div style="display: flex; justify-content: space-between; font-weight: bold;"><span>${printData.totals.returnedAmount > 0 ? "Net Total:" : "Total:"}</span> <span>₦${Number(printData.totals.netTotalAmount ?? printData.totals.totalAmount).toLocaleString()}</span></div>
             ${printData.payments?.map((payment: any) => `<div style="display: flex; justify-content: space-between;"><span>Paid (${payment.method}):</span><span>₦${payment.amount.toLocaleString()}</span></div>`).join("") || ""}
+            ${printData.refunds?.map((refund: any) => `<div style="font-size: 10px; margin-top: 3px;">Refund ${refund.returnNo} (${new Date(refund.date).toLocaleDateString()}): -₦${Number(refund.amount).toLocaleString()}</div>`).join("") || ""}
             <div style="display: flex; justify-content: space-between;"><span>Change:</span><span>₦${printData.totals.changeAmount.toLocaleString()}</span></div>
           </div>
           <div class="footer">Cashier: ${printData.cashier.name}<br>Thank you for your business!<br>Bizlens Accounting Software-08033124491</div>

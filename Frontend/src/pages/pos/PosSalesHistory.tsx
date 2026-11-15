@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Eye,
   Printer,
-  RotateCcw,
+  // RotateCcw,
   Calendar,
   DollarSign,
   ShoppingCart,
@@ -13,7 +13,7 @@ import { DataTable } from "../../components/DataTable";
 import StatusBadge from "../../components/StatusBadge";
 import { PosSale } from "../../types/api";
 // import { ReportExporter } from "../../utils/reportExport";
-import toast from "react-hot-toast";
+// import toast from "react-hot-toast";
 import DetailPOSSaleModal from "./DetailPOSSaleModal";
 import { useAuthStore } from "../../store/authStore";
 
@@ -38,14 +38,14 @@ const PosSalesHistory = () => {
         customerId: customerFilter,
         paymentMethod,
         userId: selectedCashier,
-        status: "COMPLETED",
+        status: "COMPLETED,PARTIALLY_RETURNED,RETURNED",
       },
     ],
     queryFn: () =>
       posApi.getSales({
         page,
         limit: 20,
-        status: "COMPLETED",
+        status: "COMPLETED,PARTIALLY_RETURNED,RETURNED",
         ...(dateFromFilter && { dateFrom: dateFromFilter }),
         ...(dateToFilter && { dateTo: dateToFilter }),
         ...(selectedCashier && { userId: selectedCashier }),
@@ -104,8 +104,20 @@ const PosSalesHistory = () => {
       width: "w-40",
     },
     {
+      key: "originalTotalAmount",
+      header: "Original Total",
+      cell: (sale: PosSale) => `₦${Number(sale.originalTotalAmount ?? sale.totalAmount).toLocaleString()}`,
+      width: "w-32",
+    },
+    {
+      key: "returnedAmount",
+      header: "Returned",
+      cell: (sale: PosSale) => `₦${Number(sale.returnedAmount ?? 0).toLocaleString()}`,
+      width: "w-28",
+    },
+    {
       key: "totalAmount",
-      header: "Total Amount",
+      header: "Net Total",
       cell: (sale: PosSale) => `₦${sale.totalAmount.toLocaleString()}`,
       width: "w-32",
     },
@@ -144,6 +156,7 @@ const PosSalesHistory = () => {
   const handlePrintReceipt = async (sale: PosSale) => {
     try {
       const printData = await posApi.printReceipt(sale.id);
+      console.log("Print data:", printData);
       const printerWidth = localStorage.getItem("printerWidth") || "80"; // default to 80mm
       const paperWidth = `${printerWidth}mm`;
 
@@ -238,9 +251,10 @@ const PosSalesHistory = () => {
             <thead>
               <tr>
                 <th>Item</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Total</th>
+                <th>Sold</th>
+                <th>Returned</th>
+                <th>Left</th>
+                <th>Net</th>
               </tr>
             </thead>
             <tbody>
@@ -249,9 +263,10 @@ const PosSalesHistory = () => {
                   (item: any) => `
                 <tr>
                   <td>${item.name}</td>
-                  <td>${item.qty}</td>
-                  <td>₦${item.unitPrice.toLocaleString()}</td>
-                  <td>₦${item.lineTotal.toLocaleString()}</td>
+                  <td>${Number(item.originalQty ?? item.qty).toLocaleString()}</td>
+                  <td>${Number(item.returnedQty ?? 0).toLocaleString()}</td>
+                  <td>${Number(item.remainingQty ?? item.qty).toLocaleString()}</td>
+                  <td>₦${Number(item.netLineTotal ?? item.lineTotal).toLocaleString()}</td>
                 </tr>
               `,
                 )
@@ -261,19 +276,23 @@ const PosSalesHistory = () => {
 
           <div class="totals">
             <div style="display: flex; justify-content: space-between;">
-              <span>Subtotal:</span> <span>₦${printData.totals.subtotal.toLocaleString()}</span>
+              <span>Subtotal:</span> <span>₦${Number(printData.totals.subtotal).toLocaleString()}</span>
             </div>
             ${
               printData.totals.discountAmount > 0
                 ? `
               <div style="display: flex; justify-content: space-between;">
-                <span>Discount:</span> <span>-₦${printData.totals.discountAmount.toLocaleString()}</span>
+                <span>Discount:</span> <span>-₦${Number(printData.totals.discountAmount).toLocaleString()}</span>
               </div>
             `
                 : ""
             }
             <div style="display: flex; justify-content: space-between; font-weight: bold;">
-              <span>Total:</span> <span>₦${printData.totals.totalAmount.toLocaleString()}</span>
+              <span>Original Total:</span> <span>₦${Number(printData.totals.originalTotalAmount ?? printData.totals.totalAmount).toLocaleString()}</span>
+            </div>
+            ${printData.totals.returnedAmount > 0 ? `<div style="display: flex; justify-content: space-between; color: #b91c1c;"><span>Returned / Refunded:</span><span>-₦${Number(printData.totals.returnedAmount).toLocaleString()}</span></div>` : ""}
+            <div style="display: flex; justify-content: space-between; font-weight: bold;">
+              <span>${printData.totals.returnedAmount > 0 ? "Net Total:" : "Total:"}</span> <span>₦${Number(printData.totals.netTotalAmount ?? printData.totals.totalAmount).toLocaleString()}</span>
             </div>
              ${
                printData.payments
@@ -287,6 +306,7 @@ const PosSalesHistory = () => {
                  )
                  .join("") || ""
              }
+            ${printData.refunds?.map((refund: any) => `<div style="font-size: 10px; margin-top: 3px;">Refund ${refund.returnNo} (${new Date(refund.date).toLocaleDateString()}): -₦${Number(refund.amount).toLocaleString()}</div>`).join("") || ""}
             <div style="display: flex; justify-content: space-between;">
               <span>Change:</span>
               <span>₦${printData.totals.changeAmount.toLocaleString()}</span>
@@ -324,7 +344,7 @@ const PosSalesHistory = () => {
 
   const actions = (sale: PosSale) => (
     <div className="flex space-x-2">
-      {sale.status === "COMPLETED" && (
+      {["COMPLETED", "PARTIALLY_RETURNED", "RETURNED"].includes(sale.status) && (
         <button
           onClick={() => handlePrintReceipt(sale)}
           className="text-blue-600 hover:text-blue-900"
@@ -334,7 +354,7 @@ const PosSalesHistory = () => {
         </button>
       )}
       {/* Include view button */}
-      {sale.status === "COMPLETED" && (
+      {["COMPLETED", "PARTIALLY_RETURNED", "RETURNED"].includes(sale.status) && (
         <button
           onClick={() => handleViewDetails(sale)}
           className="text-blue-600 hover:text-blue-900"

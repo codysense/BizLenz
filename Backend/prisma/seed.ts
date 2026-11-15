@@ -210,82 +210,82 @@ async function main() {
 
   //  Create roles
 
-  // const roles = await Promise.all([
-  //   // prisma.role.upsert({
-  //   //   where: { name: 'Account Officer' },
-  //   //   update: {},
-  //   //   create: {
-  //   //     name: 'Account Officer',
-  //   //     description: 'Basic accounting operations'
-  //   //   }
-  //   // }),
-  //   // prisma.role.upsert({
-  //   //   where: { name: 'POS User' },
-  //   //   update: {},
-  //   //   create: {
-  //   //     name: 'POS User',
-  //   //     description: 'Point of Sales user with warehouse-specific access'
-  //   //   }
-  //   // }),
-  //   // prisma.role.upsert({
-  //   //   where: { name: 'CFO' },
-  //   //   update: {},
-  //   //   create: {
-  //   //     name: 'CFO',
-  //   //     description: 'Chief Financial Officer with full access'
-  //   //   }
-  //   // }),
-  //   await prisma.role.upsert({
-  //     where: { name: "General Manager" },
-  //     update: {},
-  //     create: {
-  //       name: "General Manager",
-  //       description: "General Manager with production control",
-  //     },
-  //   }),
-  //   await prisma.role.upsert({
-  //     where: { name: "POS User" },
-  //     update: {},
-  //     create: {
-  //       name: "POS User",
-  //       description: "Point of Sales user with warehouse-specific access",
-  //     },
-  //   }),
-  //   await prisma.role.upsert({
-  //     where: { name: "Accountant" },
-  //     update: {},
-  //     create: {
-  //       name: "Accountant",
-  //       description: "Head of POS Users with full accounting access",
-  //     },
-  //   }),
-  //   await prisma.role.upsert({
-  //     where: { name: "Inventory Manager" },
-  //     update: {},
-  //     create: {
-  //       name: "Inventory Manager",
-  //       description: "Inventory manager with procurement",
-  //     },
-  //   }),
-  //   await prisma.role.upsert({
-  //     where: { name: "Assistant Inventory Manager" },
-  //     update: {},
-  //     create: {
-  //       name: "Assistant Inventory Manager",
-  //       description: "Assistant Inventory manager with read only access",
-  //     },
-  //   }),
-  //   await prisma.role.upsert({
-  //     where: { name: "Production Manager" },
-  //     update: {},
-  //     create: {
-  //       name: "Production Manager",
-  //       description: "Production manager with full access",
-  //     },
-  //   }),
-  // ]);
+  const roles = await Promise.all([
+    // prisma.role.upsert({
+    //   where: { name: 'Account Officer' },
+    //   update: {},
+    //   create: {
+    //     name: 'Account Officer',
+    //     description: 'Basic accounting operations'
+    //   }
+    // }),
+    // prisma.role.upsert({
+    //   where: { name: 'POS User' },
+    //   update: {},
+    //   create: {
+    //     name: 'POS User',
+    //     description: 'Point of Sales user with warehouse-specific access'
+    //   }
+    // }),
+    // prisma.role.upsert({
+    //   where: { name: 'CFO' },
+    //   update: {},
+    //   create: {
+    //     name: 'CFO',
+    //     description: 'Chief Financial Officer with full access'
+    //   }
+    // }),
+    await prisma.role.upsert({
+      where: { name: "General Manager" },
+      update: {},
+      create: {
+        name: "General Manager",
+        description: "General Manager with production control",
+      },
+    }),
+    await prisma.role.upsert({
+      where: { name: "POS User" },
+      update: {},
+      create: {
+        name: "POS User",
+        description: "Point of Sales user with warehouse-specific access",
+      },
+    }),
+    await prisma.role.upsert({
+      where: { name: "Accountant" },
+      update: {},
+      create: {
+        name: "Accountant",
+        description: "Head of POS Users with full accounting access",
+      },
+    }),
+    await prisma.role.upsert({
+      where: { name: "Inventory Manager" },
+      update: {},
+      create: {
+        name: "Inventory Manager",
+        description: "Inventory manager with procurement",
+      },
+    }),
+    await prisma.role.upsert({
+      where: { name: "Assistant Inventory Manager" },
+      update: {},
+      create: {
+        name: "Assistant Inventory Manager",
+        description: "Assistant Inventory manager with read only access",
+      },
+    }),
+    await prisma.role.upsert({
+      where: { name: "Production Manager" },
+      update: {},
+      create: {
+        name: "Production Manager",
+        description: "Production manager with full access",
+      },
+    }),
+  ]);
 
-  //console.log("✅ Roles created");
+  console.log("✅ Roles created");
 
   // Assign permissions to roles
   // Account Officer permissions
@@ -377,7 +377,7 @@ async function main() {
   console.log("✅ Role permissions assigned");
 
   // Create users
-  const hashedPassword = await bcrypt.hash("pass4D3mo", 12);
+  const hashedPassword = await bcrypt.hash("D3mo@0001", 12);
 
   const users = await Promise.all([
     // prisma.user.upsert({
@@ -429,35 +429,35 @@ async function main() {
   //       roleId: roles[0].id,
   //     },
   //   }),
-    // prisma.userRole.upsert({
-    //   where: {
-    //     userId_roleId: {
-    //       userId: users[1].id,
-    //       roleId: roles[1].id
-    //     }
-    //   },
-    //   update: {},
-    //   create: {
-    //     userId: users[1].id,
-    //     roleId: roles[1].id
-    //   }
-    // }),
-    // prisma.userRole.upsert({
-    //   where: {
-    //     userId_roleId: {
-    //       userId: users[2].id,
-    //       roleId: roles[2].id
-    //     }
-    //   },
-    //   update: {},
-    //   create: {
-    //     userId: users[2].id,
-    //     roleId: roles[2].id
-    //   }
-    // })
-  //]);
+  //   // prisma.userRole.upsert({
+  //   //   where: {
+  //   //     userId_roleId: {
+  //   //       userId: users[1].id,
+  //   //       roleId: roles[1].id
+  //   //     }
+  //   //   },
+  //   //   update: {},
+  //   //   create: {
+  //   //     userId: users[1].id,
+  //   //     roleId: roles[1].id
+  //   //   }
+  //   // }),
+  //   // prisma.userRole.upsert({
+  //   //   where: {
+  //   //     userId_roleId: {
+  //   //       userId: users[2].id,
+  //   //       roleId: roles[2].id
+  //   //     }
+  //   //   },
+  //   //   update: {},
+  //   //   create: {
+  //   //     userId: users[2].id,
+  //   //     roleId: roles[2].id
+  //   //   }
+  //   // })
+  // ]);
 
-  console.log("✅ User roles assigned");
+  // console.log("✅ User roles assigned");
   // Create company
   // await prisma.company.upsert({
   //   where: { id: "default" },

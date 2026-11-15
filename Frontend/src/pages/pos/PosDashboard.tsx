@@ -40,19 +40,37 @@ const PosDashboard = () => {
     queryKey: ["today-pos-sales"],
     queryFn: () =>
       posApi.getSales({
+        limit: 1000,
         dateFrom: `${today}T00:00:00.000Z`,
         dateTo: `${today}T23:59:59.999Z`,
-        status: "COMPLETED",
+        status: "COMPLETED,PARTIALLY_RETURNED,RETURNED",
       }),
   });
 
-  // Filter today's sales to only those created by the user if they don't have permission to view all sales
+  const { data: todayReturns } = useQuery({
+    queryKey: ["today-pos-returns", today],
+    queryFn: () => posApi.getReturns({
+      dateFrom: `${today}T00:00:00.000Z`,
+      dateTo: `${today}T23:59:59.999Z`,
+      limit: 1000,
+    }),
+  });
+
   const canviewall = user?.permissions?.includes("VIEW_ALL_SALES");
-  if (todaySales && !canviewall) {
-    todaySales.sales = todaySales.sales.filter(
-      (sale: any) => sale.user?.name === user?.name,
-    );
-  }
+  const visibleTodaySales = (todaySales?.sales ?? []).filter((sale: any) =>
+    canviewall || sale.user?.name === user?.name,
+  );
+  const visibleTodayReturns = (todayReturns?.data ?? []).filter((ret: any) =>
+    canviewall || ret.createdBy?.id === user?.id,
+  );
+  const todayGrossSales = visibleTodaySales.reduce(
+    (sum: number, sale: any) => sum + Number(sale.originalTotalAmount ?? sale.totalAmount),
+    0,
+  ) ?? 0;
+  const todayRefunds = visibleTodayReturns.reduce(
+    (sum: number, ret: any) => sum + Number(ret.refundAmount ?? 0),
+    0,
+  );
 
   const handleCreateSession = () => {
     refetchSession();
@@ -92,13 +110,13 @@ const PosDashboard = () => {
   const stats = [
     {
       name: "Today's Sales",
-      value: todaySales?.sales?.length || 0,
+      value: visibleTodaySales.length,
       icon: ShoppingCart,
       color: "text-blue-600",
     },
     {
       name: "Today's Revenue",
-      value: `₦${todaySales?.sales?.reduce((sum: number, sale: any) => sum + Number(sale.totalAmount), 0).toLocaleString() || "0"}`,
+      value: `₦${Math.max(0, todayGrossSales - todayRefunds).toLocaleString()}`,
       icon: DollarSign,
       color: "text-green-600",
     },

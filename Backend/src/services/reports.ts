@@ -271,7 +271,7 @@ export class ReportsService {
       const accountData = {
         accountCode: account.code,
         accountName: account.name,
-        amount: Math.abs(netAmount),
+        amount: netAmount,
       };
 
       if (account.accountType === "INCOME") {
@@ -339,20 +339,29 @@ export class ReportsService {
     const newFromDate = startOfDayUTC(dateFrom);
 
     let query = `
-    WITH report AS (
+    WITH return_totals AS (
+      SELECT "originalSaleId", SUM("refundAmount") AS "ReturnedAmount"
+      FROM pos_returns
+      GROUP BY "originalSaleId"
+    ), report AS (
       SELECT 
         ps."createdAt"::date AS "TransactionDate",
         ps."saleNo" AS "SaleNo",
+        ps.status::text AS "Status",
         w.name AS "WarehouseName",
         u.name AS "SalesRep",
         ca.name AS "CashAccountName",
-        ps."totalAmount" AS "TotalAmount",
+        ps."totalAmount" AS "OriginalAmount",
+        COALESCE(pr."ReturnedAmount", 0) AS "ReturnedAmount",
+        GREATEST(ps."totalAmount" - COALESCE(pr."ReturnedAmount", 0), 0) AS "TotalAmount",
         ps."amountPaid" AS "AmountPaid"
       FROM pos_sales ps
       LEFT JOIN warehouses w   ON ps."warehouseId"   = w.id
       LEFT JOIN cash_accounts ca ON ps."cashAccountId" = ca.id
       LEFT JOIN users u       ON ps."userId"        = u.id
-      WHERE ps."createdAt"::date BETWEEN $1::date AND $2::date and ps.status = 'COMPLETED'
+      LEFT JOIN return_totals pr ON pr."originalSaleId" = ps.id
+      WHERE ps."createdAt"::date BETWEEN $1::date AND $2::date
+        AND ps.status IN ('COMPLETED', 'PARTIALLY_RETURNED', 'RETURNED')
   `;
 
     const values: any[] = [newFromDate, newToDate];
@@ -379,9 +388,12 @@ export class ReportsService {
     SELECT 
       NULL AS "TransactionDate",
       'Grand Total' AS "SaleNo",
+      ''::text AS "Status",
       '' AS "WarehouseName",
       '' AS "SalesRep",
       '' AS "CashAccountName",
+      SUM("OriginalAmount") AS "OriginalAmount",
+      SUM("ReturnedAmount") AS "ReturnedAmount",
       SUM("TotalAmount") AS "TotalAmount",
       SUM("AmountPaid")  AS "AmountPaid"
     FROM report
@@ -393,6 +405,8 @@ export class ReportsService {
     return result.map((r) => ({
       ...r,
       TransactionDate: r.TransactionDate?.toISOString().split("T")[0] ?? "-",
+      OriginalAmount: r.OriginalAmount != null ? Number(r.OriginalAmount) : 0,
+      ReturnedAmount: r.ReturnedAmount != null ? Number(r.ReturnedAmount) : 0,
       TotalAmount: r.TotalAmount != null ? Number(r.TotalAmount) : 0,
       AmountPaid: r.AmountPaid != null ? Number(r.AmountPaid) : 0,
     }));
@@ -2035,16 +2049,16 @@ ORDER BY v.name;
           gte: newFromDate,
           lte: newToDate,
         },
-        status: "COMPLETED",
+        status: { in: ["COMPLETED", "PARTIALLY_RETURNED", "RETURNED"] },
       },
       include: {
         customer: { select: { code: true, name: true } },
         saleLines: {
-          where: hasItemFilter ? { itemId } : undefined,
           include: {
             item: {
               select: { sku: true, name: true, type: true },
             },
+            returnLines: { select: { qtyReturned: true, lineTotal: true } },
           },
         },
       },
@@ -2058,8 +2072,12 @@ ORDER BY v.name;
       item: { sku: string; name: string; type: string };
       customer: string | null;
       qty: number;
+      originalQty: number;
+      returnedQty: number;
+      returnedAmount: number;
       unitPrice: number;
       lineTotal: number;
+      status: string;
     }
 
     const rows: SaleDetailRow[] = [];
@@ -2074,14 +2092,26 @@ ORDER BY v.name;
           item: line.item,
           customer: sale.customer?.name || null,
           qty: line.qty.toNumber(),
+          originalQty: line.qty.toNumber(),
+          returnedQty: 0,
+          returnedAmount: 0,
           unitPrice: line.unitPrice.toNumber(),
           lineTotal: line.lineTotal.toNumber(),
+          status: sale.status,
         });
       });
     });
 
     posSales.forEach((posSale) => {
-      posSale.saleLines.forEach((line) => {
+      const baseLineAmount = posSale.saleLines.reduce((sum, line) => sum + line.lineTotal.toNumber(), 0);
+      posSale.saleLines
+        .filter((line) => !hasItemFilter || line.itemId === itemId)
+        .forEach((line) => {
+        const returnedQty = line.returnLines.reduce((sum, returned) => sum + returned.qtyReturned.toNumber(), 0);
+        const returnedAmount = line.returnLines.reduce((sum, returned) => sum + returned.lineTotal.toNumber(), 0);
+        const originalAllocatedAmount = baseLineAmount > 0
+          ? posSale.totalAmount.toNumber() * line.lineTotal.toNumber() / baseLineAmount
+          : 0;
         rows.push({
           source: "POS",
           reference: posSale.saleNo,
@@ -2089,9 +2119,13 @@ ORDER BY v.name;
           itemId: line.itemId,
           item: line.item,
           customer: posSale.customer?.name || null,
-          qty: line.qty.toNumber(),
+          qty: Math.max(0, line.qty.toNumber() - returnedQty),
+          originalQty: line.qty.toNumber(),
+          returnedQty,
+          returnedAmount,
           unitPrice: line.unitPrice.toNumber(),
-          lineTotal: line.lineTotal.toNumber(),
+          lineTotal: Math.max(0, originalAllocatedAmount - returnedAmount),
+          status: posSale.status,
         });
       });
     });
@@ -2190,13 +2224,38 @@ ORDER BY v.name;
         include: { sale: { include: { customer: true } }, item: true },
       }),
       prisma.posSaleLine.findMany({
-        where: { posSale: { createdAt: { gte: from, lte: to }, status: { in: ["COMPLETED", "PARTIALLY_RETURNED"] }, ...(customerId ? { customerId } : {}) } },
-        include: { posSale: { include: { customer: true } }, item: true },
+        where: { posSale: { createdAt: { gte: from, lte: to }, status: { in: ["COMPLETED", "PARTIALLY_RETURNED", "RETURNED"] }, ...(customerId ? { customerId } : {}) } },
+        include: {
+          posSale: { include: { customer: true, saleLines: { select: { lineTotal: true } } } },
+          item: true,
+          returnLines: { select: { qtyReturned: true, lineTotal: true } },
+        },
       }),
     ]);
     const data = [
       ...salesLines.map((line) => ({ date: line.sale.orderDate, orderNo: line.sale.orderNo, customerName: line.sale.customer.name, itemName: line.item.name, qty: line.qty.toNumber(), unitPrice: line.unitPrice.toNumber(), total: line.lineTotal.toNumber(), status: line.sale.status, source: "Sales Order" })),
-      ...posLines.map((line) => ({ date: line.posSale.createdAt, orderNo: line.posSale.saleNo, customerName: line.posSale.customer?.name || "Walk-in Customer", itemName: line.item.name, qty: line.qty.toNumber(), unitPrice: line.unitPrice.toNumber(), total: line.lineTotal.toNumber(), status: line.posSale.status, source: "POS" })),
+      ...posLines.map((line) => {
+        const lineBase = line.posSale.saleLines.reduce((sum, saleLine) => sum + saleLine.lineTotal.toNumber(), 0);
+        const returnedQty = line.returnLines.reduce((sum, returned) => sum + returned.qtyReturned.toNumber(), 0);
+        const returnedAmount = line.returnLines.reduce((sum, returned) => sum + returned.lineTotal.toNumber(), 0);
+        const originalAllocatedTotal = lineBase > 0
+          ? line.posSale.totalAmount.toNumber() * line.lineTotal.toNumber() / lineBase
+          : 0;
+        return {
+          date: line.posSale.createdAt,
+          orderNo: line.posSale.saleNo,
+          customerName: line.posSale.customer?.name || "Walk-in Customer",
+          itemName: line.item.name,
+          qty: Math.max(0, line.qty.toNumber() - returnedQty),
+          originalQty: line.qty.toNumber(),
+          returnedQty,
+          returnedAmount,
+          unitPrice: line.unitPrice.toNumber(),
+          total: Math.max(0, originalAllocatedTotal - returnedAmount),
+          status: line.posSale.status,
+          source: "POS",
+        };
+      }),
     ].sort((a, b) => a.date.getTime() - b.date.getTime());
     return { data, totals: { totalQty: data.reduce((sum, row) => sum + row.qty, 0), totalAmount: data.reduce((sum, row) => sum + row.total, 0) } };
   }
@@ -2247,14 +2306,25 @@ ORDER BY v.name;
     let posFilter = "";
     let saleFilter = "";
     if (params.warehouseId) { values.push(params.warehouseId); posFilter = ` AND ps.\"warehouseId\"=$3`; saleFilter = ` AND i.\"warehouseId\"=$3`; }
-    const query = `WITH line_totals AS (
+    const query = `WITH pos_return_amounts AS (
+      SELECT \"originalSaleId\", SUM(\"refundAmount\") AS returned_amount
+      FROM pos_returns GROUP BY \"originalSaleId\"
+    ), pos_return_quantities AS (
+      SELECT pr.\"originalSaleId\", SUM(prl.\"qtyReturned\") AS returned_qty
+      FROM pos_returns pr JOIN pos_return_lines prl ON prl.\"posReturnId\" = pr.id
+      GROUP BY pr.\"originalSaleId\"
+    ), line_totals AS (
       SELECT \"saleId\", \"itemId\", SUM(qty) AS qty, SUM(\"lineTotal\") AS amount FROM sale_lines GROUP BY \"saleId\", \"itemId\"
     ), issued AS (
       SELECT \"refId\" AS sale_id, \"warehouseId\", \"itemId\", SUM(qty) AS qty FROM inventory_ledger WHERE \"refType\"='SALE' AND direction='OUT' GROUP BY \"refId\",\"warehouseId\",\"itemId\"
     ), all_sales AS (
-      SELECT ps.\"createdAt\"::date AS \"TransactionDate\", 'POS' AS \"SalesType\", ps.\"saleNo\" AS \"DocumentNo\", COALESCE(c.name,'Walk-in Customer') AS \"CustomerName\", w.name AS \"WarehouseName\", SUM(pl.qty) AS \"NoOfItems\", ps.\"totalAmount\" AS \"Amount\"
+      SELECT ps.\"createdAt\"::date AS \"TransactionDate\", 'POS' AS \"SalesType\", ps.\"saleNo\" AS \"DocumentNo\", COALESCE(c.name,'Walk-in Customer') AS \"CustomerName\", w.name AS \"WarehouseName\",
+        GREATEST(SUM(pl.qty) - COALESCE(pq.returned_qty, 0), 0) AS \"NoOfItems\",
+        GREATEST(ps.\"totalAmount\" - COALESCE(pa.returned_amount, 0), 0) AS \"Amount\"
       FROM pos_sales ps JOIN warehouses w ON w.id=ps.\"warehouseId\" LEFT JOIN customers c ON c.id=ps.\"customerId\" JOIN pos_sale_lines pl ON pl.\"posSaleId\"=ps.id
-      WHERE ps.status='COMPLETED' AND ps.\"createdAt\">=$1 AND ps.\"createdAt\"<=$2 ${posFilter} GROUP BY ps.id,ps.\"createdAt\",ps.\"saleNo\",c.name,w.name,ps.\"totalAmount\"
+      LEFT JOIN pos_return_amounts pa ON pa.\"originalSaleId\"=ps.id
+      LEFT JOIN pos_return_quantities pq ON pq.\"originalSaleId\"=ps.id
+      WHERE ps.status IN ('COMPLETED','PARTIALLY_RETURNED','RETURNED') AND ps.\"createdAt\">=$1 AND ps.\"createdAt\"<=$2 ${posFilter} GROUP BY ps.id,ps.\"createdAt\",ps.\"saleNo\",c.name,w.name,ps.\"totalAmount\",pq.returned_qty,pa.returned_amount
       UNION ALL
       SELECT s.\"orderDate\"::date, 'SALE', s.\"orderNo\", c.name, w.name, SUM(i.qty), SUM(CASE WHEN lt.qty>0 THEN lt.amount*i.qty/lt.qty ELSE 0 END)
       FROM issued i JOIN sales s ON s.id=i.sale_id JOIN line_totals lt ON lt.\"saleId\"=i.sale_id AND lt.\"itemId\"=i.\"itemId\" JOIN customers c ON c.id=s.\"customerId\" JOIN warehouses w ON w.id=i.\"warehouseId\"

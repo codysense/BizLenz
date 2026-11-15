@@ -940,6 +940,9 @@ export interface PosSale {
   taxAmount: number;
   discountAmount: number;
   totalAmount: number;
+  originalTotalAmount?: number;
+  returnedAmount?: number;
+  netTotalAmount?: number;
   amountPaid: number;
   changeAmount: number;
   payments: {
@@ -948,7 +951,7 @@ export interface PosSale {
     amount: number;
   }[];
   // paymentMethod: 'CASH' | 'CARD' | 'TRANSFER';
-  status: "COMPLETED" | "RETURNED";
+  status: "COMPLETED" | "PARTIALLY_RETURNED" | "RETURNED";
   notes?: string;
   createdAt: string;
   customer?: {
@@ -972,6 +975,11 @@ export interface PosSaleLine {
   unitPrice: number;
   discountPercent: number;
   lineTotal: number;
+  originalQty?: number;
+  returnedQty?: number;
+  remainingQty?: number;
+  returnedAmount?: number;
+  alreadyReturnedQty?: number;
   item: {
     sku: string;
     name: string;
@@ -1048,8 +1056,8 @@ export interface CreatePosReturnRequest {
   reason: string;
   returnLines: {
     originalLineId: string;
-    itemId: string;
     qtyReturned: number;
-    unitPrice: number;
+    itemId?: string;
+    unitPrice?: number;
   }[];
 }

@@ -79,7 +79,7 @@ export class DashboardController {
 
         prisma.posSale.aggregate({
           where: {
-            status: "COMPLETED",
+            status: { in: ["COMPLETED", "PARTIALLY_RETURNED", "RETURNED"] },
             createdAt: { gte: startDate, lte: endDate },
           },
           _sum: { totalAmount: true },
@@ -253,7 +253,7 @@ export class DashboardController {
             SELECT psl."itemId", SUM(psl.qty) as qty, SUM(psl."lineTotal") as revenue
             FROM pos_sale_lines psl
             JOIN pos_sales ps ON ps.id = psl."posSaleId"
-            WHERE ps.status = 'COMPLETED'
+            WHERE ps.status IN ('COMPLETED', 'PARTIALLY_RETURNED', 'RETURNED')
               AND ps."createdAt" >= ${startDate} AND ps."createdAt" <= ${endDate}
             GROUP BY psl."itemId"
           ),

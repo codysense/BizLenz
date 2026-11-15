@@ -63,14 +63,14 @@ export const createPosReturnSchema = z.object({
       z.object({
         originalLineId: z.string().cuid("Original sale line is required"),
 
-        itemId: z.string().cuid("Item is required"),
+        // Accepted for older clients; the server derives the item from originalLineId.
+        itemId: z.string().cuid().optional(),
 
         qtyReturned: z
           .number()
-          .int("Returned quantity must be a whole number")
           .positive("Returned quantity must be greater than zero"),
-
-        unitPrice: z.number().positive("Unit price must be greater than zero"),
+        // Accepted for older clients; the server derives pricing from the sale line.
+        unitPrice: z.number().positive().optional(),
       }),
     )
     .min(1, "At least one item must be returned"),

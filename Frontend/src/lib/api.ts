@@ -1071,6 +1071,8 @@ export const posApi = {
   printReceipt: (saleId: string) => api.get(`/pos/sales/${saleId}/print`),
 
   // Returns
+  getReturnableSales: (search?: string) =>
+    api.get(`/pos/returns/eligible-sales${search ? `?search=${encodeURIComponent(search)}` : ""}`),
   createReturn: (data: CreatePosReturnRequest) =>
     api.post("/pos/returns", data),
   getReturns: (params?: {

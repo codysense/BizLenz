@@ -27,7 +27,12 @@ const PosReturnsHistory = () => {
     // },
 
     {
-      Key: "itemsSummary",
+      key: "saleNo",
+      header: "Original Sale",
+      width: "w-32",
+    },
+    {
+      key: "itemsSummary",
       header: "Items",
       cell: (returnRecord: any) => returnRecord.itemsSummary,
       width: "w-32",
@@ -53,6 +58,12 @@ const PosReturnsHistory = () => {
       cell: (returnRecord: any) =>
         `₦${returnRecord.refundAmount.toLocaleString()}`,
       width: "w-32",
+    },
+    {
+      key: "refundMethods",
+      header: "Refunded To",
+      cell: (returnRecord: any) => returnRecord.refundMethods || "Legacy return",
+      width: "w-48",
     },
     {
       key: "reason",

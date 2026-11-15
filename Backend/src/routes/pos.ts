@@ -129,6 +129,11 @@ router.get(
 );
 
 // POS Returns
+router.get(
+  "/returns/eligible-sales",
+  requireRole(["POS User", "Senior Accountant", "Accountant", "Manager"]),
+  posController.getReturnableSales,
+);
 router.post(
   "/returns",
   requireRole(["POS User", "Senior Accountant", "Accountant", "Manager"]),

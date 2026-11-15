@@ -94,17 +94,17 @@ model User {
   salesReturnsCancelled SalesReturn[] @relation("SalesReturnCanceller")
 
   // ───── Purchase stage actors ─────
-  purchasesPrepared Purchase[]     @relation("PurchasePreparer")
-  purchasesReceived Purchase[]     @relation("PurchaseReceiver")
-  purchasesInvoiced Purchase[]     @relation("PurchaseInvoicer")
-  purchasesPaid     Purchase[]     @relation("PurchasePayer")
+  purchasesPrepared Purchase[] @relation("PurchasePreparer")
+  purchasesReceived Purchase[] @relation("PurchaseReceiver")
+  purchasesInvoiced Purchase[] @relation("PurchaseInvoicer")
+  purchasesPaid     Purchase[] @relation("PurchasePayer")
 
   // ───── Purchase return stage actors ─────
   purchaseReturnsPrepared  PurchaseReturn[] @relation("PurchaseReturnPreparer")
   purchaseReturnsConfirmed PurchaseReturn[] @relation("PurchaseReturnConfirmer")
   purchaseReturnsCancelled PurchaseReturn[] @relation("PurchaseReturnCanceller")
   refreshTokens            RefreshToken[]
-  UserSession       UserSession[]
+  UserSession              UserSession[]
 
   openingStocks OpeningStock[]
 
@@ -563,12 +563,12 @@ model Purchase {
   updatedAt DateTime @updatedAt
 
   // Relations
-  assets              Asset[]
-  purchaseLines       PurchaseLine[]
-  purchasePayments    PurchasePayment[]
-  PurchaseRefunds     PurchaseRefund[]
-  purchaseReturns     PurchaseReturn[]
-  vendorPaymentLines  VendorPaymentLine[]
+  assets             Asset[]
+  purchaseLines      PurchaseLine[]
+  purchasePayments   PurchasePayment[]
+  PurchaseRefunds    PurchaseRefund[]
+  purchaseReturns    PurchaseReturn[]
+  vendorPaymentLines VendorPaymentLine[]
 
   vendor Vendor @relation(fields: [vendorId], references: [id])
 
@@ -689,28 +689,28 @@ model SaleLine {
 }
 
 model ChartOfAccount {
-  id                          String                @id @default(cuid())
-  code                        String                @unique
-  name                        String
-  accountType                 String
-  parentId                    String?
-  isActive                    Boolean               @default(true)
-  createdAt                   DateTime              @default(now())
-  description                 String?
-  assetCategoriesAccumulated  AssetCategory[]       @relation("AssetCategoryAccumulatedDepreciationAccount")
-  assetCategoriesAsset        AssetCategory[]       @relation("AssetCategoryAssetAccount")
-  assetCategoriesDepreciation AssetCategory[]       @relation("AssetCategoryDepreciationAccount")
+  id                           String                  @id @default(cuid())
+  code                         String                  @unique
+  name                         String
+  accountType                  String
+  parentId                     String?
+  isActive                     Boolean                 @default(true)
+  createdAt                    DateTime                @default(now())
+  description                  String?
+  assetCategoriesAccumulated   AssetCategory[]         @relation("AssetCategoryAccumulatedDepreciationAccount")
+  assetCategoriesAsset         AssetCategory[]         @relation("AssetCategoryAssetAccount")
+  assetCategoriesDepreciation  AssetCategory[]         @relation("AssetCategoryDepreciationAccount")
   assetRecapitalizationSources AssetRecapitalization[]
-  cashAccounts                CashAccount[]         @relation("CashAccountGLAccount")
-  cashTransactionLinesContra  CashTransactionLine[] @relation("CashTransactionLineContraAccount")
-  cashTransactionLinesGL      CashTransactionLine[] @relation("CashTransactionLineGLAccount")
-  parent                      ChartOfAccount?       @relation("AccountHierarchy", fields: [parentId], references: [id])
-  children                    ChartOfAccount[]      @relation("AccountHierarchy")
-  customerPaymentLines        CustomerPaymentLine[]
-  journalLines                JournalLine[]
-  Memo                        Memo[]
-  StockAdjustment             StockAdjustment[]
-  vendorPaymentLines          VendorPaymentLine[]
+  cashAccounts                 CashAccount[]           @relation("CashAccountGLAccount")
+  cashTransactionLinesContra   CashTransactionLine[]   @relation("CashTransactionLineContraAccount")
+  cashTransactionLinesGL       CashTransactionLine[]   @relation("CashTransactionLineGLAccount")
+  parent                       ChartOfAccount?         @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children                     ChartOfAccount[]        @relation("AccountHierarchy")
+  customerPaymentLines         CustomerPaymentLine[]
+  journalLines                 JournalLine[]
+  Memo                         Memo[]
+  StockAdjustment              StockAdjustment[]
+  vendorPaymentLines           VendorPaymentLine[]
 
   @@map("chart_of_accounts")
 }
@@ -724,7 +724,7 @@ model Journal {
   postedAt                DateTime                 @default(now())
   assetDepreciation       AssetDepreciation[]
   assetDisposals          AssetDisposal[]
-  assetRecapitalizations   AssetRecapitalization[]
+  assetRecapitalizations  AssetRecapitalization[]
   cashTransactionPostings CashTransactionPosting[]
   customerPaymentPostings CustomerPaymentPosting[]
   journalLines            JournalLine[]
@@ -760,18 +760,18 @@ model Policy {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  userId     String
-  action     String
-  entity     String
-  entityId   String
-  beforeJson Json?
-  afterJson  Json?
-  requestJson Json?
+  id           String   @id @default(cuid())
+  userId       String
+  action       String
+  entity       String
+  entityId     String
+  beforeJson   Json?
+  afterJson    Json?
+  requestJson  Json?
   metadataJson Json?
-  ipAddress  String?
-  createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id])
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
 
   @@map("audit_log")
 }
@@ -801,6 +801,7 @@ model CashAccount {
   SalesRefund       SalesRefund[]
   vendorPayments    VendorPayment[]
   posSalePayments   PosSalePayment[]
+  posReturnPayments PosReturnPayment[]
   PendingPOSPayment PendingPOSPayment[]
 
   @@map("cash_accounts")
@@ -1332,34 +1333,34 @@ model AssetCategory {
 }
 
 model Asset {
-  id                  String              @id @default(cuid())
-  assetNo             String              @unique
+  id                  String                  @id @default(cuid())
+  assetNo             String                  @unique
   name                String
   description         String?
   categoryId          String
   acquisitionDate     DateTime
-  acquisitionCost     Decimal             @db.Decimal(15, 2)
-  residualValue       Decimal             @default(0) @db.Decimal(15, 2)
+  acquisitionCost     Decimal                 @db.Decimal(15, 2)
+  residualValue       Decimal                 @default(0) @db.Decimal(15, 2)
   usefulLife          Int
   depreciationMethod  String
   locationId          String?
   serialNumber        String?
   supplier            String?
   purchaseOrderId     String?
-  status              String              @default("ACTIVE")
+  status              String                  @default("ACTIVE")
   disposalDate        DateTime?
-  disposalAmount      Decimal?            @db.Decimal(15, 2)
+  disposalAmount      Decimal?                @db.Decimal(15, 2)
   disposalMethod      String?
   createdBy           String
-  createdAt           DateTime            @default(now())
+  createdAt           DateTime                @default(now())
   vendorId            String?
   depreciationEntries AssetDepreciation[]
   disposals           AssetDisposal[]
-  category            AssetCategory       @relation(fields: [categoryId], references: [id])
-  createdByUser       User                @relation("AssetCreatedBy", fields: [createdBy], references: [id])
-  location            Location?           @relation(fields: [locationId], references: [id])
-  purchaseOrder       Purchase?           @relation(fields: [purchaseOrderId], references: [id])
-  Vendor              Vendor?             @relation(fields: [vendorId], references: [id])
+  category            AssetCategory           @relation(fields: [categoryId], references: [id])
+  createdByUser       User                    @relation("AssetCreatedBy", fields: [createdBy], references: [id])
+  location            Location?               @relation(fields: [locationId], references: [id])
+  purchaseOrder       Purchase?               @relation(fields: [purchaseOrderId], references: [id])
+  Vendor              Vendor?                 @relation(fields: [vendorId], references: [id])
   recapitalizations   AssetRecapitalization[]
 
   @@map("assets")
@@ -1417,8 +1418,8 @@ model AssetRecapitalization {
   newUsefulLife           Int
   sourceAccountId         String?
   journalId               String?
-  createdBy                String
-  createdAt                DateTime @default(now())
+  createdBy               String
+  createdAt               DateTime @default(now())
 
   asset         Asset           @relation(fields: [assetId], references: [id], onDelete: Restrict)
   sourceAccount ChartOfAccount? @relation(fields: [sourceAccountId], references: [id], onDelete: SetNull)
@@ -1459,8 +1460,9 @@ model PosSalePayment {
   amount        Decimal          @db.Decimal(15, 2)
   createdAt     DateTime         @default(now())
 
-  posSale     PosSale      @relation(fields: [posSaleId], references: [id], onDelete: Cascade)
-  cashAccount CashAccount? @relation(fields: [cashAccountId], references: [id])
+  posSale           PosSale            @relation(fields: [posSaleId], references: [id], onDelete: Cascade)
+  cashAccount       CashAccount?       @relation(fields: [cashAccountId], references: [id])
+  returnAllocations PosReturnPayment[]
 
   @@map("pos_sale_payments")
 }
@@ -1513,7 +1515,7 @@ model PendingPOSPayment {
   cashAccountId String?
   amount        Decimal        @db.Decimal(15, 4)
   pendingSale   PendingPOSSale @relation(fields: [pendingSaleId], references: [id], onDelete: Cascade)
-  cashAccount   CashAccount?    @relation(fields: [cashAccountId], references: [id], onDelete: Cascade)
+  cashAccount   CashAccount?   @relation(fields: [cashAccountId], references: [id], onDelete: Cascade)
 
   @@map("pending_pos_payments")
 }
@@ -1575,25 +1577,43 @@ model PosSaleLine {
 }
 
 model PosReturn {
-  id             String          @id @default(cuid())
-  returnNo       String          @unique
+  id             String             @id @default(cuid())
+  returnNo       String             @unique
   originalSaleId String
   sessionId      String
   customerId     String?
   warehouseId    String
-  totalAmount    Decimal         @db.Decimal(15, 2)
-  refundAmount   Decimal         @db.Decimal(15, 2)
+  totalAmount    Decimal            @db.Decimal(15, 2)
+  refundAmount   Decimal            @db.Decimal(15, 2)
   reason         String
   userId         String
-  createdAt      DateTime        @default(now())
+  createdAt      DateTime           @default(now())
   returnLines    PosReturnLine[]
-  customer       Customer?       @relation(fields: [customerId], references: [id])
-  originalSale   PosSale         @relation(fields: [originalSaleId], references: [id])
-  session        PosSession      @relation(fields: [sessionId], references: [id])
-  user           User            @relation(fields: [userId], references: [id])
-  warehouse      Warehouse       @relation(fields: [warehouseId], references: [id])
+  refundPayments PosReturnPayment[]
+  customer       Customer?          @relation(fields: [customerId], references: [id])
+  originalSale   PosSale            @relation(fields: [originalSaleId], references: [id])
+  session        PosSession         @relation(fields: [sessionId], references: [id])
+  user           User               @relation(fields: [userId], references: [id])
+  warehouse      Warehouse          @relation(fields: [warehouseId], references: [id])
 
   @@map("pos_returns")
+}
+
+model PosReturnPayment {
+  id                    String           @id @default(cuid())
+  posReturnId           String
+  originalSalePaymentId String
+  cashAccountId         String?
+  method                PosPaymentMethod
+  amount                Decimal          @db.Decimal(15, 2)
+  createdAt             DateTime         @default(now())
+  posReturn             PosReturn        @relation(fields: [posReturnId], references: [id], onDelete: Cascade)
+  originalSalePayment   PosSalePayment   @relation(fields: [originalSalePaymentId], references: [id])
+  cashAccount           CashAccount?     @relation(fields: [cashAccountId], references: [id])
+
+  @@unique([posReturnId, originalSalePaymentId])
+  @@index([originalSalePaymentId])
+  @@map("pos_return_payments")
 }
 
 model PosReturnLine {

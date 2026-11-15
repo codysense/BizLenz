@@ -863,9 +863,7 @@ export class PosController {
       const where: any = {};
       const skip = (Number(page) - 1) * Number(limit);
 
-      /* =========================
-       Warehouse Restriction
-    ========================== */
+      // Warehouse Restriction
       if (
         !req.user!.roles.includes("Senior Accountant") ||
         !req.user!.roles.includes("Manager") ||
@@ -881,26 +879,23 @@ export class PosController {
         }
       }
 
-      /* =========================
-       Basic Filters
-    ========================== */
+      // Basic Filters
       if (sessionId) where.sessionId = sessionId;
       if (customerId) where.customerId = customerId;
-      if (status) where.status = status;
+      if (status) {
+        const statuses = String(status).split(",").map((value) => value.trim()).filter(Boolean);
+        where.status = statuses.length > 1 ? { in: statuses } : statuses[0];
+      }
       if (userId) where.userId = userId;
 
-      /* =========================
-       Date Range
-    ========================== */
+      // Date Range
       if (dateFrom || dateTo) {
         where.createdAt = {};
         if (dateFrom) where.createdAt.gte = new Date(dateFrom as string);
         if (dateTo) where.createdAt.lte = new Date(dateTo as string);
       }
 
-      /* =========================
-       Payment Method Filter
-    ========================== */
+      // Payment Method Filter
       if (paymentMethod) {
         where.payments = {
           some: {
@@ -909,9 +904,7 @@ export class PosController {
         };
       }
 
-      /* =========================
-        SEARCH (Optional)
-    ========================== */
+      // SEARCH (Optional)
       if (search && String(search).trim() !== "") {
         where.OR = [
           {
@@ -954,6 +947,15 @@ export class PosController {
             saleLines: {
               include: {
                 item: { select: { sku: true, name: true, uom: true } },
+                returnLines: { select: { qtyReturned: true, lineTotal: true } },
+              },
+            },
+            returns: {
+              select: {
+                id: true,
+                returnNo: true,
+                refundAmount: true,
+                createdAt: true,
               },
             },
             payments: {
@@ -970,8 +972,44 @@ export class PosController {
         prisma.posSale.count({ where }),
       ]);
 
+      const adjustedSales = sales.map((sale) => {
+        const originalAmount = sale.totalAmount.toNumber();
+        const returnedAmount = sale.returns.reduce((sum, ret) => sum + ret.refundAmount.toNumber(), 0);
+        const netAmount = Math.max(0, originalAmount - returnedAmount);
+        const lineBaseTotal = sale.saleLines.reduce((sum, line) => sum + line.lineTotal.toNumber(), 0);
+        return {
+          ...sale,
+          originalTotalAmount: originalAmount,
+          returnedAmount,
+          netTotalAmount: netAmount,
+          totalAmount: netAmount,
+          returnCount: sale.returns.length,
+          saleLines: sale.saleLines.map((line) => {
+            const returnedQty = line.returnLines.reduce((sum, ret) => sum + ret.qtyReturned.toNumber(), 0);
+            const returnedLineAmount = line.returnLines.reduce((sum, ret) => sum + ret.lineTotal.toNumber(), 0);
+            const originalLineTotal = lineBaseTotal > 0
+              ? originalAmount * line.lineTotal.toNumber() / lineBaseTotal
+              : line.lineTotal.toNumber();
+            const { returnLines: _returnLines, ...saleLine } = line;
+            return {
+              ...saleLine,
+              originalQty: line.qty.toNumber(),
+              returnedQty,
+              remainingQty: Math.max(0, line.qty.toNumber() - returnedQty),
+              returnedAmount: returnedLineAmount,
+              originalLineTotal,
+              netLineTotal: Math.max(0, originalLineTotal - returnedLineAmount),
+            };
+          }),
+          returns: sale.returns.map((ret) => ({
+            ...ret,
+            refundAmount: ret.refundAmount.toNumber(),
+          })),
+        };
+      });
+
       res.json({
-        sales,
+        sales: adjustedSales,
         pagination: {
           page: Number(page),
           limit: Number(limit),
@@ -1272,8 +1310,11 @@ export class PosController {
             originalSale: { select: { id: true, saleNo: true } },
             returnLines: {
               include: {
-                item: { select: { id: true, name: true } },
+                item: { select: { id: true, sku: true, name: true, uom: true } },
               },
+            },
+            refundPayments: {
+              include: { cashAccount: { select: { id: true, code: true, name: true } } },
             },
           },
         }),
@@ -1284,6 +1325,7 @@ export class PosController {
       const data = returns.map((ret) => ({
         id: ret.id,
         returnNo: ret.returnNo,
+        originalSaleId: ret.originalSaleId,
         saleNo: ret.originalSale?.saleNo,
         sessionNo: ret.session?.sessionNo,
         customer: ret.customer,
@@ -1293,10 +1335,11 @@ export class PosController {
         createdAt: ret.createdAt,
         createdBy: ret.user,
         itemsSummary: ret.returnLines
-          .map(
-            (line) => `${line.item?.name ?? "Unknown"} (x${line.qtyReturned})`,
-          )
+          .map((line) => `${line.item?.sku ? `${line.item.sku} — ` : ""}${line.item?.name ?? "Unknown"} (x${line.qtyReturned})`)
           .join(", "),
+        refundMethods: ret.refundPayments.map((payment) =>
+          `${payment.method}${payment.cashAccount ? ` · ${payment.cashAccount.code}` : ""}: ₦${payment.amount.toNumber().toLocaleString()}`,
+        ).join(", "),
       }));
 
       res.json({
@@ -1446,83 +1489,220 @@ export class PosController {
    * }
    */
 
+  async getReturnableSales(req: AuthRequest, res: Response) {
+    try {
+      const search = String(req.query.search ?? "").trim();
+      const roles = req.user?.roles ?? [];
+      const where: any = { status: { in: ["COMPLETED", "PARTIALLY_RETURNED"] } };
+      if (!roles.some((role) => ["Senior Accountant", "Manager", "General Manager"].includes(role))) {
+        const user = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { warehouseId: true } });
+        if (user?.warehouseId) where.warehouseId = user.warehouseId;
+      }
+      if (search) {
+        where.OR = [
+          { saleNo: { contains: search, mode: "insensitive" } },
+          { customer: { name: { contains: search, mode: "insensitive" } } },
+          { customer: { code: { contains: search, mode: "insensitive" } } },
+        ];
+      }
+
+      const sales = await prisma.posSale.findMany({
+        where,
+        take: 50,
+        orderBy: { createdAt: "desc" },
+        include: {
+          customer: { select: { id: true, code: true, name: true } },
+          saleLines: {
+            include: {
+              item: { select: { id: true, sku: true, name: true, uom: true } },
+              returnLines: { select: { qtyReturned: true } },
+            },
+          },
+          payments: {
+            select: { id: true, method: true, amount: true, cashAccountId: true },
+          },
+        },
+      });
+
+      const eligibleSales = sales.map((sale) => ({
+        ...sale,
+        saleLines: sale.saleLines.map((line) => {
+          const alreadyReturnedQty = line.returnLines.reduce(
+            (sum, returnLine) => sum + Number(returnLine.qtyReturned),
+            0,
+          );
+          return {
+            ...line,
+            alreadyReturnedQty,
+            remainingQty: Math.max(0, Number(line.qty) - alreadyReturnedQty),
+          };
+        }).filter((line) => Number(line.remainingQty) > 0),
+      })).filter((sale) => sale.saleLines.length > 0);
+
+      res.json({ sales: eligibleSales });
+    } catch (error) {
+      console.error("Get returnable POS sales error:", error);
+      res.status(500).json({ error: "Failed to fetch returnable POS sales" });
+    }
+  }
+
   // Create POS Returns
   async createReturn(req: AuthRequest, res: Response) {
     try {
       const validatedData = createPosReturnSchema.parse(req.body);
-      //console.log("validated Data", validatedData);
+      const uniqueLineIds = new Set(validatedData.returnLines.map((line) => line.originalLineId));
+      if (uniqueLineIds.size !== validatedData.returnLines.length) {
+        throw new Error("Each sale line can only appear once per return");
+      }
 
       const returnRecord = await prisma.$transaction(async (tx) => {
-        // Generate return number
-        const returnNo = await nextDocumentNumber(tx, "pos_return", "RTN");
-
-        // Fetch original sale with lines
+        // Serialize returns against this sale so concurrent requests cannot over-return it.
+        await tx.$queryRaw`SELECT id FROM "pos_sales" WHERE id = ${validatedData.originalSaleId} FOR UPDATE`;
         const originalSale = await tx.posSale.findUnique({
           where: { id: validatedData.originalSaleId },
-          include: {
-            saleLines: true,
-            session: true,
-            payments: true,
-          },
+          include: { saleLines: true, payments: true },
         });
-
-        if (!originalSale) {
-          throw new Error("Original sale not found");
+        if (!originalSale) throw new Error("Original sale not found");
+        if (!["COMPLETED", "PARTIALLY_RETURNED"].includes(originalSale.status)) {
+          throw new Error("Only completed or partially returned POS sales can be returned");
         }
 
-        // console.log("Original Sale", originalSale);
+        const session = await tx.posSession.findUnique({ where: { id: validatedData.sessionId } });
+        if (!session || session.status !== "OPEN") throw new Error("Invalid or closed POS session");
+        if (session.warehouseId !== originalSale.warehouseId) throw new Error("Session warehouse mismatch");
 
-        // Validate session
-        const session = await tx.posSession.findUnique({
-          where: { id: validatedData.sessionId },
+        const money = (amount: number) => new Decimal(Number(amount.toFixed(2)));
+        const lineBaseTotal = originalSale.saleLines.reduce((sum, line) => sum + line.lineTotal.toNumber(), 0);
+        if (lineBaseTotal <= 0) throw new Error("Original sale has no refundable line value");
+        let allocatedSaleValue = 0;
+        const lineRefundCaps = new Map<string, number>();
+        originalSale.saleLines.forEach((line, index) => {
+          const cap = index === originalSale.saleLines.length - 1
+            ? Number((originalSale.totalAmount.toNumber() - allocatedSaleValue).toFixed(2))
+            : Number((line.lineTotal.toNumber() * originalSale.totalAmount.toNumber() / lineBaseTotal).toFixed(2));
+          lineRefundCaps.set(line.id, Math.max(0, cap));
+          allocatedSaleValue += cap;
         });
-
-        if (!session || session.status !== "OPEN") {
-          throw new Error("Invalid or closed POS session");
-        }
-
-        if (session.warehouseId !== originalSale.warehouseId) {
-          throw new Error("Session warehouse mismatch");
-        }
-
+        const priorReturns = await tx.posReturn.findMany({
+          where: { originalSaleId: originalSale.id },
+          select: { id: true, refundAmount: true, refundPayments: { select: { originalSalePaymentId: true, amount: true } } },
+        });
+        const priorRefundTotal = priorReturns.reduce((sum, ret) => sum + ret.refundAmount.toNumber(), 0);
         let returnTotal = 0;
         let totalReturnCogs = 0;
+        const returnLines: Array<{ originalLine: typeof originalSale.saleLines[number]; qty: number; lineTotal: number }> = [];
 
-        // Validate each return line
         for (const line of validatedData.returnLines) {
-          const originalLine = originalSale.saleLines.find(
-            (l) => l.id === line.originalLineId,
-          );
-
-          if (!originalLine) {
-            throw new Error("Invalid sale line reference");
-          }
-
-          // Prevent over-return
-          const alreadyReturnedQty = await tx.posReturnLine.aggregate({
+          const originalLine = originalSale.saleLines.find((candidate) => candidate.id === line.originalLineId);
+          if (!originalLine) throw new Error("Invalid sale line reference");
+          const soldQty = originalLine.qty.toNumber();
+          const returnedAggregate = await tx.posReturnLine.aggregate({
             where: { originalLineId: originalLine.id },
-            _sum: { qtyReturned: true },
+            _sum: { qtyReturned: true, lineTotal: true },
           });
-
-          const returnedQty =
-            alreadyReturnedQty._sum.qtyReturned?.toNumber() || 0;
-
-          if (returnedQty + line.qtyReturned > originalLine.qty.toNumber()) {
-            throw new Error("Return quantity exceeds sold quantity");
+          const priorQty = returnedAggregate._sum.qtyReturned?.toNumber() ?? 0;
+          const priorLineValue = returnedAggregate._sum.lineTotal?.toNumber() ?? 0;
+          const remainingQty = Math.max(0, soldQty - priorQty);
+          if (line.qtyReturned > remainingQty + 0.000001) {
+            throw new Error(`Only ${remainingQty} unit(s) remain returnable for ${originalLine.itemId}`);
           }
 
-          returnTotal += line.qtyReturned * line.unitPrice;
-
-          // Cost price from inventory / sale line
-          const costPrice = await costingService.getInventoryValue(
-            originalLine.itemId,
-            originalSale.warehouseId,
+          // Allocate sale-level discount/tax proportionally and use the recorded line value.
+          const lineRefundCap = lineRefundCaps.get(originalLine.id) ?? 0;
+          const remainingLineValue = Math.max(0, lineRefundCap - priorLineValue);
+          const isFinalQuantity = line.qtyReturned >= remainingQty - 0.000001;
+          const lineRefund = Math.min(
+            remainingLineValue,
+            isFinalQuantity ? remainingLineValue : lineRefundCap * line.qtyReturned / soldQty,
           );
-
-          totalReturnCogs += line.qtyReturned * costPrice.avgCost!;
+          const roundedLineRefund = Number(lineRefund.toFixed(2));
+          if (roundedLineRefund <= 0) throw new Error("This line has no remaining refundable value");
+          returnTotal += roundedLineRefund;
+          totalReturnCogs += line.qtyReturned * originalLine.costPrice.toNumber();
+          returnLines.push({ originalLine, qty: line.qtyReturned, lineTotal: roundedLineRefund });
+        }
+        returnTotal = Number(returnTotal.toFixed(2));
+        if (priorRefundTotal + returnTotal > originalSale.totalAmount.toNumber() + 0.009) {
+          throw new Error("Return exceeds the remaining refundable sale amount");
         }
 
-        // Create return header
+        // Allocate this return back to the original tender split, considering earlier refunds.
+        const originalPaymentTotal = originalSale.payments.reduce((sum, payment) => sum + payment.amount.toNumber(), 0);
+        if (!originalSale.payments.length || originalPaymentTotal <= 0) throw new Error("Original sale has no payment allocations");
+        const alreadyAllocated = new Map<string, number>();
+        for (const ret of priorReturns) {
+          for (const allocation of ret.refundPayments) {
+            alreadyAllocated.set(
+              allocation.originalSalePaymentId,
+              (alreadyAllocated.get(allocation.originalSalePaymentId) ?? 0) + allocation.amount.toNumber(),
+            );
+          }
+        }
+        const legacyReturns = priorReturns.filter((ret) => ret.refundPayments.length === 0);
+        const legacyCashTransactions = legacyReturns.length
+          ? await tx.cashTransaction.findMany({
+              where: {
+                refType: "POS_RETURN",
+                transactionType: "PAYMENT",
+                refId: { in: legacyReturns.map((ret) => ret.id) },
+              },
+              select: { refId: true, cashAccountId: true, amount: true },
+            })
+          : [];
+        const cashRefundByReturn = new Map<string, number>();
+        const legacyRefundByAccount = new Map<string, number>();
+        for (const transaction of legacyCashTransactions) {
+          if (transaction.refId) {
+            cashRefundByReturn.set(transaction.refId, (cashRefundByReturn.get(transaction.refId) ?? 0) + transaction.amount.toNumber());
+          }
+          legacyRefundByAccount.set(
+            transaction.cashAccountId,
+            (legacyRefundByAccount.get(transaction.cashAccountId) ?? 0) + transaction.amount.toNumber(),
+          );
+        }
+        let legacyRefundToDistribute = legacyReturns
+          .filter((ret) => !cashRefundByReturn.has(ret.id))
+          .reduce((sum, ret) => sum + ret.refundAmount.toNumber(), 0);
+        const historicalCashOut = legacyCashTransactions.reduce((sum, transaction) => sum + transaction.amount.toNumber(), 0);
+        if (Math.max(priorRefundTotal, historicalCashOut) + returnTotal > originalSale.totalAmount.toNumber() + 0.009) {
+          throw new Error("This sale has already reached its refundable limit; review earlier POS return payments");
+        }
+        let allocatedTenderValue = 0;
+        const paymentCaps = originalSale.payments.map((payment, index) => {
+          const netSaleShare = index === originalSale.payments.length - 1
+            ? Number((originalSale.totalAmount.toNumber() - allocatedTenderValue).toFixed(2))
+            : Number((payment.amount.toNumber() / originalPaymentTotal * originalSale.totalAmount.toNumber()).toFixed(2));
+          allocatedTenderValue += netSaleShare;
+          const availableBeforeLegacy = Math.max(0, netSaleShare - (alreadyAllocated.get(payment.id) ?? 0));
+          const accountKey = payment.cashAccountId ?? session.cashAccountId ?? "";
+          const accountLegacy = legacyRefundByAccount.get(accountKey) ?? 0;
+          const legacyAccountShare = Math.min(accountLegacy, availableBeforeLegacy);
+          legacyRefundByAccount.set(accountKey, Math.max(0, accountLegacy - legacyAccountShare));
+          const legacyFallbackShare = Math.min(legacyRefundToDistribute, availableBeforeLegacy - legacyAccountShare);
+          const legacyShare = legacyAccountShare + legacyFallbackShare;
+          legacyRefundToDistribute -= legacyFallbackShare;
+          return {
+            payment,
+            available: Math.max(0, netSaleShare - (alreadyAllocated.get(payment.id) ?? 0) - legacyShare),
+          };
+        });
+        const availableTotal = paymentCaps.reduce((sum, entry) => sum + entry.available, 0);
+        if (availableTotal + 0.009 < returnTotal) throw new Error("Original payment allocations do not cover the remaining refund");
+        let refundRemaining = returnTotal;
+        const refundAllocations = paymentCaps.map((entry, index) => {
+          if (index === paymentCaps.length - 1) {
+            const amount = Math.min(refundRemaining, entry.available);
+            refundRemaining -= amount;
+            return { ...entry, amount: Number(amount.toFixed(2)) };
+          }
+          const proportional = Number((returnTotal * entry.available / availableTotal).toFixed(2));
+          const amount = Math.min(refundRemaining, entry.available, proportional);
+          refundRemaining -= amount;
+          return { ...entry, amount: Number(amount.toFixed(2)) };
+        }).filter((entry) => entry.amount > 0);
+        if (refundRemaining > 0.009) throw new Error("Unable to allocate the full refund to original payments");
+
+        const returnNo = await nextDocumentNumber(tx, "pos_return", "RTN");
         const newReturn = await tx.posReturn.create({
           data: {
             returnNo,
@@ -1530,91 +1710,74 @@ export class PosController {
             sessionId: session.id,
             customerId: originalSale.customerId,
             warehouseId: originalSale.warehouseId,
-            totalAmount: new Decimal(returnTotal),
-            refundAmount: new Decimal(returnTotal),
+            totalAmount: money(returnTotal),
+            refundAmount: money(returnTotal),
             reason: validatedData.reason,
             userId: req.user!.id,
           },
         });
 
-        // Create return lines + inventory reversal
-        for (const line of validatedData.returnLines) {
-          const costPrice = await costingService.getInventoryValue(
-            line.itemId,
-            originalSale.warehouseId,
-          );
-
+        for (const line of returnLines) {
+          const { originalLine, qty, lineTotal } = line;
           await tx.posReturnLine.create({
             data: {
               posReturnId: newReturn.id,
-              originalLineId: line.originalLineId,
-              itemId: line.itemId,
-              qtyReturned: new Decimal(line.qtyReturned),
-              unitPrice: new Decimal(line.unitPrice),
-              lineTotal: new Decimal(line.qtyReturned * line.unitPrice),
+              originalLineId: originalLine.id,
+              itemId: originalLine.itemId,
+              qtyReturned: new Decimal(qty),
+              unitPrice: originalLine.unitPrice,
+              lineTotal: money(lineTotal),
             },
           });
-
           await costingService.receiveInventory(
             tx,
-            line.itemId,
+            originalLine.itemId,
             originalSale.warehouseId,
-            line.qtyReturned,
-            costPrice.avgCost || 0,
+            qty,
+            originalLine.costPrice.toNumber(),
             "POS_RETURN",
             newReturn.id,
             req.user!.id,
           );
         }
 
-        // Update session totals
-        await tx.posSession.update({
-          where: { id: session.id },
-          data: {
-            totalReturns: { increment: returnTotal },
-          },
+        await tx.posReturnPayment.createMany({
+          data: refundAllocations.map(({ payment, amount }) => ({
+            posReturnId: newReturn.id,
+            originalSalePaymentId: payment.id,
+            cashAccountId: payment.cashAccountId ?? session.cashAccountId,
+            method: payment.method,
+            amount: money(amount),
+          })),
         });
 
         const glEntries: any[] = [];
-
-        // Refund cash
-        for (const payment of originalSale.payments) {
+        for (const { payment, amount } of refundAllocations) {
+          const cashAccountId = payment.cashAccountId ?? session.cashAccountId;
+          if (!cashAccountId) throw new Error("No cash account is available for this refund allocation");
           const updatedCashAccount = await tx.cashAccount.update({
-            where: { id: payment.cashAccountId },
-            data: {
-              balance: { decrement: payment.amount.toNumber() },
-            },
+            where: { id: cashAccountId },
+            data: { balance: { decrement: money(amount) } },
           });
-
-          const cashaccountGL = await tx.chartOfAccount.findUnique({
-            where: { id: updatedCashAccount.glAccountId },
-          });
-
+          const cashaccountGL = updatedCashAccount.glAccountId
+            ? await tx.chartOfAccount.findUnique({ where: { id: updatedCashAccount.glAccountId } })
+            : null;
           glEntries.push({
-            accountCode: cashaccountGL?.code || "1100", // Cash/Bank account (should ideally fetch from cash account)
+            accountCode: cashaccountGL?.code || "1100",
             debit: 0,
-            credit: payment.amount.toNumber(),
+            credit: amount,
             refType: "POS_RETURN",
             refId: newReturn.id,
           });
-        }
 
-        // Cash transaction
-
-        for (const payment of originalSale.payments) {
-          const transactionNo = await nextDocumentNumber(
-            tx,
-            "cash_transaction",
-            "CT",
-          );
-
+          const transactionNo = await nextDocumentNumber(tx, "cash_transaction", "CT");
           await tx.cashTransaction.create({
             data: {
               transactionNo,
-              cashAccountId: payment.cashAccountId,
+              cashAccountId,
               transactionType: "PAYMENT",
-              amount: new Decimal(payment.amount.toNumber()),
-              description: `POS Return: ${returnNo}`,
+              amount: money(amount),
+              description: `POS Return: ${returnNo} (${payment.method})`,
               transactionDate: new Date(),
               reference: returnNo,
               refType: "POS_RETURN",
@@ -1629,68 +1792,43 @@ export class PosController {
           });
         }
 
-        glEntries.push({
-          accountCode: "4000",
-          debit: returnTotal,
-          credit: 0,
-          refType: "POS_RETURN",
-          refId: newReturn.id,
-        });
-
+        await tx.posSession.update({ where: { id: session.id }, data: { totalReturns: { increment: money(returnTotal) } } });
         glEntries.push(
-          {
-            accountCode: "5000",
-            debit: 0,
-            credit: totalReturnCogs,
-            refType: "POS_RETURN",
-            refId: newReturn.id,
-          },
-          {
-            accountCode: "1350",
-            debit: totalReturnCogs,
-            credit: 0,
-            refType: "POS_RETURN",
-            refId: newReturn.id,
-          },
+          { accountCode: "4900", debit: returnTotal, credit: 0, refType: "POS_RETURN", refId: newReturn.id },
+          { accountCode: "5000", debit: 0, credit: totalReturnCogs, refType: "POS_RETURN", refId: newReturn.id },
+          { accountCode: "1350", debit: totalReturnCogs, credit: 0, refType: "POS_RETURN", refId: newReturn.id },
         );
+        await glService.postJournal(tx, glEntries, `POS Return: ${returnNo}`, req.user!.id);
 
-        // GL reversal
-        await glService.postJournal(
-          tx,
-          glEntries,
-          `POS Return: ${returnNo}`,
-          req.user!.id,
-        );
-
-        // Update sale status
-        const totalReturnedQty = await tx.posReturnLine.aggregate({
-          where: { posReturn: { originalSaleId: originalSale.id } },
-          _sum: { qtyReturned: true },
+        const updatedLines = await tx.posSaleLine.findMany({
+          where: { posSaleId: originalSale.id },
+          include: { returnLines: { select: { qtyReturned: true } } },
         });
-
-        const fullyReturned = await tx.posSaleLine.count({
-          where: {
-            posSaleId: originalSale.id,
-            qty: {
-              equals: totalReturnedQty._sum.qtyReturned || new Decimal(0),
-            },
-          },
+        const fullyReturned = updatedLines.length > 0 && updatedLines.every((saleLine) => {
+          const returned = saleLine.returnLines.reduce((sum, line) => sum + line.qtyReturned.toNumber(), 0);
+          return returned >= saleLine.qty.toNumber() - 0.000001;
         });
-
         await tx.posSale.update({
           where: { id: originalSale.id },
-          data: {
-            status: fullyReturned ? "RETURNED" : "PARTIALLY_RETURNED",
-          },
+          data: { status: fullyReturned ? "RETURNED" : "PARTIALLY_RETURNED" },
         });
 
-        return newReturn;
-      });
+        return tx.posReturn.findUnique({
+          where: { id: newReturn.id },
+          include: {
+            returnLines: { include: { item: { select: { id: true, sku: true, name: true, uom: true } } } },
+            refundPayments: { include: { cashAccount: { select: { id: true, code: true, name: true } } } },
+            originalSale: { select: { id: true, saleNo: true } },
+          },
+        });
+      }, { maxWait: 10000, timeout: 30000, isolationLevel: "Serializable" });
 
       res.status(201).json(returnRecord);
     } catch (error) {
       console.error("Create POS return error:", error);
-      res.status(400).json({ error: "Failed to create POS return" });
+      res.status(400).json({
+        error: error instanceof Error ? error.message : "Failed to create POS return",
+      });
     }
   }
 
@@ -1737,9 +1875,9 @@ export class PosController {
         return res.status(400).json({ error: "Sale ID is required" });
       }
 
-      /* =====================================================
-       * 1. FETCH SALE WITH ALL REQUIRED RELATIONS
-       * ===================================================== */
+    
+      //  * 1. FETCH SALE WITH ALL REQUIRED RELATIONS
+     
       const sale = await prisma.posSale.findUnique({
         where: { id: id },
         include: {
@@ -1760,6 +1898,17 @@ export class PosController {
               item: {
                 select: { sku: true, name: true, uom: true },
               },
+              returnLines: { select: { qtyReturned: true, lineTotal: true } },
+            },
+          },
+          returns: {
+            select: {
+              returnNo: true,
+              refundAmount: true,
+              createdAt: true,
+              refundPayments: {
+                select: { method: true, amount: true },
+              },
             },
           },
           payments: true, // PosSalePayment[]
@@ -1770,19 +1919,34 @@ export class PosController {
         return res.status(404).json({ error: "Sale not found" });
       }
 
-      /* =====================================================
-       * 2. FORMAT SALE LINES
-       * ===================================================== */
-      const saleLines = sale.saleLines.map((line) => ({
-        sku: line.item?.sku ?? "N/A",
-        name: line.item?.name ?? "Unknown Item",
-        uom: line.item?.uom ?? "",
-        qty: line.qty.toNumber(),
-        unitPrice: line.unitPrice.toNumber(),
-        discountPercent: line.discountPercent.toNumber(),
-        costPrice: line.costPrice.toNumber(),
-        lineTotal: line.lineTotal.toNumber(),
-      }));
+      //  * 2. FORMAT SALE LINES
+      
+      const lineBaseTotal = sale.saleLines.reduce((sum, line) => sum + line.lineTotal.toNumber(), 0);
+      const saleLines = sale.saleLines.map((line) => {
+        const originalQty = line.qty.toNumber();
+        const returnedQty = line.returnLines.reduce((sum, returned) => sum + returned.qtyReturned.toNumber(), 0);
+        const returnedAmount = line.returnLines.reduce((sum, returned) => sum + returned.lineTotal.toNumber(), 0);
+        const originalLineTotal = lineBaseTotal > 0
+          ? sale.totalAmount.toNumber() * line.lineTotal.toNumber() / lineBaseTotal
+          : line.lineTotal.toNumber();
+        const netLineTotal = Math.max(0, originalLineTotal - returnedAmount);
+        return {
+          sku: line.item?.sku ?? "N/A",
+          name: line.item?.name ?? "Unknown Item",
+          uom: line.item?.uom ?? "",
+          qty: Math.max(0, originalQty - returnedQty),
+          originalQty,
+          returnedQty,
+          remainingQty: Math.max(0, originalQty - returnedQty),
+          unitPrice: line.unitPrice.toNumber(),
+          discountPercent: line.discountPercent.toNumber(),
+          costPrice: line.costPrice.toNumber(),
+          originalLineTotal,
+          returnedAmount,
+          netLineTotal,
+          lineTotal: netLineTotal,
+        };
+      });
 
       /* =====================================================
        * 3. FORMAT PAYMENTS
@@ -1802,6 +1966,18 @@ export class PosController {
         },
         {},
       );
+
+      const returnedAmount = sale.returns.reduce((sum, ret) => sum + ret.refundAmount.toNumber(), 0);
+      const netTotalAmount = Math.max(0, sale.totalAmount.toNumber() - returnedAmount);
+      const refunds = sale.returns.map((ret) => ({
+        returnNo: ret.returnNo,
+        date: ret.createdAt,
+        amount: ret.refundAmount.toNumber(),
+        payments: ret.refundPayments.map((payment) => ({
+          method: payment.method,
+          amount: payment.amount.toNumber(),
+        })),
+      }));
 
       /* =====================================================
        * 5. BUILD RECEIPT OBJECT
@@ -1838,14 +2014,18 @@ export class PosController {
           subtotal: sale.subtotal.toNumber(),
           discountAmount: sale.discountAmount.toNumber(),
           taxAmount: sale.taxAmount.toNumber(),
-          totalAmount: sale.totalAmount.toNumber(),
+          originalTotalAmount: sale.totalAmount.toNumber(),
+          returnedAmount,
+          netTotalAmount,
+          totalAmount: netTotalAmount,
           amountPaid: sale.amountPaid.toNumber(),
           changeAmount: sale.changeAmount.toNumber(),
           outstandingBalance:
-            sale.totalAmount.toNumber() - sale.amountPaid.toNumber(),
+            netTotalAmount - sale.amountPaid.toNumber(),
         },
 
         items: saleLines,
+        refunds,
 
         payments,
         paymentSummary,

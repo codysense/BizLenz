@@ -27,9 +27,7 @@ const posReturnSchema = z.object({
     .array(
       z.object({
         originalLineId: z.string().cuid(),
-        itemId: z.string().cuid(),
-        qtyReturned: z.number().int().nonnegative(),
-        //unitPrice: z.number().positive(),
+        qtyReturned: z.number().nonnegative(),
       }),
     )
     .min(1),
@@ -74,12 +72,7 @@ const PosReturnsModal = ({
   /*  SINGLE SOURCE OF TRUTH — SERVER FILTERING */
   const { data, isLoading } = useQuery({
     queryKey: ["search-pos-sales-for-return", saleSearch],
-    queryFn: () =>
-      posApi.getSales({
-        status: "COMPLETED",
-        limit: 50,
-        ...(saleSearch && { search: saleSearch }),
-      }),
+    queryFn: () => posApi.getReturnableSales(saleSearch),
     // enabled: saleSearch.length > 2,
   });
 
@@ -91,8 +84,6 @@ const PosReturnsModal = ({
 
   const sales: PosSale[] = data?.sales || [];
 
-  console.log("Sales search results:", sales);
-
   const handleSaleSelect = (sale: PosSale) => {
     setSelectedSale(sale);
 
@@ -102,34 +93,28 @@ const PosReturnsModal = ({
       reason: undefined,
       returnLines: sale.saleLines.map((line) => ({
         originalLineId: line.id,
-        itemId: line.itemId,
         qtyReturned: 0,
-        unitPrice: Number(line.unitPrice),
       })),
     });
   };
 
-  const calculateReturnTotal = () =>
-    watch("returnLines")?.reduce(
-      (sum, line) =>
-        sum + (line.qtyReturned || 0) * Number(line.unitPrice || 0),
-      0,
-    ) || 0;
+  const calculateReturnTotal = () => {
+    if (!selectedSale) return 0;
+    const lineBase = Number(selectedSale.subtotal);
+    if (lineBase <= 0) return 0;
+    return (watch("returnLines") ?? []).reduce((sum, line) => {
+      const saleLine = selectedSale.saleLines.find((candidate) => candidate.id === line.originalLineId);
+      if (!saleLine || Number(saleLine.qty) <= 0) return sum;
+      const allocatedLineTotal = Number(saleLine.lineTotal) * Number(selectedSale.totalAmount) / lineBase;
+      return sum + Number(line.qtyReturned || 0) * allocatedLineTotal / Number(saleLine.qty);
+    }, 0);
+  };
 
   const onSubmit = async (formData: PosReturnFormData) => {
     try {
       const validLines = formData.returnLines
         .filter((l) => l.qtyReturned > 0)
-        .map((line) => {
-          const originalLine = selectedSale!.saleLines.find(
-            (sl) => sl.id === line.originalLineId,
-          );
-
-          return {
-            ...line,
-            unitPrice: Number(originalLine!.unitPrice), // inject safely here
-          };
-        });
+        .map(({ originalLineId, qtyReturned }) => ({ originalLineId, qtyReturned }));
 
       if (!validLines.length) {
         toast.error("Please specify quantities to return");
@@ -145,6 +130,7 @@ const PosReturnsModal = ({
       onReturnComplete();
     } catch (error) {
       console.error("POS return ", error);
+      toast.error(error instanceof Error ? error.message : "Failed to process POS return");
     }
   };
 
@@ -368,7 +354,7 @@ const PosReturnsModal = ({
                             </h4>
 
                             <p className="text-sm text-gray-500">
-                              Original Qty: {originalLine.qty}
+                              Sold: {originalLine.qty} · Returned: {originalLine.alreadyReturnedQty ?? 0} · Remaining: {originalLine.remainingQty ?? originalLine.qty}
                             </p>
                           </div>
 
@@ -376,12 +362,14 @@ const PosReturnsModal = ({
                             <input
                               type="number"
                               min="0"
-                              max={originalLine.qty}
+                              max={originalLine.remainingQty ?? originalLine.qty}
+                              step="any"
                               {...register(`returnLines.${index}.qtyReturned`, {
                                 valueAsNumber: true,
                                 validate: (value) => {
-                                  if (value > originalLine.qty) {
-                                    return `Cannot return more than ${originalLine.qty}`;
+                                  const remaining = Number(originalLine.remainingQty ?? originalLine.qty);
+                                  if (value > remaining) {
+                                    return `Cannot return more than the remaining quantity (${remaining})`;
                                   }
                                   return true;
                                 },

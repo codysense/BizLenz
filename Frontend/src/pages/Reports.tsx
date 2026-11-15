@@ -2118,10 +2118,13 @@ const POSSalesReport = ({ data }: { data: any }) => {
   const columns = [
     { key: "TransactionDate", header: "Transaction Date", width: "w-32" },
     { key: "SaleNo", header: "Sale No", width: "w-32" },
+    { key: "Status", header: "Status", width: "w-32" },
     { key: "WarehouseName", header: "Warehouse Name", width: "w-32" },
     { key: "CashAccountName", header: "CashAccount Name", width: "w-32" },
     { key: "SalesRep", header: "Sales Rep", width: "w-32" },
-    { key: "TotalAmount", header: "Total Amount", width: "w-32" },
+    { key: "OriginalAmount", header: "Original Amount", width: "w-32" },
+    { key: "ReturnedAmount", header: "Returned", width: "w-32" },
+    { key: "TotalAmount", header: "Net Total", width: "w-32" },
     { key: "AmountPaid", header: "Amount Paid", width: "w-32" },
     // { key: 'GrandTotalClosing', header: 'Grand TotalClosing' , width: 'w-32'},
   ];
@@ -2172,12 +2175,18 @@ const GeneralLedgerReport = ({ data }: { data: any }) => {
     (acc: any[], curr: any, idx: number) => {
     const prevBalance =
       idx > 0 ? acc[idx - 1].runningBalance : data.openingBalance;
+     // console.log("prevBalance", prevBalance, "curr", curr.debit, curr.credit);
     const runningBalance = prevBalance + (curr.debit || 0) - (curr.credit || 0);
+    
 
     acc.push({ ...curr, runningBalance });
+
+
     return acc;
     },
     [],
+
+
   );
 
   // 2. Define columns including the new one
@@ -2887,6 +2896,7 @@ const SalesByItemReport = ({ data }: { data: any }) => {
       cell: (row: any) => row.reference,
       width: "w-32",
     },
+    { key: "status", header: "Status", width: "w-32" },
     {
       key: "item",
       header: "Item",
@@ -2905,8 +2915,20 @@ const SalesByItemReport = ({ data }: { data: any }) => {
       width: "w-40",
     },
     {
+      key: "originalQty",
+      header: "Original Qty",
+      cell: (row: any) => (row.originalQty || 0).toLocaleString(),
+      width: "w-24",
+    },
+    {
+      key: "returnedQty",
+      header: "Returned Qty",
+      cell: (row: any) => (row.returnedQty || 0).toLocaleString(),
+      width: "w-24",
+    },
+    {
       key: "qty",
-      header: "Qty",
+      header: "Net Qty",
       cell: (row: any) => (row.qty || 0).toLocaleString(),
       width: "w-20",
     },
@@ -2917,8 +2939,14 @@ const SalesByItemReport = ({ data }: { data: any }) => {
       width: "w-28",
     },
     {
+      key: "returnedAmount",
+      header: "Returned Amount",
+      cell: (row: any) => `₦${(row.returnedAmount || 0).toLocaleString()}`,
+      width: "w-32",
+    },
+    {
       key: "lineTotal",
-      header: "Line Total",
+      header: "Net Line Total",
       cell: (row: any) => `₦${(row.lineTotal || 0).toLocaleString()}`,
       width: "w-28",
     },
@@ -3064,9 +3092,12 @@ const DetailedSalesReport = ({ data }: { data: any }) => {
     { key: "orderNo", header: "Sale No" },
     { key: "customerName", header: "Customer" },
     { key: "itemName", header: "Item" },
-    { key: "qty", header: "Quantity" },
+    { key: "originalQty", header: "Original Qty", cell: (row: any) => Number(row.originalQty ?? row.qty).toLocaleString() },
+    { key: "returnedQty", header: "Returned Qty", cell: (row: any) => Number(row.returnedQty ?? 0).toLocaleString() },
+    { key: "qty", header: "Net Qty" },
     { key: "unitPrice", header: "Unit Price", cell: (row: any) => `₦${Number(row.unitPrice).toLocaleString()}` },
-    { key: "total", header: "Line Total", cell: (row: any) => `₦${Number(row.total).toLocaleString()}` },
+    { key: "returnedAmount", header: "Returned Amount", cell: (row: any) => `₦${Number(row.returnedAmount ?? 0).toLocaleString()}` },
+    { key: "total", header: "Net Line Total", cell: (row: any) => `₦${Number(row.total).toLocaleString()}` },
     { key: "source", header: "Source" },
     { key: "status", header: "Status" },
   ];

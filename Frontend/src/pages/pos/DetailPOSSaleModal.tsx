@@ -46,6 +46,14 @@ const DetailPOSSaleModal: React.FC<DetailPOSSaleModalProps> = ({
     }, 0) || 0;
 
   const totalAmount = subtotal - discountAmount;
+  const displaySubtotal = Number(sale?.subtotal ?? subtotal);
+  const displayDiscountAmount = Number(sale?.discountAmount ?? discountAmount);
+  const displayTaxAmount = Number(sale?.taxAmount ?? 0);
+  const originalTotalAmount = Number(sale?.originalTotalAmount ?? sale?.totalAmount ?? totalAmount);
+  const returnedAmount = Number(sale?.returnedAmount ?? 0);
+  const netTotalAmount = Number(
+    sale?.netTotalAmount ?? Math.max(0, originalTotalAmount - returnedAmount),
+  );
 
   const totalPaid =
     displayPayments?.reduce(
@@ -53,7 +61,7 @@ const DetailPOSSaleModal: React.FC<DetailPOSSaleModalProps> = ({
       0,
     ) || 0;
 
-  const changeAmount = totalPaid - totalAmount;
+  const changeAmount = Number(sale?.changeAmount ?? totalPaid - originalTotalAmount);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
@@ -106,17 +114,23 @@ const DetailPOSSaleModal: React.FC<DetailPOSSaleModalProps> = ({
               {saleLines?.length ? (
                 <div className="space-y-4">
                   {saleLines.map((line: any, index: number) => {
+                    const soldQty = Number(line.originalQty ?? line.qty ?? 0);
+                    const returnedQty = Number(line.returnedQty ?? 0);
+                    const remainingQty = Number(line.remainingQty ?? Math.max(0, soldQty - returnedQty));
                     const lineTotal =
-                      Number(line.qty || 0) * Number(line.unitPrice || 0);
+                      soldQty * Number(line.unitPrice || 0);
                     const discount =
                       (lineTotal * Number(line.discountPercent || 0)) / 100;
+                    const originalLineTotal = Number(line.originalLineTotal ?? lineTotal - discount);
+                    const returnedLineAmount = Number(line.returnedAmount ?? 0);
+                    const netLineTotal = Number(line.netLineTotal ?? Math.max(0, originalLineTotal - returnedLineAmount));
 
                     return (
                       <div
                         key={index}
                         className="bg-gray-50 border border-gray-200 rounded-2xl p-4"
                       >
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div>
                             <p className="text-gray-500 text-xs">Product</p>
                             <p className="text-gray-900 font-medium mt-1">
@@ -125,9 +139,23 @@ const DetailPOSSaleModal: React.FC<DetailPOSSaleModalProps> = ({
                           </div>
 
                           <div>
-                            <p className="text-gray-500 text-xs">Qty</p>
+                            <p className="text-gray-500 text-xs">Sold Qty</p>
                             <p className="text-gray-900 mt-1">
-                              {Number(line.qty) || 0}
+                              {soldQty.toLocaleString()}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-gray-500 text-xs">Returned Qty</p>
+                            <p className="text-red-600 mt-1">
+                              {returnedQty.toLocaleString()}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-gray-500 text-xs">Remaining Qty</p>
+                            <p className="text-gray-900 mt-1">
+                              {remainingQty.toLocaleString()}
                             </p>
                           </div>
 
@@ -146,11 +174,35 @@ const DetailPOSSaleModal: React.FC<DetailPOSSaleModalProps> = ({
                           </div>
 
                           <div>
-                            <p className="text-gray-500 text-xs">Total</p>
-                            <p className="text-emerald-600 font-semibold mt-1">
-                              ₦{(lineTotal - discount).toLocaleString()}
+                            <p className="text-gray-500 text-xs">Original Line Total</p>
+                            <p className="text-gray-900 font-semibold mt-1">
+                              ₦{originalLineTotal.toLocaleString()}
                             </p>
                           </div>
+
+                          {returnedQty > 0 || returnedLineAmount > 0 ? (
+                            <>
+                              <div>
+                                <p className="text-gray-500 text-xs">Returned Amount</p>
+                                <p className="text-red-600 mt-1">
+                                  −₦{returnedLineAmount.toLocaleString()}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500 text-xs">Net Line Total</p>
+                                <p className="text-emerald-600 font-semibold mt-1">
+                                  ₦{netLineTotal.toLocaleString()}
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <div>
+                              <p className="text-gray-500 text-xs">Line Total</p>
+                              <p className="text-emerald-600 font-semibold mt-1">
+                                ₦{netLineTotal.toLocaleString()}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -160,6 +212,26 @@ const DetailPOSSaleModal: React.FC<DetailPOSSaleModalProps> = ({
                 <p className="text-gray-500 text-sm">No items found</p>
               )}
             </div>
+
+            {!isPending && sale?.returns?.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+                <h3 className="text-xl font-semibold text-red-700 mb-4">
+                  Return Activity
+                </h3>
+                <div className="space-y-3">
+                  {sale.returns.map((returnRecord: any) => (
+                    <div key={returnRecord.id} className="flex flex-wrap justify-between gap-2 text-sm">
+                      <span className="text-gray-700">
+                        {returnRecord.returnNo} · {new Date(returnRecord.createdAt).toLocaleString()}
+                      </span>
+                      <span className="font-semibold text-red-700">
+                        −₦{Number(returnRecord.refundAmount ?? 0).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* PAYMENTS */}
             <div className="bg-white border border-gray-200 rounded-2xl p-6">
@@ -215,19 +287,38 @@ const DetailPOSSaleModal: React.FC<DetailPOSSaleModalProps> = ({
                 <div className="space-y-3 text-sm text-gray-700">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>₦{subtotal.toLocaleString()}</span>
+                    <span>₦{displaySubtotal.toLocaleString()}</span>
                   </div>
 
-                  {discountAmount > 0 && (
+                  {displayDiscountAmount > 0 && (
                     <div className="flex justify-between text-red-500">
                       <span>Discount</span>
-                      <span>-₦{discountAmount.toLocaleString()}</span>
+                      <span>-₦{displayDiscountAmount.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  {displayTaxAmount > 0 && (
+                    <div className="flex justify-between">
+                      <span>Tax</span>
+                      <span>₦{displayTaxAmount.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between font-medium">
+                    <span>Original Total</span>
+                    <span>₦{originalTotalAmount.toLocaleString()}</span>
+                  </div>
+
+                  {returnedAmount > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Returned / Refunded</span>
+                      <span>−₦{returnedAmount.toLocaleString()}</span>
                     </div>
                   )}
 
                   <div className="border-t border-gray-200 pt-4 flex justify-between text-lg font-bold text-gray-900">
-                    <span>Total</span>
-                    <span>₦{totalAmount.toLocaleString()}</span>
+                    <span>Net Sale Total</span>
+                    <span>₦{netTotalAmount.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
