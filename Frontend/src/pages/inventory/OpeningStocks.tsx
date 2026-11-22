@@ -4,6 +4,7 @@ import { Plus, Search, Building, Eye, ChevronDown } from "lucide-react";
 
 import { openingStockApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import CreateOpeningStockModal from "./CreateOpeningStockModal";
 
 interface Warehouse {
@@ -232,7 +233,7 @@ const OpeningStock = () => {
         pagination={data?.pagination}
         onPageChange={setPage}
         // actions={actions}
-      />
+      exportMenu={<ExportMenu module="opening-stocks" filters={{ search }} matchingRows={data?.pagination?.total} />} />
 
       {/* Create Modal */}
       {showCreateModal && (

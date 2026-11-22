@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useMemo } from "react";
+import { Fragment, useState, useEffect, useMemo, useRef } from "react";
 import { Combobox, Transition } from "@headlessui/react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
@@ -22,6 +22,7 @@ interface ItemSelectProps {
   error?: string;
   typeFilter?: string;
   noZeroItem?: boolean;
+  autoFocus?: boolean;
 }
 
 export function ItemSelect({
@@ -30,12 +31,15 @@ export function ItemSelect({
   error,
   typeFilter,
   noZeroItem,
+  autoFocus = false,
 }: ItemSelectProps) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<Item[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const debouncedSearch = useDebounce(search, 500);
+  const debouncedSearch = useDebounce(search, 250);
+  const isSearchPending = search !== debouncedSearch;
 
   /**
    * Reset pagination + items when search or filter changes
@@ -43,13 +47,13 @@ export function ItemSelect({
   useEffect(() => {
     setPage(1);
     setItems([]);
-  }, [debouncedSearch, typeFilter]);
+  }, [debouncedSearch, typeFilter, noZeroItem]);
 
   /**
    * Fetch paginated items (extracted isFetching to throttle scroll)
    */
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["items", { page, search: debouncedSearch, type: typeFilter }],
+  const { data, isLoading, isFetching, isPlaceholderData } = useQuery({
+    queryKey: ["items", { page, search: debouncedSearch, type: typeFilter, noZeroItem }],
     queryFn: () =>
       inventoryApi.getItems({
         page,
@@ -65,10 +69,10 @@ export function ItemSelect({
    * Merge paginated results safely
    */
   useEffect(() => {
-    if (!data?.items) return;
+    if (!data?.items || isPlaceholderData) return;
 
     setItems((prev) => {
-      const map = new Map(prev.map((i) => [i.id, i]));
+      const map = new Map((page === 1 ? [] : prev).map((i) => [i.id, i]));
 
       data.items.forEach((item: Item) => {
         map.set(item.id, item);
@@ -76,7 +80,7 @@ export function ItemSelect({
 
       return Array.from(map.values());
     });
-  }, [data]);
+  }, [data, isPlaceholderData, page]);
 
   /**
    * Ensure selected item always exists in state
@@ -100,7 +104,7 @@ export function ItemSelect({
       .catch(() => {
         // silently ignore if item no longer exists
       });
-  }, [value, items]);
+  }, [value]);
 
   const total = data?.pagination?.total ?? 0;
 
@@ -113,7 +117,7 @@ export function ItemSelect({
     const bottom = scrollHeight - scrollTop <= clientHeight + 10;
 
     // Use isFetching instead of isLoading to prevent multiple rapid scroll increments
-    if (bottom && items.length < total && !isFetching) {
+    if (bottom && items.length < total && !isFetching && !isSearchPending) {
       setPage((prev) => prev + 1);
     }
   };
@@ -126,6 +130,12 @@ export function ItemSelect({
     [items, value],
   );
 
+  useEffect(() => {
+    if (!autoFocus) return;
+    inputRef.current?.focus();
+    inputRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [autoFocus]);
+
   return (
     <div>
       {/* 1. Extract render prop `{ open }` to coordinate static options rendering */}
@@ -134,6 +144,7 @@ export function ItemSelect({
           <div className="relative mt-1">
             <div className="relative w-full cursor-default overflow-hidden rounded-md border border-gray-300 bg-white text-left shadow-sm focus-within:ring-2 focus-within:ring-blue-500 sm:text-sm">
               <Combobox.Input
+                ref={inputRef}
                 className="w-full border-none py-2 pl-3 pr-10 leading-5 text-gray-900 focus:ring-0"
                 displayValue={() => selectedItem?.name ?? ""}
                 // 2. Removed .trim() to support entering space characters
@@ -159,7 +170,11 @@ export function ItemSelect({
                 className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 sm:text-sm"
                 onScroll={handleScroll}
               >
-                {items.length === 0 && !isFetching ? (
+                {isSearchPending ? (
+                  <div className="cursor-default select-none py-2 px-4 text-gray-500">
+                    Searching...
+                  </div>
+                ) : items.length === 0 && !isFetching ? (
                   <div className="cursor-default select-none py-2 px-4 text-gray-700">
                     Nothing found.
                   </div>
@@ -202,8 +217,10 @@ export function ItemSelect({
                   ))
                 )}
 
-                {isFetching && (
-                  <div className="py-2 px-4 text-gray-500">Loading...</div>
+                {isFetching && !isSearchPending && (
+                  <div className="py-2 px-4 text-gray-500">
+                    {isLoading ? "Loading..." : "Searching..."}
+                  </div>
                 )}
               </Combobox.Options>
             </Transition>

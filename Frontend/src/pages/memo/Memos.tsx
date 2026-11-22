@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useMemos } from "../../hooks/useMemo";
 import { MemoModal } from "./CreateMemoModal";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import { Eye, Plus, RotateCcw } from "lucide-react";
 import StatusBadge from "../../components/StatusBadge";
 import MemoDetailsModal from "./MemoDetailsModal";
@@ -221,7 +222,7 @@ export const Memos = () => {
         pagination={pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="memos" filters={{ type: typeFilter, partyType: partyTypeFilter, dateFrom: dateFilter, dateTo: dateFilter }} matchingRows={pagination?.total} />} />
 
       {/* Modal */}
       {isModalOpen && (

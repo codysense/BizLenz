@@ -19,5 +19,6 @@ build/
 deploy.sh
 backup_db.sh
 backups/
+Backend/exports/
 videoCreation/
 

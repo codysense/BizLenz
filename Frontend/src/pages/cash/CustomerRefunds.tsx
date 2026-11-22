@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Eye, DollarSign, Users, Calendar, Printer } from "lucide-react";
 import { cashApi, salesApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import CreateCustomerRefundModal from "./CreateCustomerRefundModal";
 // import { ReportExporter } from '../../lib/reportExporter';
@@ -302,7 +303,7 @@ const CustomerRefunds = () => {
         loading={isLoading}
         pagination={data?.pagination}
         onPageChange={setPage}
-      />
+      exportMenu={<ExportMenu module="customer-refunds" filters={{ partyId: customerFilter }} matchingRows={data?.pagination?.total} />} />
 
       {showCreateModal && (
         <CreateCustomerRefundModal

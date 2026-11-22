@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, Tags, Edit, Trash2 } from "lucide-react";
 import { uomApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import CreateUOMModal from "./CreateUOMModal";
 import EditUOMModal from "./EditUOMModal";
 import toast from "react-hot-toast";
@@ -147,7 +148,7 @@ const UOMs = () => {
         pagination={data?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="uoms" filters={{ search }} matchingRows={data?.pagination?.total} />} />
 
       {/* Modals */}
       {showCreateModal && (

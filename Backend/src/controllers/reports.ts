@@ -123,9 +123,18 @@ export class ReportsController {
     }
   }
 
+  async getJournalRefTypes(req: AuthRequest, res: Response) {
+    try {
+      res.json(await reportsService.getJournalRefTypes());
+    } catch (error) {
+      console.error("Journal reference types error:", error);
+      res.status(500).json({ error: "Failed to fetch journal reference types" });
+    }
+  }
+
   async getGeneralLedger(req: AuthRequest, res: Response) {
     try {
-      const { dateFrom, dateTo, accountId } = req.query;
+      const { dateFrom, dateTo, accountId, refType } = req.query;
 
       if (!dateFrom || !dateTo) {
         return res.status(400).json({ error: "Date range is required" });
@@ -135,6 +144,7 @@ export class ReportsController {
         new Date(dateFrom as string),
         new Date(dateTo as string),
         accountId as string,
+        refType as string | undefined,
       );
       res.json(report);
     } catch (error) {

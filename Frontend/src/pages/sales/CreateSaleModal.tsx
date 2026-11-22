@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { useForm, useFieldArray, Controller, set } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { record, z } from "zod";
+import { z } from "zod";
 import { X, Plus, Trash2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { salesApi, inventoryApi, posApi } from "../../lib/api";
@@ -36,6 +36,7 @@ interface CreateSaleModalProps {
 }
 
 const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
+  const [focusNewItem, setFocusNewItem] = useState(false);
   const {
     register,
     control,
@@ -43,7 +44,6 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
     watch,
     setValue,
     getValues,
-    reset,
     formState: { errors, isSubmitting },
   } = useForm<CreateSaleFormData>({
     resolver: zodResolver(createSaleSchema),
@@ -58,7 +58,9 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
     name: "saleLines",
   });
 
-  const [itemStocks, setItemStocks] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (focusNewItem) setFocusNewItem(false);
+  }, [focusNewItem]);
 
   const { user } = useAuthStore();
   const canPerformActions =
@@ -66,83 +68,62 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
     user?.roles.includes("General Manager");
 
   const watchedLines = watch("saleLines");
-  const watchedItemIds = watchedLines.map((line) => line.itemId);
   const customerId = watch("customerId");
-
-  const { data: customers } = useQuery({
-    queryKey: ["customers-for-sale"],
-    queryFn: () => salesApi.getCustomers(),
-    select: (data) => ({
-      ...data,
-      customers: data.customers
-        ?.filter((customer: any) => customer.CustomerGroup !== "WIC")
-        .map((customer: any) => ({
-          ...customer,
-          outstandingBalance: 0,
-        })),
-    }),
-  });
 
   const { data: customersWithBalances } = useQuery({
     queryKey: ["customers-with-balances"],
     queryFn: () => posApi.getCustomersWithBalances(),
   });
 
-  console.log("Customers Data", customersWithBalances);
-
-  const { data: items } = useQuery({
-    queryKey: ["items-ready-for-sale", "FINISHED_GOODS"],
-    queryFn: () =>
-      inventoryApi.getItems({ type: "FINISHED_GOODS", limit: 100 }),
-  });
+  const selectionSignature = watchedLines
+    .map((line) => line.itemId)
+    .filter(Boolean)
+    .join("|");
 
   useEffect(() => {
-    watchedLines.forEach(async (line, index) => {
-      if (line.itemId && items?.items) {
-        // const selectedItem = items.items.find(
-        //   (item: any) => item.id === line.itemId,
-        // );
+    let active = true;
+    const itemIds = Array.from(
+      new Set(watchedLines.map((line) => line.itemId).filter(Boolean)),
+    );
+    const customer = customersWithBalances?.customers?.find(
+      (candidate: any) => candidate.id === customerId,
+    );
 
-        const selectedItem = await inventoryApi.getItemById(line.itemId);
-
-        console.log("Selected Item ", selectedItem);
-
-        // Save stockQty
-        setItemStocks((prev) => ({
-          ...prev,
-          [line.itemId]: selectedItem.stockQty || 0,
-        }));
-
-        const selectedCustomer = customersWithBalances?.customers?.find(
-          (customer: any) => customer.id === customerId,
-        );
-        console.log("Selected Customer ", selectedCustomer);
-        if (selectedItem && selectedCustomer) {
-          // find the matching price for this customer's group
-          const customerGroup = selectedCustomer.customerGroupName; // adjust key if different
-          const groupPrice = selectedItem.priceList?.find(
-            (priceObj: any) => priceObj.customerGroup === customerGroup,
+    void Promise.all(
+      itemIds.map(async (itemId) => {
+        try {
+          const item = await inventoryApi.getItemById(itemId);
+          if (!active) return;
+          const groups = [customer?.customerGroupName, customer?.customerGroupId]
+            .filter(Boolean)
+            .map((group: string) => String(group).trim().toLocaleLowerCase());
+          const groupPrice = item.priceList?.find((price: any) =>
+            groups.includes(
+              String(price.customerGroup ?? "").trim().toLocaleLowerCase(),
+            ),
           );
-
-          //console.log("selected customer", selectedCustomer);
-          //console.log("selected item", selectedItem);
-          // fallback if no group-specific price found
-          const unitPrice = groupPrice ? groupPrice.price : 0;
-
-          setValue(`saleLines.${index}.unitPrice`, unitPrice);
-        } else {
-          setValue(`saleLines.${index}.unitPrice`, 0);
+          const unitPrice = Number(groupPrice?.price ?? 0);
+          getValues("saleLines").forEach((line, index) => {
+            if (line.itemId === itemId && Number(line.unitPrice) !== unitPrice) {
+              setValue(`saleLines.${index}.unitPrice`, unitPrice, {
+                shouldValidate: true,
+              });
+            }
+          });
+        } catch (error) {
+          console.error(`Failed to load item ${itemId}:`, error);
         }
-      }
-    });
-    // };
-    // setPrices();
+      }),
+    );
+
+    return () => {
+      active = false;
+    };
   }, [
-    watchedItemIds,
-    items,
+    selectionSignature,
     customerId,
     setValue,
-    watchedLines,
+    getValues,
     customersWithBalances,
   ]);
 
@@ -161,17 +142,6 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
       console.error("Create sale error:", error);
     }
   };
-
-  const [customerQuery, setCustomerQuery] = useState("");
-
-  const filteredCustomers =
-    customerQuery === ""
-      ? customers?.customers || []
-      : customers?.customers?.filter((customer: any) =>
-          `${customer.name} ${customer.phone || ""} ${customer.code}`
-            .toLowerCase()
-            .includes(customerQuery.toLowerCase()),
-        );
 
   return (
     <div className="fixed inset-0 z-50">
@@ -219,7 +189,12 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
                 <CustomerSelect
                   customers={customersWithBalances?.customers || []}
                   value={watch("customerId")}
-                  onChange={(val) => reset({ ...getValues(), customerId: val })}
+                  onChange={(val) =>
+                    setValue("customerId", val, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
                   error={errors.customerId?.message}
                 />
 
@@ -274,15 +249,6 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
                     Add finished goods to this order
                   </p>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => append({ itemId: "", qty: 1, unitPrice: 0 })}
-                  className="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Item
-                </button>
               </div>
 
               {errors.saleLines && (
@@ -291,7 +257,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
                 </p>
               )}
 
-              <div className="space-y-4">
+              <div className="max-h-[42vh] space-y-4 overflow-y-auto overscroll-contain pr-2">
                 {fields.map((field, index) => (
                   <div
                     key={field.id}
@@ -307,6 +273,7 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
                         <ItemSelect
                           noZeroItem={true}
                           typeFilter="FINISHED_GOODS"
+                          autoFocus={focusNewItem && index === fields.length - 1}
                           value={watch(`saleLines.${index}.itemId`)}
                           onChange={(val) =>
                             setValue(`saleLines.${index}.itemId`, val)
@@ -381,18 +348,26 @@ const CreateSaleModal = ({ onClose, onSuccess }: CreateSaleModalProps) => {
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Total Summary */}
-            <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-5">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-medium text-gray-900">
-                  Total Amount
-                </span>
-
-                <span className="text-3xl font-bold text-blue-600">
-                  ₦{formatCurrency(calculateTotal())}
-                </span>
+              <div className="sticky bottom-0 mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-gray-50 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFocusNewItem(true);
+                    append({ itemId: "", qty: 1, unitPrice: 0 });
+                  }}
+                  className="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </button>
+                <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2">
+                  <span className="text-sm font-medium text-gray-700 sm:text-base">
+                    Total Amount
+                  </span>
+                  <span className="text-xl font-bold text-blue-600 sm:text-2xl">
+                    ₦{formatCurrency(calculateTotal())}
+                  </span>
+                </div>
               </div>
             </div>
 

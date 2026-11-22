@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Edit, Trash2, Users, Shield, Eye, EyeOff } from "lucide-react";
 import { userApi } from "../lib/api";
 import { DataTable } from "../components/DataTable";
+import ExportMenu from "../components/ExportMenu";
 import StatusBadge from "../components/StatusBadge";
 import { useAuthStore } from "../store/authStore";
 import CreateUserModal from "./CreateUserModal";
@@ -256,6 +257,7 @@ const UserManagement = () => {
         pagination={data?.pagination}
         onPageChange={setPage}
         actions={actions}
+        exportMenu={<ExportMenu module="users" filters={{}} matchingRows={data?.pagination?.total} />}
       />
 
       {/* Create Modal */}

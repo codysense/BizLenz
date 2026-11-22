@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { managementApi, posApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { PosSale } from "../../types/api";
 // import { ReportExporter } from "../../utils/reportExport";
@@ -552,7 +553,7 @@ const PosSalesHistory = () => {
             pagination={data?.pagination}
             onPageChange={setPage}
             actions={actions}
-          />
+          exportMenu={<ExportMenu module="pos-sales" filters={{ partyId: customerFilter, dateFrom: dateFromFilter, dateTo: dateToFilter }} matchingRows={data?.pagination?.total} />} />
         </div>
       </div>
 

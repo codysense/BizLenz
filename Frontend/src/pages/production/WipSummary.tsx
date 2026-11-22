@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { productionApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import { GenericSearchSelect } from "../../components/GenericSearchCombo";
 
 interface WipSummaryItem {
@@ -285,7 +286,7 @@ const WipSummary = () => {
             data={wipData || []}
             columns={columns}
             loading={isLoading}
-          />
+          exportMenu={<ExportMenu module="wip-summary" filters={{ productionOrderId: productionOrderFilter }} />} />
         </div>
       </div>
     </div>

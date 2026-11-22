@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { api, managementApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { useAuthStore } from "../../store/authStore";
 import { ReportExporter } from "../../utils/reportExport";
@@ -720,7 +721,7 @@ const AuditLog = () => {
         pagination={auditData?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="audit-logs" filters={{ userId: userFilter, action: actionFilter, entity: entityFilter, dateFrom: dateFromFilter, dateTo: dateToFilter }} matchingRows={auditData?.pagination?.total} />} />
 
       {/* Audit Entry Details Modal */}
       {showDetailsModal && selectedEntry && (

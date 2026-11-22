@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Plus, Search, Package, Edit, Trash2 } from "lucide-react";
 import { inventoryApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { Item } from "../../types/api";
 import CreateItemModal from "./CreateItemModal";
@@ -238,7 +239,7 @@ const Items = () => {
           pagination={data?.pagination}
           onPageChange={setPage}
           actions={actions}
-        />
+        exportMenu={<ExportMenu module="items" filters={{ search: debouncedSearch, type: typeFilter }} matchingRows={data?.pagination?.total} />} />
       </div>
 
       {/* CREATE MODAL */}

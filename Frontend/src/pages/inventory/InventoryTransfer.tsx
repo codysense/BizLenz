@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { inventoryApi, managementApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { useAuthStore } from "../../store/authStore";
 import CreateTransferModal from "./CreateTransferModal";
@@ -503,7 +504,7 @@ const InventoryTransfer = () => {
         pagination={data?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="inventory-transfers" filters={{}} matchingRows={data?.pagination?.total} />} />
 
       {/* Create Modal */}
       {showCreateModal && (

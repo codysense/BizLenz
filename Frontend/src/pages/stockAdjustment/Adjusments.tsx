@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { adjustmentApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import { Eye, Plus } from "lucide-react";
 import CreateAdjustmentModal from "./createAdjustmentModal";
 
@@ -153,7 +154,7 @@ export const Adjustments = () => {
         pagination={pagination}
         onPageChange={setPage}
         // actions={actions}
-      />
+      exportMenu={<ExportMenu module="stock-adjustments" filters={{ type: typeFilter, dateFrom: dateFilter, dateTo: dateFilter }} matchingRows={pagination?.total} />} />
 
       {/* Modal */}
       {isModalOpen && (

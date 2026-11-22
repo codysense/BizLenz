@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Package, Edit } from "lucide-react";
 import { inventoryApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { Bom } from "../../types/api";
 import CreateBomModal from "./CreateBomModal";
@@ -231,6 +232,7 @@ const BOMs = () => {
             columns={columns}
             loading={isLoading}
             actions={actions}
+            exportMenu={<ExportMenu module="boms" filters={{ search }} matchingRows={boms?.length} />}
           />
         </div>
       </div>

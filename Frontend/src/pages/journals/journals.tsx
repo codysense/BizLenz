@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { journalApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import { Eye, Plus } from "lucide-react";
 import CreateJournalModal from "./createJournalModal";
 import DetailJournalModal from "./DetailJournalModal";
@@ -132,7 +133,7 @@ export const Journals = () => {
         pagination={pagination}
         onPageChange={setPage}
         // actions={actions}
-      />
+      exportMenu={<ExportMenu module="journals" filters={{ dateFrom: dateFilter, dateTo: dateFilter }} matchingRows={pagination?.total} />} />
 
       {/* Create Modal */}
       {isModalOpen && (

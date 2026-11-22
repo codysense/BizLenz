@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { inventoryApi } from "../../lib/api"; // Adjust API mapping path as necessary
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import ImportItemsModal from "./ImportItemsModal"; // Imported custom modal
 interface PriceListEntry {
   id: string;
@@ -199,6 +200,7 @@ const ImportItems = () => {
         loading={isLoading}
         pagination={data?.pagination}
         onPageChange={setPage}
+        exportMenu={<ExportMenu module="items" filters={{ search }} matchingRows={data?.pagination?.total} />}
       />
       {/* QuickBooks Import Modal Component */}
       {showImportModal && (

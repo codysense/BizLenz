@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, Building, Edit } from "lucide-react";
 import { purchaseApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { Vendor } from "../../types/api";
 import CreateVendorModal from "./CreateVendorModal";
@@ -204,7 +205,7 @@ const Vendors = () => {
         pagination={data?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="vendors" filters={{ search }} matchingRows={data?.pagination?.total} />} />
 
       {/* Create Modal */}
       {showCreateModal && (

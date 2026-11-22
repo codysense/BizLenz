@@ -175,6 +175,7 @@ const Reports = () => {
   const [loading, setLoading] = useState(false);
   const requestSequence = useRef(0);
   const [accountFilter, setAccountFilter] = useState("");
+  const [refTypeFilter, setRefTypeFilter] = useState("");
   const [customerId, setCustomerId] = useState("");
 
   const currentReportCriteriaKey = JSON.stringify({
@@ -187,6 +188,7 @@ const Reports = () => {
     usersFilter,
     vendorFilter,
     accountFilter,
+    refTypeFilter,
     customerId,
   });
 
@@ -214,6 +216,11 @@ const Reports = () => {
   const { data: accounts } = useQuery<any>({
     queryKey: ["accounts-forreports"],
     queryFn: () => managementApi.getChartOfAccounts(),
+  });
+
+  const { data: journalRefTypes = [] } = useQuery<string[]>({
+    queryKey: ["journal-ref-types-for-reports"],
+    queryFn: () => reportsApi.getJournalRefTypes(),
   });
 
   // console.log(accounts)
@@ -290,6 +297,7 @@ const Reports = () => {
       category: "Financial",
       requiresDateRange: true,
       supportAccount: true,
+      supportRefType: true,
     },
     {
       id: "cash-flow",
@@ -575,10 +583,15 @@ const Reports = () => {
             alert("Please select date range");
             return;
           }
+          if (!accountFilter) {
+            alert("Please select an account");
+            return;
+          }
           data = await reportsApi.getGeneralLedger({
             dateFrom,
             dateTo,
             accountId: accountFilter,
+            ...(refTypeFilter && { refType: refTypeFilter }),
           });
           break;
         case "cash-flow":
@@ -843,11 +856,13 @@ const Reports = () => {
           const glColumns = [
             { key: "date", header: "Date" },
             { key: "journalNo", header: "Journal No" },
+            { key: "accountId", header: "GL Account ID" },
             { key: "accountCode", header: "Account Code" },
             { key: "accountName", header: "Account Name" },
             { key: "memo", header: "Description" },
             { key: "debit", header: "Debit" },
             { key: "credit", header: "Credit" },
+            { key: "refType", header: "Reference Type" },
           ];
           console.log("Export Data", reportData);
           ReportExporter.exportGenericReport(
@@ -1205,10 +1220,22 @@ const Reports = () => {
         }
         case "sales-by-warehouse":
         case "all-sales-by-warehouse": {
-          const columns = selectedReport === "sales-by-warehouse"
-            ? ["RowType", "WarehouseName", "OrderNo", "OrderDate", "CustomerName", "NoOfItems", "Amount"].map((key) => ({ key, header: key }))
-            : ["RowType", "TransactionDate", "SalesType", "DocumentNo", "CustomerName", "WarehouseName", "NoOfItems", "Amount"].map((key) => ({ key, header: key }));
-          ReportExporter.exportGenericReport(reportData, columns, selectedReport === "sales-by-warehouse" ? "Sales by Warehouse" : "All Sales by Warehouse", format);
+          if (selectedReport === "all-sales-by-warehouse") {
+            const detailRows = (reportData || []).filter((row: any) => row.RowType === "DETAIL");
+            const columns = [
+              { key: "TransactionDate", header: "Transaction Date" },
+              { key: "SalesType", header: "Sales Type" },
+              { key: "DocumentNo", header: "Document No" },
+              { key: "CustomerName", header: "Customer Name" },
+              { key: "WarehouseName", header: "Warehouse Name" },
+              { key: "NoOfItems", header: "No of Items" },
+              { key: "Amount", header: "GL Net Revenue" },
+            ];
+            ReportExporter.exportGenericReport(detailRows, columns, "All Sales by Warehouse", format);
+          } else {
+            const columns = ["RowType", "WarehouseName", "OrderNo", "OrderDate", "CustomerName", "NoOfItems", "Amount"].map((key) => ({ key, header: key }));
+            ReportExporter.exportGenericReport(reportData, columns, "Sales by Warehouse", format);
+          }
           break;
         }
         case "purchases-by-vendor": {
@@ -1567,6 +1594,23 @@ const Reports = () => {
                       </option>
                     ))}
                   </select> */}
+                </div>
+              )}
+              {selectedReportConfig?.supportRefType && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Reference Type (optional)
+                  </label>
+                  <select
+                    value={refTypeFilter}
+                    onChange={(event) => setRefTypeFilter(event.target.value)}
+                    className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                  >
+                    <option value="">All reference types</option>
+                    {journalRefTypes.map((refType) => (
+                      <option key={refType} value={refType}>{refType}</option>
+                    ))}
+                  </select>
                 </div>
               )}
               {selectedReportConfig?.supportUsers && (
@@ -2028,6 +2072,11 @@ const TrialBalanceReport = ({
 
 //Vendor Balances
 const VendorBalances = ({ data }: { data: any }) => {
+  const rows = Array.isArray(data) ? data : [];
+  const totalOutstanding = rows.reduce(
+    (sum: number, row: any) => sum + (Number(row?.outstanding_balance) || 0),
+    0,
+  );
   const columns = [
     { key: "vendor_code", header: "Vendor Code", width: "w-32" },
     { key: "vendor_name", header: "Vendor Name", width: "w-32" },
@@ -2049,7 +2098,14 @@ const VendorBalances = ({ data }: { data: any }) => {
         <p className="text-gray-600">Detail of Vendor Balances</p>
       </div>
 
-      <DataTable data={data || []} columns={columns} />
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="text-sm font-medium text-blue-800">Total Outstanding Balance</div>
+        <div className="mt-1 text-2xl font-semibold text-blue-950">
+          ₦{totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+        <div className="mt-1 text-xs text-blue-700">Across {rows.length.toLocaleString()} vendors and unassigned AP activity</div>
+      </div>
+      <DataTable data={rows} columns={columns} />
     </div>
   );
 };
@@ -2143,6 +2199,11 @@ const POSSalesReport = ({ data }: { data: any }) => {
 
 //Vendor Balances
 const CustomerBalances = ({ data }: { data: any }) => {
+  const rows = Array.isArray(data) ? data : [];
+  const totalOutstanding = rows.reduce(
+    (sum: number, row: any) => sum + (Number(row?.outstanding_balance) || 0),
+    0,
+  );
   const columns = [
     { key: "customer_code", header: "Customer Code", width: "w-32" },
     { key: "customer_name", header: "Customer Name", width: "w-32" },
@@ -2164,7 +2225,14 @@ const CustomerBalances = ({ data }: { data: any }) => {
         <p className="text-gray-600">Detail of Customer Balances</p>
       </div>
 
-      <DataTable data={data || []} columns={columns} />
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="text-sm font-medium text-blue-800">Total Outstanding Balance</div>
+        <div className="mt-1 text-2xl font-semibold text-blue-950">
+          ₦{totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+        <div className="mt-1 text-xs text-blue-700">Across {rows.length.toLocaleString()} customers</div>
+      </div>
+      <DataTable data={rows} columns={columns} />
     </div>
   );
 };
@@ -2198,6 +2266,7 @@ const GeneralLedgerReport = ({ data }: { data: any }) => {
       width: "w-24",
     },
     { key: "journalNo", header: "Journal No", width: "w-32" },
+    { key: "accountId", header: "GL Account ID", width: "w-48" },
     { key: "accountCode", header: "Account", width: "w-32" },
     { key: "accountName", header: "Account Name", width: "w-48" },
     // { key: 'memo', header: 'Description', width: 'w-64' },
@@ -3121,18 +3190,54 @@ const DetailedPurchaseReport = ({ data }: { data: any }) => {
 
 const WarehouseSalesReport = ({ data, allSales }: { data: any; allSales: boolean }) => {
   const rows = Array.isArray(data) ? data : [];
+  const grandTotal = rows.find((row: any) => row.RowType === "GRANDTOTAL");
+  const detailRows = allSales ? rows.filter((row: any) => row.RowType === "DETAIL") : rows;
   const columns = allSales ? [
-    { key: "TransactionDate", header: "Date" }, { key: "SalesType", header: "Channel" },
-    { key: "DocumentNo", header: "Document No" }, { key: "CustomerName", header: "Customer" },
-    { key: "WarehouseName", header: "Warehouse" }, { key: "NoOfItems", header: "Quantity" },
-    { key: "Amount", header: "Amount", cell: (row: any) => `₦${Number(row.Amount || 0).toLocaleString()}` },
+    { key: "TransactionDate", header: "Transaction Date" },
+    { key: "SalesType", header: "Sales Type" },
+    { key: "DocumentNo", header: "Document No" },
+    { key: "CustomerName", header: "Customer Name" },
+    { key: "WarehouseName", header: "Warehouse Name" },
+    { key: "NoOfItems", header: "No of Items" },
+    { key: "Amount", header: "GL Net Revenue", cell: (row: any) => `₦${Number(row.Amount || 0).toLocaleString()}` },
   ] : [
     { key: "RowType", header: "Row Type" }, { key: "WarehouseName", header: "Warehouse" },
     { key: "OrderNo", header: "Sale No" }, { key: "OrderDate", header: "Date" },
     { key: "CustomerName", header: "Customer" }, { key: "NoOfItems", header: "Quantity" },
     { key: "Amount", header: "Amount", cell: (row: any) => `₦${Number(row.Amount || 0).toLocaleString()}` },
   ];
-  return <div className="space-y-4"><div className="text-center"><h2 className="text-xl font-bold">{allSales ? "All Sales by Warehouse" : "Sales by Warehouse"}</h2><p className="text-gray-600">Sales values are allocated by quantities issued from each warehouse.</p></div><DataTable data={rows} columns={columns} /></div>;
+  return (
+    <div className="space-y-4">
+      <div className="text-center">
+        <h2 className="text-xl font-bold">{allSales ? "All Sales by Warehouse" : "Sales by Warehouse"}</h2>
+        <p className="text-gray-600">
+          {allSales
+            ? "Posted sales, returns, and adjustments reconciled to GL accounts 4000 and 4900."
+            : "Sales values are allocated by quantities issued from each warehouse."}
+        </p>
+      </div>
+      {allSales && (
+        <div className="grid grid-cols-1 gap-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-center sm:grid-cols-3">
+          <div>
+            <div className="text-sm font-medium text-blue-800">Sales Revenue</div>
+            <div className="mt-1 text-xl font-semibold text-blue-950">₦{Number(grandTotal?.SalesRevenue || 0).toLocaleString()}</div>
+            <div className="mt-1 text-xs text-blue-700">Credits to GL account 4000</div>
+          </div>
+          <div>
+            <div className="text-sm font-medium text-blue-800">Sales Returns</div>
+            <div className="mt-1 text-xl font-semibold text-blue-950">₦{Number(grandTotal?.SalesReturns || 0).toLocaleString()}</div>
+            <div className="mt-1 text-xs text-blue-700">Debits to GL account 4900</div>
+          </div>
+          <div>
+            <div className="text-sm font-medium text-blue-800">GL Net Revenue</div>
+            <div className="mt-1 text-xl font-semibold text-blue-950">₦{Number(grandTotal?.Amount || 0).toLocaleString()}</div>
+            <div className="mt-1 text-xs text-blue-700">Sales revenue less sales returns</div>
+          </div>
+        </div>
+      )}
+      <DataTable data={detailRows} columns={columns} />
+    </div>
+  );
 };
 
 const SalesByCustomerReport = ({ data }: { data: any }) => {

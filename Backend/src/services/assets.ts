@@ -543,6 +543,7 @@ export class AssetsService {
           ],
           `Asset capitalization from PO ${purchase.orderNo}: ${asset.name}`,
           userId,
+          purchase.orderDate
         );
       }
 

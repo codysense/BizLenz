@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Plus, Eye, DollarSign, CreditCard, Calendar } from 'lucide-react';
 import { cashApi, purchaseApi } from '../../lib/api';
 import { DataTable } from '../../components/DataTable';
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from '../../components/StatusBadge';
 import CreatePurchasePaymentModal from './CreatePurchasePaymentModal';
 
@@ -271,7 +272,7 @@ console.log(data)
         pagination={data?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="purchase-payments" filters={{ partyId: vendorFilter, cashAccountId: cashAccountFilter }} matchingRows={data?.pagination?.total} />} />
 
       {/* Create Modal */}
       {showCreateModal && (

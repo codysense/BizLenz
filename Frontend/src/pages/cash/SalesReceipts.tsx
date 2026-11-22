@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Plus, Eye, DollarSign, Receipt, Calendar } from 'lucide-react';
 import { cashApi, salesApi } from '../../lib/api';
 import { DataTable } from '../../components/DataTable';
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from '../../components/StatusBadge';
 import CreateSalesReceiptModal from './CreateSalesReceiptModal';
 
@@ -271,7 +272,7 @@ const SalesReceipts = () => {
         pagination={data?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="sales-receipts" filters={{ partyId: customerFilter, cashAccountId: cashAccountFilter }} matchingRows={data?.pagination?.total} />} />
 
       {/* Create Modal */}
       {showCreateModal && (

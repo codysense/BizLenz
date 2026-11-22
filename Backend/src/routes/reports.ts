@@ -30,6 +30,11 @@ router.get(
   reportsController.getGeneralLedger,
 );
 router.get(
+  "/journal-ref-types",
+  requireRole(["General Manager", "Auditor", "Manager", "Senior Accountant"]),
+  reportsController.getJournalRefTypes,
+);
+router.get(
   "/cash-flow",
   requireRole(["General Manager", "Auditor", "Manager", "Senior Accountant"]),
   reportsController.getCashFlow,

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { managementApi, purchaseApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { Purchase } from "../../types/api";
 import CreatePurchaseModal from "./CreatePurchaseModal";
@@ -676,7 +677,7 @@ const PurchaseOrders = () => {
         pagination={data?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="purchases" filters={{ status: statusFilter, partyId: vendorFilter }} matchingRows={data?.pagination?.total} />} />
 
       {/* Create Modal */}
       {showCreateModal && (

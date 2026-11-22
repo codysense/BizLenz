@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { inventoryApi, userApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { InventoryLedgerEntry } from "../../types/api";
 import toast from "react-hot-toast";
@@ -634,7 +635,7 @@ const InventoryLedger = () => {
         loading={isLoading}
         pagination={ledgerData?.pagination}
         onPageChange={setPage}
-      />
+      exportMenu={<ExportMenu module="inventory-ledger" filters={{ itemId: itemFilter, warehouseId: warehouseFilter, userId: userFilter, itemType: itemTypeFilter, refType: refTypeFilter, direction: directionFilter, dateFrom: dateFromFilter, dateTo: dateToFilter }} matchingRows={ledgerData?.pagination?.total} />} />
     </div>
   );
 };

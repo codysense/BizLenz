@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { assetsApi, inventoryApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { Asset } from "../../types/api";
 import CreateAssetModal from "./CreateAssetModal";
@@ -463,7 +464,7 @@ const AssetRegister = () => {
         pagination={registerData?.register?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="assets" filters={{ search, categoryId: categoryFilter, status: statusFilter, locationId: locationFilter }} matchingRows={registerData?.register?.pagination?.total} />} />
 
       {/* Create Modal */}
       {showCreateModal && (

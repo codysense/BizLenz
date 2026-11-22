@@ -419,13 +419,15 @@ export class ReportsService {
     const newToDate = endOfDayUTC(toDate);
     const newFromDate = startOfDayUTC(fromDate);
 
+    // console.log("From Date", newFromDate, "To Date", newToDate);
+
     const balanceSheetAccounts = await prisma.chartOfAccount.findMany({
       where: {
         isActive: true,
         name: {
           notIn: [
             "Memo Cash Clearing",
-            "Cash and Bank",
+            // "Cash and Bank",
             "Asset Clearing Account",
           ],
         },
@@ -434,8 +436,10 @@ export class ReportsService {
             "EQUITY",
             "CURRENT_ASSETS",
             "NON_CURRENT_ASSETS",
+            "TRADE_RECEIVABLES",
             "CURRENT_LIABILITY",
             "NON_CURRENT_LIABILITY",
+            "TRADE_PAYABLES",
           ],
         },
       },
@@ -452,23 +456,23 @@ export class ReportsService {
     });
 
     // For Cash and Bank account - using date range
-    const cashAndBankAccount = await prisma.chartOfAccount.findMany({
-      where: {
-        isActive: true,
-        name: "Cash and Bank",
-        accountType: "CURRENT_ASSETS",
-      },
-      include: {
-        journalLines: {
-          where: {
-            journal: {
-              date: { gte: newFromDate, lte: newToDate }, // Within date range
-            },
-          },
-        },
-      },
-      orderBy: { code: "asc" },
-    });
+    // const cashAndBankAccount = await prisma.chartOfAccount.findMany({
+    //   where: {
+    //     isActive: true,
+    //     name: "Cash and Bank",
+    //     accountType: "CURRENT_ASSETS",
+    //   },
+    //   include: {
+    //     journalLines: {
+    //       where: {
+    //         journal: {
+    //           date: { gte: newFromDate, lte: newToDate },
+    //         },
+    //       },
+    //     },
+    //   },
+    //   orderBy: { code: "asc" },
+    // });
 
     // For income/expense accounts
     const incomeExpenseAccounts = await prisma.chartOfAccount.findMany({
@@ -480,8 +484,10 @@ export class ReportsService {
             "EQUITY",
             "CURRENT_ASSETS",
             "NON_CURRENT_ASSETS",
+            "TRADE_RECEIVABLES",
             "CURRENT_LIABILITY",
             "NON_CURRENT_LIABILITY",
+            "TRADE_PAYABLES",
           ],
         },
       },
@@ -489,7 +495,7 @@ export class ReportsService {
         journalLines: {
           where: {
             journal: {
-              date: { gte: newFromDate, lte: newToDate }, // Within date range
+              date: { gte: newFromDate, lte: newToDate },
             },
           },
         },
@@ -500,7 +506,7 @@ export class ReportsService {
     // Combine all results
     const chartAccounts = [
       ...balanceSheetAccounts,
-      ...cashAndBankAccount,
+      // ...cashAndBankAccount,
       ...incomeExpenseAccounts,
     ].sort((a, b) => a.code.localeCompare(b.code));
 
@@ -561,15 +567,43 @@ export class ReportsService {
     //   });
     // });
 
+    // console.log("Trial Balance Data", trialBalanceData);
+
     return trialBalanceData.sort((a, b) =>
       a.accountCode.localeCompare(b.accountCode),
     );
   }
 
-  async getGeneralLedger(fromDate: Date, toDate: Date, accountId?: string) {
+  async getJournalRefTypes(): Promise<string[]> {
+    const rows = await prisma.journalLine.findMany({
+      where: { refType: { not: null } },
+      distinct: ["refType"],
+      select: { refType: true },
+      orderBy: { refType: "asc" },
+    });
+    return rows
+      .map((row) => row.refType)
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+  }
+
+  async getGeneralLedger(
+    fromDate: Date,
+    toDate: Date,
+    accountId: string,
+    refType?: string,
+  ) {
+    if (!accountId || accountId === "ALL") {
+      throw new Error("Select an account to generate the general ledger");
+    }
+
     const fromDateStart = startOfDayUTC(fromDate);
     const toDateEnd = endOfDayUTC(toDate);
+    if (Number.isNaN(fromDateStart.getTime()) || Number.isNaN(toDateEnd.getTime()) || fromDateStart > toDateEnd) {
+      throw new Error("A valid date range is required");
+    }
+
     const where: any = {
+      accountId,
       journal: {
         date: {
           gte: fromDateStart,
@@ -578,8 +612,8 @@ export class ReportsService {
       },
     };
 
-    if (accountId) {
-      where.accountId = accountId;
+    if (refType && refType !== "ALL") {
+      where.refType = refType;
     }
 
     // Get journal lines for the period
@@ -596,11 +630,13 @@ export class ReportsService {
       orderBy: [
         { journal: { date: "asc" } },
         { journal: { journalNo: "asc" } },
+        { id: "asc" },
       ],
     });
 
     // Calculate opening balance (all transactions before fromDate)
     const openingBalanceWhere: any = {
+      accountId,
       journal: {
         date: {
           lt: fromDateStart,
@@ -608,65 +644,76 @@ export class ReportsService {
       },
     };
 
-    if (accountId) {
-      openingBalanceWhere.accountId = accountId;
+    if (refType && refType !== "ALL") {
+      openingBalanceWhere.refType = refType;
     }
 
-    const openingBalanceLines = await prisma.journalLine.findMany({
-      where: openingBalanceWhere,
-    });
+    const [openingTotals, selectedAccount] = await Promise.all([
+      prisma.journalLine.aggregate({
+        where: openingBalanceWhere,
+        _sum: { debit: true, credit: true },
+      }),
+      prisma.chartOfAccount.findUnique({
+        where: { id: accountId },
+        select: { id: true, code: true, name: true, accountType: true },
+      }),
+    ]);
 
-    const openingBalance = openingBalanceLines.reduce((balance, line) => {
-      return balance + line.debit.toNumber() - line.credit.toNumber();
-    }, 0);
+    if (!selectedAccount) {
+      throw new Error("Selected account was not found");
+    }
 
-    // Calculate totals for the period
-    const totalReceipt = journalLines.reduce(
-      (sum, line) => sum + line.debit.toNumber(),
-      0,
+    const openingBalance = new Decimal(openingTotals._sum.debit ?? 0).minus(
+      openingTotals._sum.credit ?? 0,
     );
-    const totalPayment = journalLines.reduce(
-      (sum, line) => sum + line.credit.toNumber(),
-      0,
+
+    // Keep all monetary calculations in Decimal to avoid floating-point drift.
+    const totalDebit = journalLines.reduce(
+      (sum, line) => sum.plus(line.debit),
+      new Decimal(0),
     );
+    const totalCredit = journalLines.reduce(
+      (sum, line) => sum.plus(line.credit),
+      new Decimal(0),
+    );
+    const closingBalance = openingBalance.plus(totalDebit).minus(totalCredit);
 
-    // Calculate closing balance
-    const closingBalance = openingBalance + totalReceipt - totalPayment;
-
-    // Map journal lines with running balance
     let runningBalance = openingBalance;
     const lines = journalLines.map((line) => {
-      runningBalance += line.debit.toNumber() - line.credit.toNumber();
+      runningBalance = runningBalance.plus(line.debit).minus(line.credit);
 
       return {
         date: line.journal.date,
         journalNo: line.journal.journalNo,
+        accountId: line.accountId,
         accountCode: line.account.code,
         accountName: line.account.name,
         accountType: line.account.accountType,
         memo: line.journal.memo,
         debit: line.debit.toNumber(),
         credit: line.credit.toNumber(),
-        balance: runningBalance,
+        balance: runningBalance.toNumber(),
+        runningBalance: runningBalance.toNumber(),
         refType: line.refType,
         refId: line.refId,
       };
     });
 
     return {
-      openingBalance,
-      closingBalance,
-      totalReceipt,
-      totalPayment,
+      openingBalance: openingBalance.toNumber(),
+      closingBalance: closingBalance.toNumber(),
+      totalDebit: totalDebit.toNumber(),
+      totalCredit: totalCredit.toNumber(),
+      // Preserve the old response names for any existing API consumers.
+      totalReceipt: totalDebit.toNumber(),
+      totalPayment: totalCredit.toNumber(),
       lines,
-      accountInfo:
-        journalLines.length > 0
-          ? {
-              code: journalLines[0].account.code,
-              name: journalLines[0].account.name,
-              accountType: journalLines[0].account.accountType,
-            }
-          : null,
+      accountInfo: {
+        id: selectedAccount.id,
+        code: selectedAccount.code,
+        name: selectedAccount.name,
+        accountType: selectedAccount.accountType,
+      },
     };
   }
 
@@ -1430,122 +1477,184 @@ ORDER BY date, transaction_type, reference;
     const newAsOfDate = endOfDayUTC(asOfDate);
     const result = await prisma.$queryRawUnsafe<
       {
-        vendor_id: string;
+        vendor_id: string | null;
         vendor_code: string;
         vendor_name: string;
-        total_purchases: number;
-        total_payments: number;
-        total_returns: number;
-        // total_refunds: number;
         outstanding_balance: number;
       }[]
     >(
       `
-    SELECT 
-    v.id   AS vendor_id,
+WITH ap_activity AS (
+    SELECT
+        COALESCE(
+            purchase."vendorId",
+            payment."vendorId",
+            purchase_return."vendorId",
+            legacy_return_purchase."vendorId",
+            refund."vendorId",
+            memo."vendorId",
+            memo_purchase."vendorId"
+        ) AS vendor_id,
+        jl.credit - jl.debit AS balance_change
+    FROM journal_lines jl
+    INNER JOIN journals j ON j.id = jl."journalId"
+    INNER JOIN chart_of_accounts coa ON coa.id = jl."accountId"
+    LEFT JOIN purchases purchase
+        ON jl."refType" = 'PURCHASE'
+       AND purchase.id = jl."refId"
+    LEFT JOIN vendor_payments payment
+        ON jl."refType" = 'VENDOR_PAYMENT'
+       AND payment.id = jl."refId"
+    LEFT JOIN purchase_returns purchase_return
+        ON jl."refType" IN ('PURCHASE_RETURN', 'PURCHASE_RETURN_REFUND')
+       AND purchase_return.id = jl."refId"
+    LEFT JOIN purchases legacy_return_purchase
+        ON jl."refType" = 'PURCHASE RETURN'
+       AND legacy_return_purchase.id = jl."refId"
+    LEFT JOIN purchase_refunds refund
+        ON jl."refType" IN ('VENDOR_REFUND', 'PURCHASE_REFUND')
+       AND refund.id = jl."refId"
+    LEFT JOIN memo
+        ON memo."journalId" = jl."journalId"
+    LEFT JOIN purchases memo_purchase
+        ON memo_purchase.id = memo."purchaseId"
+    WHERE (coa.code = '2000' OR coa."accountType" = 'TRADE_PAYABLES')
+      AND j.date <= $1
+), vendor_balances AS (
+    SELECT vendor_id, SUM(balance_change) AS outstanding_balance
+    FROM ap_activity
+    GROUP BY vendor_id
+)
+SELECT
+    v.id AS vendor_id,
     v.code AS vendor_code,
     v.name AS vendor_name,
-
-    COALESCE(p.total_purchases, 0) AS total_purchases,
-    COALESCE(pay.total_payments, 0) AS total_payments,
-    COALESCE(pret.total_returns, 0) AS total_returns,
-    COALESCE(r.total_refunds, 0) AS total_refunds,
-    COALESCE(dm.total_debit_memos, 0) AS total_debit_memos,
-    COALESCE(cm.total_credit_memos, 0) AS total_credit_memos,
-
-    COALESCE(p.total_purchases, 0)
-      - COALESCE(pay.total_payments, 0)
-      - COALESCE(pret.total_returns, 0)
-      - COALESCE(r.total_refunds, 0)
-      - COALESCE(dm.total_debit_memos, 0)
-      + COALESCE(cm.total_credit_memos, 0)
-      AS outstanding_balance
-
+    COALESCE(vb.outstanding_balance, 0) AS outstanding_balance
 FROM vendors v
+LEFT JOIN vendor_balances vb ON vb.vendor_id = v.id
 
-/* PURCHASES */
-LEFT JOIN (
-    SELECT 
-        "vendorId",
-        SUM("totalAmount") AS total_purchases
-    FROM purchases
-    WHERE "orderDate" <= $1
-      AND status IN ('INVOICED', 'PAID', 'PARTIALLY_PAID', 'RETURNED')
-    GROUP BY "vendorId"
-) p ON p."vendorId" = v.id
+UNION ALL
 
-/* PAYMENTS */
-LEFT JOIN (
-    SELECT 
-        vp."vendorId",
-        SUM(vpl."lineAmount") AS total_payments
-    FROM vendor_payments vp
-    INNER JOIN vendor_payment_lines vpl
-        ON vpl."vendorPaymentId" = vp.id
-    INNER JOIN chart_of_accounts coa
-        ON coa.id = vpl."glAccountId"
-       AND coa.code = '2000'
-    WHERE vp.status IN ('PAID', 'PARTIALLY_PAID', 'RETURNED', 'INVOICED')
-      AND vp."paymentDate" <= $1
-    GROUP BY vp."vendorId"
-) pay ON pay."vendorId" = v.id
+SELECT
+    NULL AS vendor_id,
+    'UNASSIGNED' AS vendor_code,
+    'Unassigned AP activity' AS vendor_name,
+    vb.outstanding_balance
+FROM vendor_balances vb
+WHERE vb.vendor_id IS NULL
 
-/* PURCHASE RETURNS (SUPPLIER_CREDIT only — reduce AP) */
-LEFT JOIN (
-    SELECT
-        "vendorId",
-        SUM("totalAmount") AS total_returns
-    FROM purchase_returns
-    WHERE "returnDate" <= $1
-      AND status = 'CONFIRMED'
-      AND "settlementMethod" = 'SUPPLIER_CREDIT'
-    GROUP BY "vendorId"
-) pret ON pret."vendorId" = v.id
+ORDER BY vendor_name;
 
-/* REFUNDS */
-LEFT JOIN (
-    SELECT 
-        "vendorId",
-        SUM("amount") AS total_refunds
-    FROM purchase_refunds
-    WHERE "refundDate" <= $1
-    GROUP BY "vendorId"
-) r ON r."vendorId" = v.id
-
-/* DEBIT MEMOS */
-LEFT JOIN (
-    SELECT
-        "vendorId",
-        SUM("amount") AS total_debit_memos
-    FROM memo
-    WHERE "memoType" = 'DEBIT'
-      AND "date" <= $1
-      AND "vendorId" IS NOT NULL
-    GROUP BY "vendorId"
-) dm ON dm."vendorId" = v.id
-
-/* CREDIT MEMOS */
-LEFT JOIN (
-    SELECT
-        "vendorId",
-        SUM("amount") AS total_credit_memos
-    FROM memo
-    WHERE "memoType" = 'CREDIT'
-      AND "date" <= $1
-      AND "vendorId" IS NOT NULL
-    GROUP BY "vendorId"
-) cm ON cm."vendorId" = v.id
-
-ORDER BY v.name;
-
-
-  `,
+`,
       newAsOfDate,
     );
 
-    // console.log("Vendor Balances Result:", result);
     return result;
   }
+
+  //   async getVendorBalances(asOfDate: Date) {
+  //     const newAsOfDate = endOfDayUTC(asOfDate);
+  //     const result = await prisma.$queryRawUnsafe<
+  //       {
+  //         vendor_id: string;
+  //         vendor_code: string;
+  //         vendor_name: string;
+  //         total_purchases: number;
+  //         total_payments: number;
+  //         // total_refunds: number;
+  //         outstanding_balance: number;
+  //       }[]
+  //     >(
+  //       `
+  //     SELECT
+  //     v.id   AS vendor_id,
+  //     v.code AS vendor_code,
+  //     v.name AS vendor_name,
+
+  //     COALESCE(p.total_purchases, 0) AS total_purchases,
+  //     COALESCE(pay.total_payments, 0) AS total_payments,
+  //     COALESCE(r.total_refunds, 0) AS total_refunds,
+  //     COALESCE(dm.total_debit_memos, 0) AS total_debit_memos,
+  //     COALESCE(cm.total_credit_memos, 0) AS total_credit_memos,
+
+  //     COALESCE(p.total_purchases, 0)
+  //       - COALESCE(pay.total_payments, 0)
+  //       - COALESCE(r.total_refunds, 0)
+  //       - COALESCE(dm.total_debit_memos, 0)
+  //       + COALESCE(cm.total_credit_memos, 0)
+  //       AS outstanding_balance
+
+  // FROM vendors v
+
+  // /* PURCHASES */
+  // LEFT JOIN (
+  //     SELECT
+  //         "vendorId",
+  //         SUM("totalAmount") AS total_purchases
+  //     FROM purchases
+  //     WHERE "orderDate" <= $1
+  //       AND status IN ('INVOICED', 'PAID', 'PARTIALLY_PAID', 'RETURNED')
+  //     GROUP BY "vendorId"
+  // ) p ON p."vendorId" = v.id
+
+  // /* PAYMENTS */
+  // LEFT JOIN (
+  //     SELECT
+  //         vp."vendorId",
+  //         SUM(vpl."lineAmount") AS total_payments
+  //     FROM vendor_payments vp
+  //     INNER JOIN vendor_payment_lines vpl
+  //         ON vpl."vendorPaymentId" = vp.id
+  //     INNER JOIN chart_of_accounts coa
+  //         ON coa.id = vpl."glAccountId"
+  //        AND coa.code = '2000'
+  //     WHERE vp.status IN ('PAID', 'PARTIALLY_PAID', 'RETURNED', 'INVOICED')
+  //       AND vp."paymentDate" <= $1
+  //     GROUP BY vp."vendorId"
+  // ) pay ON pay."vendorId" = v.id
+
+  // /* REFUNDS */
+  // LEFT JOIN (
+  //     SELECT
+  //         "vendorId",
+  //         SUM("amount") AS total_refunds
+  //     FROM purchase_refunds
+  //     WHERE "refundDate" <= $1
+  //     GROUP BY "vendorId"
+  // ) r ON r."vendorId" = v.id
+
+  // /* DEBIT MEMOS */
+  // LEFT JOIN (
+  //     SELECT
+  //         "vendorId",
+  //         SUM("amount") AS total_debit_memos
+  //     FROM memo
+  //     WHERE "memoType" = 'DEBIT'
+  //       AND "date" <= $1
+  //       AND "vendorId" IS NOT NULL
+  //     GROUP BY "vendorId"
+  // ) dm ON dm."vendorId" = v.id
+
+  // /* CREDIT MEMOS */
+  // LEFT JOIN (
+  //     SELECT
+  //         "vendorId",
+  //         SUM("amount") AS total_credit_memos
+  //     FROM memo
+  //     WHERE "memoType" = 'CREDIT'
+  //       AND "date" <= $1
+  //     GROUP BY "vendorId"
+  // ) cm ON cm."vendorId" = v.id
+
+  // ORDER BY v.name;
+
+  //   `,
+  //       newAsOfDate,
+  //     );
+
+  //     // console.log("Vendor Balances Result:", result);
+  //     return result;
+  //   }
 
   async getCashFlow(fromDate: Date, toDate: Date) {
     const newToDate = endOfDayUTC(toDate);
@@ -2299,41 +2408,168 @@ ORDER BY v.name;
     return rows.map((row) => ({ ...row, OrderDate: row.OrderDate instanceof Date ? row.OrderDate.toISOString().slice(0, 10) : row.OrderDate, NoOfItems: Number(row.NoOfItems || 0), Amount: Number(row.Amount || 0) }));
   }
 
-  async getAllSalesByWarehouse(params: { dateFrom: Date; dateTo: Date; warehouseId?: string | null }) {
-    const from = startOfDayUTC(params.dateFrom);
-    const to = endOfDayUTC(params.dateTo);
-    const values: any[] = [from, to];
-    let posFilter = "";
-    let saleFilter = "";
-    if (params.warehouseId) { values.push(params.warehouseId); posFilter = ` AND ps.\"warehouseId\"=$3`; saleFilter = ` AND i.\"warehouseId\"=$3`; }
-    const query = `WITH pos_return_amounts AS (
-      SELECT \"originalSaleId\", SUM(\"refundAmount\") AS returned_amount
-      FROM pos_returns GROUP BY \"originalSaleId\"
-    ), pos_return_quantities AS (
-      SELECT pr.\"originalSaleId\", SUM(prl.\"qtyReturned\") AS returned_qty
-      FROM pos_returns pr JOIN pos_return_lines prl ON prl.\"posReturnId\" = pr.id
-      GROUP BY pr.\"originalSaleId\"
-    ), line_totals AS (
-      SELECT \"saleId\", \"itemId\", SUM(qty) AS qty, SUM(\"lineTotal\") AS amount FROM sale_lines GROUP BY \"saleId\", \"itemId\"
-    ), issued AS (
-      SELECT \"refId\" AS sale_id, \"warehouseId\", \"itemId\", SUM(qty) AS qty FROM inventory_ledger WHERE \"refType\"='SALE' AND direction='OUT' GROUP BY \"refId\",\"warehouseId\",\"itemId\"
-    ), all_sales AS (
-      SELECT ps.\"createdAt\"::date AS \"TransactionDate\", 'POS' AS \"SalesType\", ps.\"saleNo\" AS \"DocumentNo\", COALESCE(c.name,'Walk-in Customer') AS \"CustomerName\", w.name AS \"WarehouseName\",
-        GREATEST(SUM(pl.qty) - COALESCE(pq.returned_qty, 0), 0) AS \"NoOfItems\",
-        GREATEST(ps.\"totalAmount\" - COALESCE(pa.returned_amount, 0), 0) AS \"Amount\"
-      FROM pos_sales ps JOIN warehouses w ON w.id=ps.\"warehouseId\" LEFT JOIN customers c ON c.id=ps.\"customerId\" JOIN pos_sale_lines pl ON pl.\"posSaleId\"=ps.id
-      LEFT JOIN pos_return_amounts pa ON pa.\"originalSaleId\"=ps.id
-      LEFT JOIN pos_return_quantities pq ON pq.\"originalSaleId\"=ps.id
-      WHERE ps.status IN ('COMPLETED','PARTIALLY_RETURNED','RETURNED') AND ps.\"createdAt\">=$1 AND ps.\"createdAt\"<=$2 ${posFilter} GROUP BY ps.id,ps.\"createdAt\",ps.\"saleNo\",c.name,w.name,ps.\"totalAmount\",pq.returned_qty,pa.returned_amount
+  async getAllSalesByWarehouse(params: {
+    dateFrom: Date;
+    dateTo: Date;
+    warehouseId?: string | null;
+  }) {
+    const { dateFrom, dateTo, warehouseId } = params;
+
+    const newFromDate = startOfDayUTC(dateFrom);
+    const newToDate = endOfDayUTC(dateTo);
+    if (
+      Number.isNaN(newFromDate.getTime()) ||
+      Number.isNaN(newToDate.getTime()) ||
+      newFromDate > newToDate
+    ) {
+      throw new Error("A valid date range is required");
+    }
+    const fromDateOnly = newFromDate.toISOString().slice(0, 10);
+    const toDateOnly = newToDate.toISOString().slice(0, 10);
+
+    const normalizedWarehouseId = warehouseId && warehouseId !== "null" ? warehouseId : null;
+    const query = `
+      WITH sale_line_basis AS (
+        SELECT "saleId", "itemId", SUM("lineTotal") AS line_value, SUM(qty) AS line_qty
+        FROM sale_lines
+        GROUP BY "saleId", "itemId"
+      ),
+      sale_warehouse_basis AS (
+        SELECT
+          il."refId" AS "saleId",
+          il."warehouseId",
+          SUM(CASE WHEN sib.line_qty > 0 THEN sib.line_value * il.qty / sib.line_qty ELSE 0 END) AS basis_value,
+          SUM(il.qty) AS item_qty
+        FROM inventory_ledger il
+        INNER JOIN sale_line_basis sib ON sib."saleId" = il."refId" AND sib."itemId" = il."itemId"
+        WHERE il."refType" = 'SALE' AND il.direction = 'OUT'
+        GROUP BY il."refId", il."warehouseId"
+      ),
+      sale_warehouse_allocation AS (
+        SELECT
+          "saleId", "warehouseId", item_qty,
+          CASE
+            WHEN SUM(basis_value) OVER (PARTITION BY "saleId") > 0
+              THEN basis_value / SUM(basis_value) OVER (PARTITION BY "saleId")
+            ELSE 1.0 / COUNT(*) OVER (PARTITION BY "saleId")
+          END AS allocation
+        FROM sale_warehouse_basis
+      ),
+      return_warehouse AS (
+        SELECT "refId", "warehouseId", SUM(qty) AS item_qty
+        FROM inventory_ledger
+        WHERE "refType" = 'SALES_RETURN' AND direction = 'IN'
+        GROUP BY "refId", "warehouseId"
+      ),
+      revenue_postings AS (
+        SELECT
+          j.id AS "journalId", TO_CHAR(j.date::date, 'YYYY-MM-DD') AS "TransactionDate", jl."refType", jl."refId",
+          SUM(CASE WHEN coa.code = '4000' THEN jl.credit - jl.debit ELSE 0 END) AS sales_revenue,
+          SUM(CASE WHEN coa.code = '4900' THEN jl.debit - jl.credit ELSE 0 END) AS sales_returns
+        FROM journal_lines jl
+        INNER JOIN journals j ON j.id = jl."journalId"
+        INNER JOIN chart_of_accounts coa ON coa.id = jl."accountId"
+        WHERE coa.code IN ('4000', '4900')
+          AND j.date::date >= $1::date AND j.date::date <= $2::date
+        GROUP BY j.id, j.date::date, jl."refType", jl."refId"
+      ),
+      all_sales AS (
+        SELECT
+          rp."TransactionDate", 'SALE'::text AS "SalesType", s."orderNo" AS "DocumentNo",
+          c.name AS "CustomerName", w.name AS "WarehouseName", swa."warehouseId",
+          COALESCE(swa.item_qty, 0) AS "NoOfItems",
+          rp.sales_revenue * COALESCE(swa.allocation, 1) AS "SalesRevenue",
+          rp.sales_returns * COALESCE(swa.allocation, 1) AS "SalesReturns",
+          (rp.sales_revenue - rp.sales_returns) * COALESCE(swa.allocation, 1) AS "Amount"
+        FROM revenue_postings rp
+        INNER JOIN sales s ON s.id = rp."refId"
+        LEFT JOIN customers c ON c.id = s."customerId"
+        LEFT JOIN sale_warehouse_allocation swa ON swa."saleId" = s.id
+        LEFT JOIN warehouses w ON w.id = swa."warehouseId"
+        WHERE rp."refType" = 'SALE'
+
+        UNION ALL
+
+        SELECT
+          rp."TransactionDate", 'POS'::text, ps."saleNo",
+          COALESCE(c.name, 'Walk-in Customer'), w.name, ps."warehouseId",
+          COALESCE(lines.item_qty, 0), rp.sales_revenue, rp.sales_returns,
+          rp.sales_revenue - rp.sales_returns
+        FROM revenue_postings rp
+        INNER JOIN pos_sales ps ON ps.id = rp."refId"
+        LEFT JOIN customers c ON c.id = ps."customerId"
+        LEFT JOIN warehouses w ON w.id = ps."warehouseId"
+        LEFT JOIN LATERAL (
+          SELECT SUM(qty) AS item_qty FROM pos_sale_lines WHERE "posSaleId" = ps.id
+        ) lines ON TRUE
+        WHERE rp."refType" = 'POS_SALE'
+
+        UNION ALL
+
+        SELECT
+          rp."TransactionDate", 'SALES RETURN'::text, sr."returnNo", c.name,
+          w.name, rw."warehouseId", -COALESCE(rw.item_qty, 0), rp.sales_revenue,
+          rp.sales_returns, rp.sales_revenue - rp.sales_returns
+        FROM revenue_postings rp
+        INNER JOIN sales_returns sr ON sr.id = rp."refId"
+        LEFT JOIN customers c ON c.id = sr."customerId"
+        LEFT JOIN return_warehouse rw ON rw."refId" = sr.id
+        LEFT JOIN warehouses w ON w.id = rw."warehouseId"
+        WHERE rp."refType" = 'SALES_RETURN'
+
+        UNION ALL
+
+        SELECT
+          rp."TransactionDate", 'POS RETURN'::text, pr."returnNo",
+          COALESCE(c.name, 'Walk-in Customer'), w.name, pr."warehouseId",
+          -COALESCE(lines.item_qty, 0), rp.sales_revenue, rp.sales_returns,
+          rp.sales_revenue - rp.sales_returns
+        FROM revenue_postings rp
+        INNER JOIN pos_returns pr ON pr.id = rp."refId"
+        LEFT JOIN customers c ON c.id = pr."customerId"
+        LEFT JOIN warehouses w ON w.id = pr."warehouseId"
+        LEFT JOIN LATERAL (
+          SELECT SUM("qtyReturned") AS item_qty FROM pos_return_lines WHERE "posReturnId" = pr.id
+        ) lines ON TRUE
+        WHERE rp."refType" = 'POS_RETURN'
+
+        UNION ALL
+
+        SELECT
+          rp."TransactionDate", 'GL ADJUSTMENT'::text, COALESCE(rp."refType", 'Manual journal'),
+          '', 'Unassigned', NULL::text, 0::numeric, rp.sales_revenue, rp.sales_returns,
+          rp.sales_revenue - rp.sales_returns
+        FROM revenue_postings rp
+        WHERE COALESCE(rp."refType", '') NOT IN ('SALE', 'POS_SALE', 'SALES_RETURN', 'POS_RETURN')
+      ),
+      filtered_sales AS (
+        SELECT * FROM all_sales
+        WHERE $3::text IS NULL OR "warehouseId" = $3
+      )
+      SELECT
+        'GRANDTOTAL'::text AS "RowType", NULL::text AS "TransactionDate", ''::text AS "SalesType",
+        'Grand Total'::text AS "DocumentNo", ''::text AS "CustomerName", ''::text AS "WarehouseName",
+        COALESCE(SUM("NoOfItems"), 0) AS "NoOfItems",
+        COALESCE(SUM("SalesRevenue"), 0) AS "SalesRevenue",
+        COALESCE(SUM("SalesReturns"), 0) AS "SalesReturns",
+        COALESCE(SUM("Amount"), 0) AS "Amount"
+      FROM filtered_sales
       UNION ALL
-      SELECT s.\"orderDate\"::date, 'SALE', s.\"orderNo\", c.name, w.name, SUM(i.qty), SUM(CASE WHEN lt.qty>0 THEN lt.amount*i.qty/lt.qty ELSE 0 END)
-      FROM issued i JOIN sales s ON s.id=i.sale_id JOIN line_totals lt ON lt.\"saleId\"=i.sale_id AND lt.\"itemId\"=i.\"itemId\" JOIN customers c ON c.id=s.\"customerId\" JOIN warehouses w ON w.id=i.\"warehouseId\"
-      WHERE s.status IN ('DELIVERED','INVOICED','PAID') AND s.\"orderDate\">=$1 AND s.\"orderDate\"<=$2 ${saleFilter} GROUP BY s.id,s.\"orderDate\",s.\"orderNo\",c.name,w.name
-    )
-    SELECT 'DETAIL' AS \"RowType\", \"TransactionDate\", \"SalesType\", \"DocumentNo\", \"CustomerName\", \"WarehouseName\", \"NoOfItems\", \"Amount\" FROM all_sales
-    UNION ALL SELECT 'GRANDTOTAL', NULL, '', 'Grand Total', '', '', SUM(\"NoOfItems\"), SUM(\"Amount\") FROM all_sales ORDER BY 2 NULLS LAST,4`;
-    const rows = await prisma.$queryRawUnsafe<any[]>(query, ...values);
-    return rows.map((row) => ({ ...row, TransactionDate: row.TransactionDate instanceof Date ? row.TransactionDate.toISOString().slice(0, 10) : row.TransactionDate || "-", NoOfItems: Number(row.NoOfItems || 0), Amount: Number(row.Amount || 0) }));
+      SELECT
+        'DETAIL'::text, "TransactionDate", "SalesType", "DocumentNo", COALESCE("CustomerName", ''),
+        COALESCE("WarehouseName", 'Unassigned'), "NoOfItems", NULL::numeric, NULL::numeric, "Amount"
+      FROM filtered_sales
+      ORDER BY "TransactionDate" NULLS LAST, "DocumentNo";
+    `;
+
+    const result = await prisma.$queryRawUnsafe<any[]>(query, fromDateOnly, toDateOnly, normalizedWarehouseId);
+
+    return result.map((r) => ({
+      ...r,
+      TransactionDate: r.TransactionDate ?? "-",
+      NoOfItems: Number(r.NoOfItems ?? 0),
+      Amount: Number(r.Amount ?? 0),
+    }));
   }
 
   async getSalesByCustomer(fromDate: Date, toDate: Date) {

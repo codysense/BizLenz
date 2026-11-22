@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Building, Settings, Edit, Trash2 } from "lucide-react";
 import { assetsApi, managementApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { AssetCategory } from "../../types/api";
 import CreateAssetCategoryModal from "./CreateAssetCategoryModal";
@@ -240,7 +241,7 @@ const AssetCategories = () => {
         actions={actions}
         columns={columns}
         loading={isLoading}
-      />
+      exportMenu={<ExportMenu module="asset-categories" filters={{}} matchingRows={data?.pagination?.total} />} />
 
       {/* Create Modal */}
       {showCreateModal && (

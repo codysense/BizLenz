@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Eye, CheckCircle, XCircle } from "lucide-react";
 import { salesApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { SalesReturn } from "../../types/api";
 import ConfirmSalesReturnModal from "./ConfirmSalesReturnModal";
@@ -149,7 +150,7 @@ const SalesReturns = () => {
         pagination={data?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="sales-returns" filters={{ status: statusFilter }} matchingRows={data?.pagination?.total} />} />
 
       {showConfirmModal && selectedReturn && (
         <ConfirmSalesReturnModal

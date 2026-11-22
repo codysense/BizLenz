@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, Users, Edit } from "lucide-react";
 import { salesApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { CustomerGroup } from "../../types/api";
 import CreateCustomerGroupModal from "./CreateCusomerGroupModal";
@@ -199,7 +200,7 @@ const CustomerGroups = () => {
         pagination={data?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="customer-groups" filters={{ search }} matchingRows={data?.pagination?.total} />} />
 
       {/* Create Modal */}
       {showCreateModal && (

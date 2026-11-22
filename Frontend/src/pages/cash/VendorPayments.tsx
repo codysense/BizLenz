@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cashApi, managementApi, purchaseApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import CreateVendorPaymentModal from "./CreateVendorPaymentModal";
 import StatusBadge from "../../components/StatusBadge";
 import { toast } from "react-hot-toast";
@@ -634,7 +635,7 @@ const VendorPayments = () => {
         actions={actions}
         pagination={data?.pagination}
         onPageChange={setPage}
-      />
+      exportMenu={<ExportMenu module="vendor-payments" filters={{ partyId: vendorId, status: statusFilter }} matchingRows={data?.pagination?.total} />} />
 
       {showCreateModal && (
         <CreateVendorPaymentModal

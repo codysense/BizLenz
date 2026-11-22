@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cashApi, purchaseApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 
 // import { ReportExporter } from '../../lib/api';
 import { toast } from "react-hot-toast";
@@ -307,7 +308,7 @@ const VendorRefunds = () => {
         loading={isLoading}
         pagination={data?.pagination}
         onPageChange={setPage}
-      />
+      exportMenu={<ExportMenu module="vendor-refunds" filters={{ partyId: vendorFilter }} matchingRows={data?.pagination?.total} />} />
 
       {showCreateModal && (
         <CreateVendorRefundModal

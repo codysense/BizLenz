@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Package, TrendingUp, DollarSign } from "lucide-react";
 import { inventoryApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { InventoryValuation as InventoryValuationType } from "../../types/api";
 
@@ -84,11 +85,6 @@ const InventoryValuation = () => {
       width: "w-32",
     },
   ];
-
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    console.log("Export inventory valuation");
-  };
 
   // Calculate summary statistics
   const totalItems = valuationData?.valuation?.length || 0;
@@ -247,8 +243,7 @@ const InventoryValuation = () => {
         columns={columns}
         loading={isLoading}
         pagination={valuationData?.pagination}
-        onExport={handleExport}
-      />
+      exportMenu={<ExportMenu module="inventory-valuation" filters={{ warehouseId: warehouseFilter, type: typeFilter }} matchingRows={valuationData?.pagination?.total} />} />
     </div>
   );
 };

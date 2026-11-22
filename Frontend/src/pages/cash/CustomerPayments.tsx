@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cashApi, managementApi, salesApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import CreateCustomerPaymentModal from "./CreateCustomerPaymentModal";
 // import { ReportExporter } from '../../lib/reportExporter';
@@ -712,7 +713,7 @@ const CustomerPayments = () => {
         actions={actions}
         pagination={data?.pagination}
         onPageChange={setPage}
-      />
+      exportMenu={<ExportMenu module="customer-payments" filters={{ partyId: customerId }} matchingRows={data?.pagination?.total} />} />
 
       {showCreateModal && (
         <CreateCustomerPaymentModal

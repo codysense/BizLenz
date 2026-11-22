@@ -738,10 +738,12 @@ export const reportsApi = {
     dateFrom: string;
     dateTo: string;
     accountId?: string;
+    refType?: string;
   }) =>
     api.get(
       `/reports/general-ledger?${new URLSearchParams(params as any).toString()}`,
     ),
+  getJournalRefTypes: () => api.get<string[]>("/reports/journal-ref-types"),
   getCashFlow: (params: { dateFrom: string; dateTo: string }) =>
     api.get(`/reports/cash-flow?${new URLSearchParams(params).toString()}`),
   getVendorBalances: (params: { asOfDate: string }) =>

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { managementApi, salesApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { CreditLimitRejection, Sale } from "../../types/api";
 import CreateSaleModal from "./CreateSaleModal";
@@ -702,7 +703,7 @@ const SalesOrders = () => {
         pagination={data?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="sales" filters={{ status: statusFilter, partyId: customerFilter }} matchingRows={data?.pagination?.total} />} />
 
       {/* Create Modal */}
       {showCreateModal && (

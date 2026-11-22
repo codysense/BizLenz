@@ -22,6 +22,7 @@ interface DataTableProps<T> {
   onPageChange?: (page: number) => void;
   onExport?: () => void;
   onPrint?: () => void;
+  exportMenu?: React.ReactNode;
   actions?: (item: T) => React.ReactNode;
 }
 
@@ -33,6 +34,7 @@ export function DataTable<T extends Record<string, any>>({
   onPageChange,
   onExport,
   onPrint,
+  exportMenu,
   actions
 }: DataTableProps<T>) {
   const getCellValue = (item: T, column: Column<T>) => {
@@ -73,8 +75,9 @@ export function DataTable<T extends Record<string, any>>({
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
       {/* Table Actions */}
-      {(onExport || onPrint) && (
+      {(onExport || onPrint || exportMenu) && (
         <div className="px-4 py-3 border-b border-gray-200 flex justify-end space-x-2">
+          {exportMenu}
           {onExport && (
             <button
               onClick={onExport}

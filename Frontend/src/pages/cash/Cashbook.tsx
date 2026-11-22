@@ -23,6 +23,7 @@ import {
 import { cashApi, managementApi } from "../../lib/api";
 import { CashTransaction } from "../../types/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import CreateCashTransactionModal from "./CreateCashTransactionModal";
 import BankReconciliationModal from "./BankReconciliationModal";
@@ -1041,7 +1042,7 @@ const Cashbook = () => {
         onPageChange={setPage}
         //currentPage={page}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="cashbook" filters={{ cashAccountId: cashAccountFilter, dateFrom: dateFromFilter, dateTo: dateToFilter }} matchingRows={cashTransactions?.pagination?.total} />} />
 
       {/* Modals */}
       {showCreateModal && (

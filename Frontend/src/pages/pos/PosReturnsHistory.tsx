@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Eye, RotateCcw, Calendar, DollarSign } from "lucide-react";
 import { posApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 
 const PosReturnsHistory = () => {
@@ -215,7 +216,7 @@ const PosReturnsHistory = () => {
               loading={isLoading}
               pagination={data?.pagination}
               onPageChange={setPage}
-            />
+            exportMenu={<ExportMenu module="pos-returns" filters={{}} matchingRows={data?.pagination?.total} />} />
           </div>
         </div>
       )}

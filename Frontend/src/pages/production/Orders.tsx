@@ -4,6 +4,7 @@ import { Plus, Play, Package, Eye, Edit, Trash2, Printer } from "lucide-react";
 import { Clock, DollarSign, CheckCircle, X, RotateCcw } from "lucide-react";
 import { managementApi, productionApi } from "../../lib/api";
 import { DataTable } from "../../components/DataTable";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import { ProductionOrder } from "../../types/api";
 import CreateProductionOrderModal from "./CreateProductionOrderModal";
@@ -682,7 +683,7 @@ const ProductionOrders = () => {
         pagination={data?.pagination}
         onPageChange={setPage}
         actions={actions}
-      />
+      exportMenu={<ExportMenu module="production-orders" filters={{ status: statusFilter }} matchingRows={data?.pagination?.total} />} />
 
       {/* Create Modal */}
       {showCreateModal && (
